@@ -43,7 +43,7 @@ class Machine extends Model
 
     public function bookings(): HasMany
     {
-        return $this->hasMany(Booking::class);
+        return $this->hasMany(Reservation::class);
     }
 
     public function reservations(): HasMany
@@ -53,9 +53,11 @@ class Machine extends Model
 
     public function activeBooking(): HasOne
     {
-        return $this->hasOne(Booking::class)
-            ->whereIn('status', ['confirmed', 'in_progress'])
-            ->latestOfMany();
+        $now = Carbon::now();
+        return $this->hasOne(Reservation::class)
+            ->where('start_time', '<=', $now)
+            ->where('end_time', '>=', $now)
+            ->latestOfMany('start_time');
     }
 
     public function isAvailable(): bool

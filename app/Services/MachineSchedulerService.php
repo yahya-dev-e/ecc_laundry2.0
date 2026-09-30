@@ -2,10 +2,9 @@
 
 namespace App\Services;
 
-use App\Enums\BookingStatus;
 use App\Enums\MachineStatus;
-use App\Models\Booking;
 use App\Models\Machine;
+use App\Models\Reservation;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
 
@@ -13,18 +12,14 @@ class MachineSchedulerService
 {
     /**
      * Determine if a machine is free from conflicting reservations during [start, end].
+     * PURELY TIME-BASED (NO 'status' COLUMN QUERIES!)
      */
     public function isMachineAvailableForSlot(Machine $machine, Carbon $startTime, Carbon $endTime, ?int $excludeBookingId = null): bool
     {
-        $query = Booking::where('machine_id', $machine->id)
-            ->whereIn('status', [BookingStatus::PENDING, BookingStatus::CONFIRMED, BookingStatus::IN_PROGRESS])
+        $query = Reservation::where('machine_id', $machine->id)
             ->where(function ($q) use ($startTime, $endTime) {
-                $q->whereBetween('start_time', [$startTime, $endTime])
-                  ->orWhereBetween('end_time', [$startTime, $endTime])
-                  ->orWhere(function ($sub) use ($startTime, $endTime) {
-                      $sub->where('start_time', '<=', $startTime)
-                          ->where('end_time', '>=', $endTime);
-                  });
+                $q->where('start_time', '<', $endTime)
+                  ->where('end_time', '>', $startTime);
             });
 
         if ($excludeBookingId) {
@@ -65,8 +60,8 @@ class MachineSchedulerService
                 'is_past'    => $isPast,
             ];
 
-            // 10-minute turnaround buffer between slots
-            $cursor->addMinutes($duration + 10);
+            // Buffer between slots
+            $cursor->addMinutes($duration);
         }
 
         return $slots;

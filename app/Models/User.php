@@ -53,12 +53,25 @@ class User extends Authenticatable
 
     public function bookings(): HasMany
     {
-        return $this->hasMany(Booking::class);
+        return $this->hasMany(Reservation::class);
     }
 
     public function reservations(): HasMany
     {
         return $this->hasMany(Reservation::class);
+    }
+
+    public function weeklyRemainingLimit(): int
+    {
+        $startOfWeek = \Carbon\Carbon::now()->startOfWeek();
+        $endOfWeek = \Carbon\Carbon::now()->endOfWeek();
+
+        $usedCount = $this->reservations()
+            ->where('start_time', '>=', $startOfWeek)
+            ->where('start_time', '<=', $endOfWeek)
+            ->count();
+
+        return max(0, config('laundry.weekly_hours_limit', 8) - $usedCount);
     }
 
     public function transactions(): HasMany

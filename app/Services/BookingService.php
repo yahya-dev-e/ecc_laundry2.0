@@ -2,12 +2,11 @@
 
 namespace App\Services;
 
-use App\Enums\BookingStatus;
 use App\Enums\MachineStatus;
 use App\Events\CycleCompleted;
 use App\Events\CycleStarted;
-use App\Models\Booking;
 use App\Models\Machine;
+use App\Models\Reservation;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -20,9 +19,10 @@ class BookingService
     ) {}
 
     /**
-     * Create a new booking reservation for a user.
+     * Create a new reservation for a user.
+     * STRICTLY writes only the columns that exist in the database.
      */
-    public function createBooking(User $user, Machine $machine, Carbon $startTime, ?int $durationMinutes = null): Booking
+    public function createBooking(User $user, Machine $machine, Carbon $startTime, ?int $durationMinutes = null): Reservation
     {
         $duration = $durationMinutes ?? $machine->default_duration_minutes;
         $endTime = (clone $startTime)->addMinutes($duration);
@@ -35,52 +35,47 @@ class BookingService
             throw new InvalidArgumentException("Machine {$machine->code} already has a conflicting reservation during this slot.");
         }
 
-        $cost = $machine->cost_per_cycle;
+        $cost = max(1, (int) round($duration / 60));
         if (!$user->hasCredits($cost)) {
             throw new InvalidArgumentException("Insufficient credits. You need {$cost} credits to reserve this machine.");
         }
 
         return DB::transaction(function () use ($user, $machine, $startTime, $endTime, $cost) {
-            $booking = Booking::create([
+            $reservation = Reservation::create([
                 'user_id' => $user->id,
                 'machine_id' => $machine->id,
-                'status' => BookingStatus::CONFIRMED,
                 'start_time' => $startTime,
                 'end_time' => $endTime,
-                'credits_spent' => $cost,
+                'notified_start' => false,
+                'notified_end' => false,
+                'weekly_session_limit_remaining' => $user->weeklyRemainingLimit(),
             ]);
 
-            $user->deductCredits($cost, "Reservation for machine {$machine->code}", $booking->id);
+            $user->deductCredits($cost, "Reservation for machine {$machine->code}", $reservation->id);
 
-            // If reservation starts within 15 minutes, set machine status to RESERVED immediately
+            // If reservation starts within 15 minutes, set machine status to RESERVED
             if ($startTime->lessThanOrEqualTo(Carbon::now()->addMinutes(15)) && $machine->isAvailable()) {
                 $machine->update(['status' => MachineStatus::RESERVED]);
             }
 
-            return $booking;
+            return $reservation;
         });
     }
 
     /**
      * Start the physical washing or drying cycle.
      */
-    public function startCycle(Booking $booking): Machine
+    public function startCycle(Reservation $booking): Machine
     {
         if (!$booking->status->canBeStarted()) {
-            throw new InvalidArgumentException("This booking cannot be started because its status is: {$booking->status->label()}.");
+            throw new InvalidArgumentException("This reservation cannot be started because it is not within the start window.");
         }
 
         $machine = $booking->machine;
         $duration = $machine->default_duration_minutes;
         $endsAt = Carbon::now()->addMinutes($duration);
 
-        DB::transaction(function () use ($booking, $machine, $endsAt) {
-            $booking->update([
-                'status' => BookingStatus::IN_PROGRESS,
-                'started_at' => Carbon::now(),
-                'end_time' => $endsAt,
-            ]);
-
+        DB::transaction(function () use ($machine, $endsAt) {
             $machine->update([
                 'status' => MachineStatus::IN_USE,
                 'current_cycle_ends_at' => $endsAt,
@@ -97,19 +92,14 @@ class BookingService
      */
     public function completeCycle(Machine $machine): void
     {
-        $activeBooking = Booking::where('machine_id', $machine->id)
-            ->where('status', BookingStatus::IN_PROGRESS)
-            ->latest()
+        $now = Carbon::now();
+        $activeBooking = Reservation::where('machine_id', $machine->id)
+            ->where('start_time', '<=', $now)
+            ->where('end_time', '>=', $now)
+            ->latest('start_time')
             ->first();
 
-        DB::transaction(function () use ($machine, $activeBooking) {
-            if ($activeBooking) {
-                $activeBooking->update([
-                    'status' => BookingStatus::COMPLETED,
-                    'completed_at' => Carbon::now(),
-                ]);
-            }
-
+        DB::transaction(function () use ($machine) {
             $machine->update([
                 'status' => MachineStatus::AVAILABLE,
                 'current_cycle_ends_at' => null,
@@ -120,67 +110,57 @@ class BookingService
     }
 
     /**
-     * Cancel a booking reservation and refund credits.
+     * Cancel an existing reservation and release slot.
      */
-    public function cancelBooking(Booking $booking, string $reason = 'Cancelled by user'): void
+    public function cancelBooking(Reservation $booking, string $reason = 'Cancelled by user'): void
     {
         if (!$booking->status->canBeCancelled()) {
-            throw new InvalidArgumentException("Cannot cancel a booking with status {$booking->status->label()}.");
+            throw new InvalidArgumentException("Cannot cancel this reservation.");
         }
 
-        DB::transaction(function () use ($booking, $reason) {
-            $booking->update([
-                'status' => BookingStatus::CANCELLED,
-                'cancellation_reason' => $reason,
-            ]);
+        DB::transaction(function () use ($booking) {
+            $machine = $booking->machine;
+            $creditsToRefund = $booking->credits_spent;
 
-            // Refund credits to user
+            // Delete the reservation row to release the time slot
+            $booking->delete();
+
+            // Refund credits
             $booking->user->addCredits(
-                $booking->credits_spent,
-                "Refund for cancelled booking #{$booking->id} on {$booking->machine->code}",
-                $booking->id
+                $creditsToRefund,
+                "Refund for cancelled reservation on {$machine->code}"
             );
 
             // Revert machine status to available if it was reserved
-            $machine = $booking->machine;
-            if ($machine->status === MachineStatus::RESERVED) {
+            if ($machine && $machine->status === MachineStatus::RESERVED) {
                 $machine->update(['status' => MachineStatus::AVAILABLE]);
             }
         });
     }
 
     /**
-     * Release expired pending/confirmed bookings where user failed to show up.
+     * Release expired reservations where user failed to show up.
      */
     public function releaseExpiredBookings(): int
     {
         $graceMinutes = config('laundry.grace_period_minutes', 15);
-        $expiredBookings = Booking::expiredPending($graceMinutes)->get();
+        $cutoff = Carbon::now()->subMinutes($graceMinutes);
 
-        $count = 0;
+        // Expired upcoming reservations where start_time <= cutoff and machine remained reserved
+        $expiredBookings = Reservation::where('start_time', '<=', $cutoff)
+            ->where('end_time', '>', Carbon::now())
+            ->whereHas('machine', function ($q) {
+                $q->where('status', MachineStatus::RESERVED);
+            })
+            ->get();
+
+        $count = $expiredBookings->count();
         foreach ($expiredBookings as $booking) {
-            DB::transaction(function () use ($booking) {
-                $booking->update([
-                    'status' => BookingStatus::EXPIRED,
-                    'cancellation_reason' => 'User did not show up within grace period.',
-                ]);
-
-                // Refund 50% or full credits according to college policy
-                $refund = (int) floor($booking->credits_spent / 2);
-                if ($refund > 0) {
-                    $booking->user->addCredits(
-                        $refund,
-                        "Partial refund for expired booking #{$booking->id} (no-show penalty)",
-                        $booking->id
-                    );
-                }
-
-                $machine = $booking->machine;
-                if ($machine->status === MachineStatus::RESERVED) {
-                    $machine->update(['status' => MachineStatus::AVAILABLE]);
-                }
-            });
-            $count++;
+            $machine = $booking->machine;
+            $booking->delete();
+            if ($machine) {
+                $machine->update(['status' => MachineStatus::AVAILABLE]);
+            }
         }
 
         return $count;

@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Enums\BookingStatus;
 use App\Enums\MachineStatus;
 use App\Models\Machine;
 use App\Services\MachineSchedulerService;
@@ -23,17 +22,16 @@ class DashboardController extends Controller
     {
         $user = $request->user();
 
-        // 1. Fetch user's currently active cycles
-        $activeCycles = $user ? $user->bookings()
+        // 1. Fetch user's currently active cycles (time-derived: start_time <= now <= end_time)
+        $activeCycles = $user ? $user->reservations()
             ->with('machine')
-            ->where('status', BookingStatus::IN_PROGRESS)
+            ->inProgress()
             ->get() : collect();
 
-        // 2. Fetch user's next upcoming booking
-        $nextBooking = $user ? $user->bookings()
+        // 2. Fetch user's next upcoming reservation (time-derived: start_time > now)
+        $nextBooking = $user ? $user->reservations()
             ->with('machine')
-            ->whereIn('status', [BookingStatus::PENDING, BookingStatus::CONFIRMED])
-            ->where('start_time', '>=', Carbon::now()->subMinutes(15))
+            ->upcoming()
             ->orderBy('start_time')
             ->first() : null;
 

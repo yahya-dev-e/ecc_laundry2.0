@@ -2,11 +2,10 @@
 
 namespace App\Http\Controllers;
 
-use App\Enums\BookingStatus;
 use App\Enums\MachineStatus;
 use App\Http\Requests\StoreBookingRequest;
-use App\Models\Booking;
 use App\Models\Machine;
+use App\Models\Reservation;
 use App\Services\BookingService;
 use App\Services\MachineSchedulerService;
 use Carbon\Carbon;
@@ -23,35 +22,37 @@ class BookingController extends Controller
     ) {}
 
     /**
-     * Display a listing of the user's laundry bookings and transactions.
+     * Display a listing of the user's laundry reservations and transactions.
      */
     public function index(Request $request): View
     {
         $user = $request->user();
 
-        $activeBookings = $user->bookings()
+        // Active reservations currently in progress (start_time <= now <= end_time)
+        $activeBookings = $user ? $user->reservations()
             ->with('machine')
-            ->where('status', BookingStatus::IN_PROGRESS)
+            ->inProgress()
             ->latest('start_time')
-            ->get();
+            ->get() : collect();
 
-        $upcomingBookings = $user->bookings()
+        // Upcoming reservations (start_time > now)
+        $upcomingBookings = $user ? $user->reservations()
             ->with('machine')
-            ->whereIn('status', [BookingStatus::PENDING, BookingStatus::CONFIRMED])
-            ->where('start_time', '>=', Carbon::now()->subMinutes(15))
+            ->upcoming()
             ->orderBy('start_time')
-            ->get();
+            ->get() : collect();
 
-        $pastBookings = $user->bookings()
+        // Completed reservations in the past (end_time < now)
+        $pastBookings = $user ? $user->reservations()
             ->with('machine')
-            ->whereIn('status', [BookingStatus::COMPLETED, BookingStatus::CANCELLED, BookingStatus::EXPIRED])
+            ->completed()
             ->latest('start_time')
-            ->paginate(10);
+            ->paginate(10) : collect();
 
-        $recentTransactions = $user->transactions()
+        $recentTransactions = $user ? $user->transactions()
             ->latest()
             ->limit(8)
-            ->get();
+            ->get() : collect();
 
         return view('bookings.index', [
             'activeBookings' => $activeBookings,
@@ -104,7 +105,7 @@ class BookingController extends Controller
             );
 
             return redirect()->route('bookings.index')
-                ->with('success', "Reservation confirmed for {$machine->code} at {$startTime->format('M d, H:i')}! {$booking->credits_spent} credits deducted.");
+                ->with('success', "Reservation confirmed for {$machine->code} at {$startTime->format('M d, H:i')}!");
         } catch (InvalidArgumentException $e) {
             return back()->withInput()->with('error', $e->getMessage());
         }
@@ -113,7 +114,7 @@ class BookingController extends Controller
     /**
      * Start the washing/drying cycle on the machine.
      */
-    public function start(Request $request, Booking $booking): RedirectResponse
+    public function start(Request $request, Reservation $booking): RedirectResponse
     {
         if ($booking->user_id !== $request->user()->id && !$request->user()->isAdmin()) {
             abort(403, 'Unauthorized action.');
@@ -130,9 +131,9 @@ class BookingController extends Controller
     }
 
     /**
-     * Cancel an existing reservation and refund credits.
+     * Cancel an existing reservation and release slot.
      */
-    public function cancel(Request $request, Booking $booking): RedirectResponse
+    public function cancel(Request $request, Reservation $booking): RedirectResponse
     {
         if ($booking->user_id !== $request->user()->id && !$request->user()->isAdmin()) {
             abort(403, 'Unauthorized action.');
@@ -144,7 +145,7 @@ class BookingController extends Controller
             $this->bookingService->cancelBooking($booking, $reason);
 
             return redirect()->route('bookings.index')
-                ->with('success', "Booking #{$booking->id} cancelled. {$booking->credits_spent} credits have been refunded to your account.");
+                ->with('success', "Reservation #{$booking->id} cancelled successfully.");
         } catch (InvalidArgumentException $e) {
             return back()->with('error', $e->getMessage());
         }
