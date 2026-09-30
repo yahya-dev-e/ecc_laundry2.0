@@ -21,15 +21,59 @@ function getAssets() {
     return { cssFile, jsFile };
 }
 
-// In-memory state with weekly reservation quota
+// 24 standard 1-hour slots for campus laundry
+const ALL_HOURLY_SLOTS = [
+    '00:00 - 01:00', '01:00 - 02:00', '02:00 - 03:00', '03:00 - 04:00', '04:00 - 05:00', '05:00 - 06:00',
+    '06:00 - 07:00', '07:00 - 08:00', '08:00 - 09:00', '09:00 - 10:00', '10:00 - 11:00', '11:00 - 12:00',
+    '12:00 - 13:00', '13:00 - 14:00', '14:00 - 15:00', '15:00 - 16:00', '16:00 - 17:00', '17:00 - 18:00',
+    '18:00 - 19:00', '19:00 - 20:00', '20:00 - 21:00', '21:00 - 22:00', '22:00 - 23:00', '23:00 - 00:00'
+];
+
+function parseTimeToMinutes(t) {
+    const parts = t.trim().replace('h', ':00').split(':');
+    return parseInt(parts[0], 10) * 60 + (parts[1] ? parseInt(parts[1], 10) : 0);
+}
+
+function isSlotBooked(reservations, machineCode, date, slotTime) {
+    const [sStartStr, sEndStr] = slotTime.split('-').map(s => s.trim());
+    const slotStart = parseTimeToMinutes(sStartStr);
+    let slotEnd = parseTimeToMinutes(sEndStr);
+    if (slotEnd === 0) slotEnd = 24 * 60;
+
+    for (const r of reservations) {
+        const resDate = r.date || '2026-09-30';
+        if (resDate !== date) continue;
+
+        if (r.multi) {
+            for (const m of r.multi) {
+                if (m.code === machineCode) {
+                    const [rStartStr, rEndStr] = m.time.split('-').map(s => s.trim());
+                    const rStart = parseTimeToMinutes(rStartStr);
+                    let rEnd = parseTimeToMinutes(rEndStr);
+                    if (rEnd === 0) rEnd = 24 * 60;
+                    if (slotStart < rEnd && slotEnd > rStart) return true;
+                }
+            }
+        } else if (r.code === machineCode) {
+            const [rStartStr, rEndStr] = r.time.split('-').map(s => s.trim());
+            const rStart = parseTimeToMinutes(rStartStr);
+            let rEnd = parseTimeToMinutes(rEndStr);
+            if (rEnd === 0) rEnd = 24 * 60;
+            if (slotStart < rEnd && slotEnd > rStart) return true;
+        }
+    }
+    return false;
+}
+
+// In-memory state with 8-hour weekly reservation quota (1h = 1 credit)
 const state = {
     isAuthenticated: false, // FIRST SCREEN IS LOGIN
     isAdmin: true, // Role switcher for testing
-    weeklyLimit: 3, // 3 reservations per week limit
+    weeklyLimit: 8, // 8 hours per week quota
     user: {
         name: 'R. Omari',
         email: 'r.omari@fecc.ma',
-        weeklyUsed: 1, // 1 used out of 3
+        weeklyUsed: 2, // 2 hours used out of 8 (6 hours remaining)
     },
     machines: [
         { code: 'ML1-OM', name: 'Machine à laver 1 Omar', type: 'washer', bg: '#e53935', text: 'text-white', icon: '👕', status: 'available', cap: '9.0 kg', loc: 'Bâtiment Omar, RDC' },
@@ -48,16 +92,19 @@ const state = {
         { code: 'SL3-OM', name: 'Sèche-linge 3 Omar', type: 'dryer', bg: '#212121', text: 'text-white', icon: '🔄', status: 'available', cap: '9.5 kg', loc: 'Bâtiment Omar, RDC' },
     ],
     reservations: [
-        { hour: '00 h', time: '0:00 - 1:00', code: 'ML2-OM', bg: '#00e676', textColor: 'text-slate-900', user: 'Alex Rivera' },
-        { hour: '06 h', time: '6:00 - 7:00', code: 'SL1-PE', bg: '#1a237e', textColor: 'text-white', user: 'Youssef Alami' },
+        { date: '2026-09-30', hour: '00 h', time: '00:00 - 01:00', code: 'ML2-OM', bg: '#00e676', textColor: 'text-slate-900', user: 'Alex Rivera', durationHours: 1 },
+        { date: '2026-09-30', hour: '06 h', time: '06:00 - 07:00', code: 'SL1-PE', bg: '#1a237e', textColor: 'text-white', user: 'Youssef Alami', durationHours: 1 },
         { 
+            date: '2026-09-30',
             hour: '07 h', 
             multi: [
-                { time: '7:00 - 9:00', code: 'ML2-PE', bg: '#ffd600', textColor: 'text-slate-900', user: 'Sara Bennani' },
-                { time: '7:00 - 9:00', code: 'ML3-PE', bg: '#ff007f', textColor: 'text-white', user: 'Mehdi Tazi' },
-                { time: '7:00 - 9:00', code: 'ML2-OM', bg: '#00e676', textColor: 'text-slate-900', user: 'Sara Bennani' }
+                { time: '07:00 - 09:00', code: 'ML2-PE', bg: '#ffd600', textColor: 'text-slate-900', user: 'Sara Bennani' },
+                { time: '07:00 - 09:00', code: 'ML3-PE', bg: '#ff007f', textColor: 'text-white', user: 'Mehdi Tazi' },
+                { time: '07:00 - 09:00', code: 'ML2-OM', bg: '#00e676', textColor: 'text-slate-900', user: 'Sara Bennani' }
             ]
-        }
+        },
+        // Pre-seeded reservation for ML1-PE from 2pm to 3pm (14:00 - 15:00) as requested
+        { date: '2026-09-30', hour: '14 h', time: '14:00 - 15:00', code: 'ML1-PE', bg: '#2979ff', textColor: 'text-white', user: 'Mehdi Tazi', durationHours: 1 }
     ]
 };
 
@@ -112,6 +159,11 @@ function renderLayout(title, content, currentPath = '/', flash = '') {
                     <span>Calendrier des réservations</span>
                 </a>
 
+                <a href="/reserver" class="sidebar-link ${currentPath === '/reserver' ? 'active' : ''}">
+                    <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                    <span>Nouvelle réservation</span>
+                </a>
+
                 <a href="/machines" class="sidebar-link ${currentPath === '/machines' ? 'active' : ''}">
                     <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="3" stroke-width="2"/><circle cx="12" cy="13" r="4" stroke-width="2"/></svg>
                     <span>Machines</span>
@@ -158,18 +210,16 @@ function renderLayout(title, content, currentPath = '/', flash = '') {
             <div class="flex items-center space-x-3">
                 <span class="text-xs text-slate-400 font-medium">laundry.fecc.ma${currentPath}</span>
                 
-                <!-- Interactive Role Switcher -->
                 <a href="/toggle-role" class="px-2.5 py-1 rounded-full text-[11px] font-bold border transition-all ${state.isAdmin ? 'bg-amber-50 text-amber-800 border-amber-300' : 'bg-blue-50 text-blue-800 border-blue-300'}" title="Cliquez pour basculer entre vue Administrateur et vue Étudiant">
                     ${state.isAdmin ? '👑 Mode: ADMIN (Cliquez pour tester vue Étudiant)' : '🎓 Mode: ÉTUDIANT (Cliquez pour tester vue Admin)'}
                 </a>
             </div>
 
             <div class="flex items-center space-x-5">
-                <!-- Weekly Quota Badge (NO CREDITS!) -->
                 <div class="flex items-center space-x-2 px-3 py-1 rounded-full ${state.isAdmin ? 'bg-amber-50 text-amber-900 border border-amber-200' : (remaining > 0 ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-rose-50 text-rose-800 border border-rose-200')} text-xs font-semibold">
                     <span class="w-2 h-2 rounded-full ${state.isAdmin ? 'bg-amber-500' : (remaining > 0 ? 'bg-emerald-500' : 'bg-rose-500')}"></span>
                     <span>
-                        ${state.isAdmin ? 'Quota : Illimité (Admin)' : `Quota : ${state.user.weeklyUsed} / ${state.weeklyLimit} cette semaine (${remaining} restante${remaining > 1 ? 's' : ''})`}
+                        ${state.isAdmin ? 'Quota : Illimité (Admin)' : `Quota : ${state.user.weeklyUsed}h / ${state.weeklyLimit}h cette semaine (${remaining}h restante${remaining > 1 ? 's' : ''})`}
                     </span>
                 </div>
 
@@ -202,11 +252,32 @@ function renderLayout(title, content, currentPath = '/', flash = '') {
             ${content}
         </main>
     </div>
+
+    <!-- Machine Selection Script for Direct Reservation Page Link -->
+    <script>
+    window.currentSelectedMachine = 'ML1-OM';
+
+    function pickMachine(code) {
+        window.currentSelectedMachine = code;
+        const label = document.getElementById('activeMachineCode');
+        if (label) label.innerText = code;
+        const dedicatedBtn = document.getElementById('dedicatedPageBtn');
+        if (dedicatedBtn) dedicatedBtn.href = '/reserver?machine=' + encodeURIComponent(code);
+        
+        document.querySelectorAll('.badge-machine-btn').forEach(btn => {
+            if (btn.getAttribute('data-code') === code) {
+                btn.classList.add('ring-3', 'ring-slate-900', 'scale-105', 'shadow-md');
+            } else {
+                btn.classList.remove('ring-3', 'ring-slate-900', 'scale-105', 'shadow-md');
+            }
+        });
+    }
+    </script>
 </body>
 </html>`;
 }
 
-// 1. Calendrier Page (Image 2) with fixed interactive modal
+// 1. Calendrier Page (Image 2) with fixed viewport popup modal
 function renderCalendarPage() {
     const washers = state.machines.filter(m => m.type === 'washer');
     const dryers = state.machines.filter(m => m.type === 'dryer');
@@ -214,29 +285,17 @@ function renderCalendarPage() {
     const remaining = Math.max(0, state.weeklyLimit - state.user.weeklyUsed);
 
     return `
-    <div class="space-y-6 max-w-6xl mx-auto" x-data="{
-        selectedMachine: 'ML1-OM',
-        showModal: false,
-        modalMachine: 'ML1-OM',
-        modalDate: '2026-09-30',
-        modalHour: '14:00',
-        openReservation(code) {
-            this.modalMachine = code || this.selectedMachine || 'ML1-OM';
-            this.showModal = true;
-        }
-    }">
-        <!-- Green Info Banner matching Image 2 with weekly quota counter -->
+    <div class="space-y-6 max-w-6xl mx-auto">
         <div class="bg-white border-l-4 border-[#00897b] p-3.5 rounded shadow-xs flex items-center justify-between">
             <div class="flex items-center space-x-3">
                 <div class="w-5 h-5 rounded-full bg-[#00897b]/10 text-[#00897b] flex items-center justify-center font-bold text-xs shrink-0">i</div>
-                <span class="text-xs text-slate-700">Cliquez sur une machine pour voir les créneaux déjà réservés.</span>
+                <span class="text-xs text-slate-700">Cliquez sur une machine pour voir ses créneaux et réserver directement.</span>
             </div>
             <div class="text-xs font-semibold text-[#00897b]">
-                ${state.isAdmin ? 'Régime Administrateur (Illimité)' : `Quota restant : ${remaining} sur ${state.weeklyLimit} cette semaine`}
+                ${state.isAdmin ? 'Régime Administrateur (Illimité)' : `Quota restant : ${remaining}h sur ${state.weeklyLimit}h cette semaine (1h = 1 crédit)`}
             </div>
         </div>
 
-        <!-- Search Bar matching Image 2 -->
         <div class="max-w-md mx-auto">
             <input type="text" placeholder="Rechercher une machine..." 
                    class="w-full px-4 py-2 bg-white border border-slate-300 rounded text-xs placeholder-slate-400 focus:outline-none focus:border-[#00897b] shadow-xs">
@@ -250,26 +309,26 @@ function renderCalendarPage() {
             </div>
 
             <div class="grid grid-cols-2 divide-x divide-slate-200 p-4">
-                <!-- Washers List -->
                 <div class="grid grid-cols-3 gap-2 pr-3">
                     ${washers.map(m => `
-                        <button type="button" @click="selectedMachine = '${m.code}'" 
-                                :class="{'ring-2 ring-slate-900 scale-105 shadow-md': selectedMachine === '${m.code}'}"
+                        <button type="button" 
+                                onclick="pickMachine('${m.code}')" 
+                                data-code="${m.code}"
                                 style="background-color: ${m.bg};"
-                                class="badge-machine ${m.text}">
+                                class="badge-machine badge-machine-btn ${m.text} ${m.code === 'ML1-OM' ? 'ring-3 ring-slate-900 scale-105 shadow-md' : ''}">
                             <span>${m.code}</span>
                             <span class="text-sm">${m.icon}</span>
                         </button>
                     `).join('')}
                 </div>
 
-                <!-- Dryers List -->
                 <div class="grid grid-cols-2 gap-2 pl-3">
                     ${dryers.map(m => `
-                        <button type="button" @click="selectedMachine = '${m.code}'"
-                                :class="{'ring-2 ring-slate-900 scale-105 shadow-md': selectedMachine === '${m.code}'}"
+                        <button type="button" 
+                                onclick="pickMachine('${m.code}')" 
+                                data-code="${m.code}"
                                 style="background-color: ${m.bg};"
-                                class="badge-machine ${m.text}">
+                                class="badge-machine badge-machine-btn ${m.text}">
                             <span>${m.code}</span>
                             <span class="text-xs">${m.icon}</span>
                         </button>
@@ -278,18 +337,20 @@ function renderCalendarPage() {
             </div>
         </div>
 
-        <!-- Action Button Réserver (OPENS MODAL DIRECTLY - NO SHUFFLE!) -->
-        <div class="flex justify-between items-center max-w-2xl mx-auto">
-            <div class="text-xs text-slate-500">
-                Machine sélectionnée : <span class="font-bold text-[#00897b]" x-text="selectedMachine"></span>
+        <!-- Action Button Réserver (Direct Link to Dedicated Page) -->
+        <div class="flex flex-col sm:flex-row justify-between items-center gap-3 max-w-2xl mx-auto bg-slate-50 p-3.5 rounded-lg border border-slate-200 shadow-xs">
+            <div class="text-xs text-slate-600">
+                Machine sélectionnée : <span id="activeMachineCode" class="font-bold text-[#00897b] bg-[#00897b]/10 px-2.5 py-1 rounded text-sm">ML1-OM</span>
             </div>
-            <button type="button" @click="openReservation(selectedMachine)" 
-                    class="px-6 py-2 rounded bg-[#00897b] hover:bg-[#00796b] text-white text-xs font-bold transition-all shadow-xs cursor-pointer active:scale-95">
-                Réserver
-            </button>
+            <div>
+                <a id="dedicatedPageBtn" href="/reserver?machine=ML1-OM" 
+                   class="px-6 py-2.5 rounded bg-[#00897b] hover:bg-[#00796b] text-white text-xs font-bold transition-all shadow-md flex items-center space-x-2 cursor-pointer active:scale-95">
+                    <span>Réserver cette machine</span>
+                    <span>&rarr;</span>
+                </a>
+            </div>
         </div>
 
-        <!-- Date Header & Navigation matching Image 2 -->
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-4 border-t border-slate-200">
             <h2 class="text-xl font-normal text-slate-700">30 septembre 2026</h2>
             <div class="inline-flex rounded shadow-xs text-xs">
@@ -299,7 +360,6 @@ function renderCalendarPage() {
             </div>
         </div>
 
-        <!-- Timetable Grid matching Image 2 -->
         <div class="bg-white rounded-lg border border-slate-300 shadow-xs overflow-hidden">
             <div class="flex border-b border-slate-300 bg-[#f9f9e8] text-xs font-semibold text-slate-700">
                 <div class="w-16 p-2 text-center border-r border-slate-300 text-[11px] text-slate-500">Toute la journée</div>
@@ -308,28 +368,27 @@ function renderCalendarPage() {
 
             <div class="divide-y divide-slate-200 text-xs">
                 ${hours.map(h => {
-                    const res = state.reservations.find(r => r.hour === h);
-                    if (res && res.multi) {
+                    const matching = [];
+                    state.reservations.forEach(r => {
+                        if (r.hour === h) {
+                            if (r.multi) {
+                                r.multi.forEach(m => matching.push(m));
+                            } else {
+                                matching.push(r);
+                            }
+                        }
+                    });
+
+                    if (matching.length > 0) {
                         return `
-                        <div class="flex items-center h-10 hover:bg-slate-50/50">
+                        <div class="flex items-center min-h-[42px] py-1 hover:bg-slate-50/50">
                             <div class="timeline-hour">${h}</div>
-                            <div class="flex-1 px-1 h-full flex items-center space-x-1">
-                                ${res.multi.map(slot => `
-                                    <div style="background-color: ${slot.bg};" class="flex-1 h-7 rounded ${slot.textColor} font-bold text-[11px] px-2 flex items-center truncate shadow-xs">
+                            <div class="flex-1 px-2 h-full flex flex-wrap items-center gap-1.5">
+                                ${matching.map(slot => `
+                                    <div style="background-color: ${slot.bg};" class="h-7 rounded ${slot.textColor} font-bold text-[11px] px-2.5 flex items-center shadow-xs">
                                         ${slot.time} • ${slot.code}
                                     </div>
                                 `).join('')}
-                            </div>
-                        </div>`;
-                    }
-                    if (res) {
-                        return `
-                        <div class="flex items-center h-10 hover:bg-slate-50/50">
-                            <div class="timeline-hour">${h}</div>
-                            <div class="flex-1 px-1 h-full flex items-center">
-                                <div style="background-color: ${res.bg};" class="w-full h-7 rounded ${res.textColor} font-bold text-[11px] px-3 flex items-center shadow-xs">
-                                    ${res.time} • ${res.code}
-                                </div>
                             </div>
                         </div>`;
                     }
@@ -341,98 +400,307 @@ function renderCalendarPage() {
                 }).join('')}
             </div>
         </div>
-
-        <!-- MODAL DE RÉSERVATION (FIX FOR THE SHUFFLE ISSUE) -->
-        <div x-show="showModal" style="display: none;" 
-             class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-            
-            <div @click.away="showModal = false" 
-                 class="bg-white rounded-xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-150">
-                
-                <div class="bg-[#00897b] px-5 py-4 text-white flex items-center justify-between">
-                    <span class="text-base font-bold">Réserver une machine</span>
-                    <button type="button" @click="showModal = false" class="text-white/80 hover:text-white text-xl font-bold cursor-pointer">
-                        &times;
-                    </button>
-                </div>
-
-                <form method="POST" action="/reserver" class="p-6 space-y-4">
-                    <!-- Machine Choice -->
-                    <div>
-                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                            Sélectionner la machine
-                        </label>
-                        <select name="machine" x-model="modalMachine" 
-                                class="w-full px-3 py-2 border border-slate-300 rounded text-xs focus:border-[#00897b] focus:outline-none bg-slate-50">
-                            <optgroup label="Machines à laver">
-                                ${washers.map(w => `<option value="${w.code}">${w.code} (${w.name} - ${w.cap})</option>`).join('')}
-                            </optgroup>
-                            <optgroup label="Sèche-linge">
-                                ${dryers.map(d => `<option value="${d.code}">${d.code} (${d.name} - ${d.cap})</option>`).join('')}
-                            </optgroup>
-                        </select>
-                    </div>
-
-                    <!-- Date -->
-                    <div>
-                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                            Date
-                        </label>
-                        <input type="date" name="date" x-model="modalDate" value="2026-09-30" 
-                               class="w-full px-3 py-2 border border-slate-300 rounded text-xs focus:border-[#00897b] focus:outline-none">
-                    </div>
-
-                    <!-- Hour Slot -->
-                    <div>
-                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                            Créneau horaire
-                        </label>
-                        <select name="hour" x-model="modalHour" 
-                                class="w-full px-3 py-2 border border-slate-300 rounded text-xs focus:border-[#00897b] focus:outline-none bg-slate-50">
-                            <option value="08:00 - 09:00">08:00 - 09:00</option>
-                            <option value="09:00 - 10:00">09:00 - 10:00</option>
-                            <option value="10:00 - 11:00">10:00 - 11:00</option>
-                            <option value="11:00 - 12:00">11:00 - 12:00</option>
-                            <option value="13:00 - 14:00">13:00 - 14:00</option>
-                            <option value="14:00 - 15:00" selected>14:00 - 15:00</option>
-                            <option value="15:00 - 16:00">15:00 - 16:00</option>
-                            <option value="16:00 - 17:00">16:00 - 17:00</option>
-                            <option value="17:00 - 18:00">17:00 - 18:00</option>
-                            <option value="18:00 - 19:00">18:00 - 19:00</option>
-                            <option value="19:00 - 20:00">19:00 - 20:00</option>
-                            <option value="20:00 - 21:00">20:00 - 21:00</option>
-                        </select>
-                    </div>
-
-                    <!-- Quota Notice (NO CREDITS!) -->
-                    <div class="p-3 rounded bg-emerald-50 border border-emerald-200 text-xs space-y-1">
-                        <div class="flex items-center justify-between font-semibold text-emerald-900">
-                            <span>Quota hebdomadaire :</span>
-                            <span>${state.isAdmin ? 'Illimité (Admin)' : `${remaining} réservation(s) restante(s) sur ${state.weeklyLimit}`}</span>
-                        </div>
-                        <p class="text-[11px] text-emerald-700">
-                            ${state.isAdmin ? 'En tant qu\'administrateur, vos réservations ne sont pas décomptées.' : 'Cette réservation sera décomptée de votre quota de 3 réservations autorisées cette semaine.'}
-                        </p>
-                    </div>
-
-                    <div class="pt-2 flex items-center justify-end space-x-3">
-                        <button type="button" @click="showModal = false" 
-                                class="px-4 py-2 border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-bold rounded">
-                            Annuler
-                        </button>
-                        <button type="submit" 
-                                class="px-5 py-2 bg-[#00897b] hover:bg-[#00796b] text-white text-xs font-bold rounded shadow-xs cursor-pointer">
-                            Confirmer la réservation
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-
     </div>`;
 }
 
-// 2. Tableau de bord Page (NO CREDITS)
+// Dedicated full page for reservation (Multi-slot selection + 8h quota system)
+function renderDedicatedReservationPage(selectedMachine = 'ML1-OM') {
+    const washers = state.machines.filter(m => m.type === 'washer');
+    const dryers = state.machines.filter(m => m.type === 'dryer');
+    const remaining = Math.max(0, state.weeklyLimit - state.user.weeklyUsed);
+    
+    // Initial available slots for selected machine
+    const initDate = '2026-09-30';
+    const initAvailable = ALL_HOURLY_SLOTS.filter(s => !isSlotBooked(state.reservations, selectedMachine, initDate, s));
+
+    return `
+    <div class="max-w-3xl mx-auto space-y-6">
+        <div class="flex items-center justify-between">
+            <div>
+                <h1 class="text-xl font-bold text-slate-800 tracking-tight">Réserver une machine</h1>
+                <p class="text-xs text-slate-500">Planification des créneaux horaires disponibles par machine</p>
+            </div>
+            <a href="/calendrier" class="text-xs text-[#00897b] hover:underline font-semibold flex items-center space-x-1">
+                <span>&larr;</span>
+                <span>Retour au calendrier</span>
+            </a>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-md border border-slate-200 overflow-hidden">
+            <div class="bg-[#00897b] px-6 py-4 text-white flex items-center justify-between">
+                <span class="text-sm font-bold">Sélection des créneaux de réservation</span>
+                <span id="activeBadgeHeader" class="text-xs bg-white/20 px-2.5 py-1 rounded font-mono font-bold">${selectedMachine}</span>
+            </div>
+
+            <form method="POST" action="/reserver" class="p-6 space-y-6 text-xs" id="bookingForm">
+                <!-- Machine and Date Selectors -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <!-- Machine Choice (JUST THE CLEAN CODES - NO PARENTHESES!) -->
+                    <div>
+                        <label class="block font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                            Sélectionner la machine
+                        </label>
+                        <select name="machine" id="machineSelect" onchange="onMachineOrDateChange()"
+                                class="w-full px-3.5 py-2.5 border border-slate-300 rounded text-xs focus:border-[#00897b] focus:outline-none bg-slate-50 font-bold text-slate-800">
+                            <optgroup label="Machines à laver">
+                                ${washers.map(w => `<option value="${w.code}" ${w.code === selectedMachine ? 'selected' : ''}>${w.code}</option>`).join('')}
+                            </optgroup>
+                            <optgroup label="Sèche-linge">
+                                ${dryers.map(d => `<option value="${d.code}" ${d.code === selectedMachine ? 'selected' : ''}>${d.code}</option>`).join('')}
+                            </optgroup>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                            Date de réservation
+                        </label>
+                        <input type="date" name="date" id="dateInput" value="2026-09-30" onchange="onMachineOrDateChange()"
+                               class="w-full px-3.5 py-2.5 border border-slate-300 rounded text-xs focus:border-[#00897b] focus:outline-none bg-white">
+                    </div>
+                </div>
+
+                <!-- Multi-Slot Interactive Selection Grid -->
+                <div>
+                    <div class="flex items-center justify-between mb-2">
+                        <label class="block font-bold text-slate-700 uppercase tracking-wider">
+                            Créneaux horaires disponibles (Sélection multiple possible)
+                        </label>
+                        <span id="availableCountBadge" class="text-[11px] text-slate-500 font-semibold font-mono">
+                            ${initAvailable.length} créneaux disponibles
+                        </span>
+                    </div>
+                    <p class="text-[11px] text-slate-500 mb-3">
+                        Cochez un ou plusieurs créneaux d'1 heure consécutifs ou distincts sur cette machine. Les heures déjà réservées sont masquées automatiquement pour éviter les doublons.
+                    </p>
+
+                    <div id="slotsGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5 max-h-72 overflow-y-auto p-2 border border-slate-200 rounded-lg bg-slate-50/50">
+                        <!-- Populated dynamically by updateSlotsView() -->
+                    </div>
+                </div>
+
+                <!-- Quota & Credit Surveillance Summary Box (8 hours / week) -->
+                <div class="p-4 rounded-lg bg-emerald-50/80 border border-emerald-200 text-xs space-y-2.5">
+                    <div class="flex items-center justify-between font-bold text-emerald-900 border-b border-emerald-200/60 pb-2">
+                        <span class="flex items-center space-x-1.5">
+                            <span>⚡</span>
+                            <span>Surveillance du Quota Hebdomadaire (8h / semaine)</span>
+                        </span>
+                        <span class="text-xs font-mono bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded">
+                            1h de créneau = 1 crédit
+                        </span>
+                    </div>
+
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-slate-700 pt-1">
+                        <div class="bg-white/80 p-2.5 rounded border border-emerald-100">
+                            <span class="text-[10px] uppercase text-slate-400 font-bold block">Créneaux choisis</span>
+                            <span id="statSelectedHours" class="font-bold text-slate-800 text-sm font-mono">0 heure</span>
+                        </div>
+
+                        <div class="bg-white/80 p-2.5 rounded border border-emerald-100">
+                            <span class="text-[10px] uppercase text-slate-400 font-bold block">Coût total</span>
+                            <span id="statTotalCost" class="font-bold text-[#00897b] text-sm font-mono">0 crédit</span>
+                        </div>
+
+                        <div class="bg-white/80 p-2.5 rounded border border-emerald-100">
+                            <span class="text-[10px] uppercase text-slate-400 font-bold block">Solde actuel</span>
+                            <span id="statCurrentBalance" class="font-bold text-slate-800 text-sm font-mono">${state.isAdmin ? 'Illimité (Admin)' : `${remaining}h / 8h`}</span>
+                        </div>
+
+                        <div class="bg-white/80 p-2.5 rounded border border-emerald-100">
+                            <span class="text-[10px] uppercase text-slate-400 font-bold block">Solde après</span>
+                            <span id="statBalanceAfter" class="font-bold text-emerald-700 text-sm font-mono">${state.isAdmin ? 'Illimité' : `${remaining}h / 8h`}</span>
+                        </div>
+                    </div>
+
+                    <!-- Insufficient Quota Alert -->
+                    <div id="quotaExceededAlert" class="hidden p-2.5 bg-rose-50 border border-rose-200 text-rose-800 rounded font-semibold text-[11px] flex items-center space-x-2">
+                        <span>⚠️</span>
+                        <span>Dépassement de quota : vous avez sélectionné plus d'heures que votre solde hebdomadaire restant (<span id="alertRemainingSpan">${remaining}</span>h disponibles sur 8h).</span>
+                    </div>
+                </div>
+
+                <div class="pt-3 flex items-center justify-end space-x-3 border-t border-slate-200">
+                    <a href="/calendrier" 
+                       class="px-4 py-2 border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-bold rounded">
+                        Annuler
+                    </a>
+                    <button type="submit" id="submitBookingBtn" disabled
+                            class="px-6 py-2.5 opacity-50 cursor-not-allowed bg-slate-400 text-white text-xs font-bold rounded transition-all shadow-xs">
+                        Sélectionnez au moins 1 créneau
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Client-Side Reactivity Script -->
+    <script>
+    const ALL_SLOTS = ${JSON.stringify(ALL_HOURLY_SLOTS)};
+    const RESERVATIONS = ${JSON.stringify(state.reservations)};
+    const WEEKLY_LIMIT = ${state.weeklyLimit};
+    let WEEKLY_USED = ${state.user.weeklyUsed};
+    const IS_ADMIN = ${state.isAdmin ? 'true' : 'false'};
+
+    function parseTimeMins(t) {
+        const parts = t.trim().replace('h', ':00').split(':');
+        return parseInt(parts[0], 10) * 60 + (parts[1] ? parseInt(parts[1], 10) : 0);
+    }
+
+    function isSlotReserved(machineCode, date, slotTime) {
+        const [sStartStr, sEndStr] = slotTime.split('-').map(s => s.trim());
+        const slotStart = parseTimeMins(sStartStr);
+        let slotEnd = parseTimeMins(sEndStr);
+        if (slotEnd === 0) slotEnd = 24 * 60;
+
+        for (const r of RESERVATIONS) {
+            const resDate = r.date || '2026-09-30';
+            if (resDate !== date) continue;
+
+            if (r.multi) {
+                for (const m of r.multi) {
+                    if (m.code === machineCode) {
+                        const [rStartStr, rEndStr] = m.time.split('-').map(s => s.trim());
+                        const rStart = parseTimeMins(rStartStr);
+                        let rEnd = parseTimeMins(rEndStr);
+                        if (rEnd === 0) rEnd = 24 * 60;
+                        if (slotStart < rEnd && slotEnd > rStart) return true;
+                    }
+                }
+            } else if (r.code === machineCode) {
+                const [rStartStr, rEndStr] = r.time.split('-').map(s => s.trim());
+                const rStart = parseTimeMins(rStartStr);
+                let rEnd = parseTimeMins(rEndStr);
+                if (rEnd === 0) rEnd = 24 * 60;
+                if (slotStart < rEnd && slotEnd > rStart) return true;
+            }
+        }
+        return false;
+    }
+
+    function onMachineOrDateChange() {
+        updateSlotsView();
+    }
+
+    function updateSlotsView() {
+        const machine = document.getElementById('machineSelect').value;
+        const date = document.getElementById('dateInput').value;
+        const grid = document.getElementById('slotsGrid');
+        const headerBadge = document.getElementById('activeBadgeHeader');
+        if (headerBadge) headerBadge.innerText = machine;
+
+        // Find which slots are booked
+        const bookedSlots = [];
+        const availableSlots = [];
+        ALL_SLOTS.forEach(slot => {
+            if (isSlotReserved(machine, date, slot)) {
+                bookedSlots.push(slot);
+            } else {
+                availableSlots.push(slot);
+            }
+        });
+
+        // Update count badge
+        document.getElementById('availableCountBadge').innerText = availableSlots.length + ' créneaux disponibles';
+
+        // Render available slots
+        grid.innerHTML = availableSlots.map((slot, idx) => {
+            return '<label id="card-' + idx + '" class="flex items-center justify-between p-2.5 rounded border border-slate-200 bg-white text-slate-700 hover:border-[#00897b] transition-all cursor-pointer select-none text-xs">' +
+                '<input type="checkbox" name="hours" value="' + slot + '" id="slot-cb-' + idx + '" onchange="onSlotToggle(' + idx + ')" class="slot-checkbox hidden">' +
+                '<span class="font-mono font-medium">' + slot + '</span>' +
+                '<span id="check-' + idx + '" class="w-4 h-4 rounded-full border border-slate-300 flex items-center justify-center text-[10px]"></span>' +
+            '</label>';
+        }).join('');
+
+        updateSummary();
+    }
+
+    function onSlotToggle(idx) {
+        const cb = document.getElementById('slot-cb-' + idx);
+        const card = document.getElementById('card-' + idx);
+        const check = document.getElementById('check-' + idx);
+
+        if (cb.checked) {
+            card.classList.add('border-[#00897b]', 'bg-[#e0f2f1]', 'text-[#00695c]', 'font-bold', 'shadow-xs');
+            card.classList.remove('border-slate-200', 'bg-white', 'text-slate-700');
+            check.classList.add('bg-[#00897b]', 'border-[#00897b]', 'text-white');
+            check.classList.remove('border-slate-300');
+            check.innerHTML = '✓';
+        } else {
+            card.classList.remove('border-[#00897b]', 'bg-[#e0f2f1]', 'text-[#00695c]', 'font-bold', 'shadow-xs');
+            card.classList.add('border-slate-200', 'bg-white', 'text-slate-700');
+            check.classList.remove('bg-[#00897b]', 'border-[#00897b]', 'text-white');
+            check.classList.add('border-slate-300');
+            check.innerHTML = '';
+        }
+
+        updateSummary();
+    }
+
+    function updateSummary() {
+        const checkedBoxes = document.querySelectorAll('.slot-checkbox:checked');
+        const count = checkedBoxes.length;
+        const remaining = Math.max(0, WEEKLY_LIMIT - WEEKLY_USED);
+
+        document.getElementById('statSelectedHours').innerText = count + ' heure' + (count > 1 ? 's' : '');
+        document.getElementById('statTotalCost').innerText = count + ' crédit' + (count > 1 ? 's' : '');
+
+        const balanceAfterEl = document.getElementById('statBalanceAfter');
+        const alertEl = document.getElementById('quotaExceededAlert');
+        const btn = document.getElementById('submitBookingBtn');
+
+        if (IS_ADMIN) {
+            balanceAfterEl.innerText = 'Illimité (Admin)';
+            balanceAfterEl.className = 'font-bold text-emerald-700 text-sm font-mono';
+            alertEl.classList.add('hidden');
+            if (count > 0) {
+                btn.disabled = false;
+                btn.className = 'px-6 py-2.5 bg-[#00897b] hover:bg-[#00796b] text-white text-xs font-bold rounded transition-all shadow-xs cursor-pointer';
+                btn.innerText = 'Confirmer la réservation (' + count + 'h • ' + count + ' crédit' + (count > 1 ? 's' : '') + ')';
+            } else {
+                btn.disabled = true;
+                btn.className = 'px-6 py-2.5 opacity-50 cursor-not-allowed bg-slate-400 text-white text-xs font-bold rounded transition-all shadow-xs';
+                btn.innerText = 'Sélectionnez au moins 1 créneau';
+            }
+            return;
+        }
+
+        const afterBalance = remaining - count;
+        if (afterBalance < 0) {
+            balanceAfterEl.innerText = afterBalance + 'h / 8h (Dépassé)';
+            balanceAfterEl.className = 'font-bold text-rose-600 text-sm font-mono';
+            alertEl.classList.remove('hidden');
+            document.getElementById('alertRemainingSpan').innerText = remaining;
+            btn.disabled = true;
+            btn.className = 'px-6 py-2.5 opacity-50 cursor-not-allowed bg-rose-500 text-white text-xs font-bold rounded transition-all shadow-xs';
+            btn.innerText = 'Quota insuffisant (' + remaining + 'h restantes)';
+        } else {
+            balanceAfterEl.innerText = afterBalance + 'h / 8h';
+            balanceAfterEl.className = 'font-bold text-emerald-700 text-sm font-mono';
+            alertEl.classList.add('hidden');
+            if (count > 0) {
+                btn.disabled = false;
+                btn.className = 'px-6 py-2.5 bg-[#00897b] hover:bg-[#00796b] text-white text-xs font-bold rounded transition-all shadow-xs cursor-pointer';
+                btn.innerText = 'Confirmer la réservation (' + count + 'h • ' + count + ' crédit' + (count > 1 ? 's' : '') + ')';
+            } else {
+                btn.disabled = true;
+                btn.className = 'px-6 py-2.5 opacity-50 cursor-not-allowed bg-slate-400 text-white text-xs font-bold rounded transition-all shadow-xs';
+                btn.innerText = 'Sélectionnez au moins 1 créneau';
+            }
+        }
+    }
+
+    // Initialize on load
+    document.addEventListener('DOMContentLoaded', () => {
+        updateSlotsView();
+    });
+    if (document.readyState === 'complete' || document.readyState === 'interactive') {
+        updateSlotsView();
+    }
+    </script>`;
+}
+
+// 2. Tableau de bord Page
 function renderDashboardPage() {
     const remaining = Math.max(0, state.weeklyLimit - state.user.weeklyUsed);
 
@@ -449,9 +717,9 @@ function renderDashboardPage() {
             <div class="bg-white p-5 rounded-lg border border-slate-200 shadow-xs">
                 <span class="text-xs font-semibold text-slate-500 uppercase">Quota Hebdomadaire</span>
                 <p class="text-2xl font-bold ${remaining > 0 ? 'text-emerald-600' : 'text-rose-600'} mt-2">
-                    ${state.isAdmin ? 'Illimité' : `${remaining} / ${state.weeklyLimit}`}
+                    ${state.isAdmin ? 'Illimité' : `${remaining}h / ${state.weeklyLimit}h`}
                 </p>
-                <span class="text-[11px] text-slate-500">${state.isAdmin ? 'Admin' : 'Réservations restantes'}</span>
+                <span class="text-[11px] text-slate-500">${state.isAdmin ? 'Admin' : 'Heures restantes cette semaine'}</span>
             </div>
             <div class="bg-white p-5 rounded-lg border border-slate-200 shadow-xs">
                 <span class="text-xs font-semibold text-slate-500 uppercase">Réservations Aujourd'hui</span>
@@ -476,8 +744,17 @@ function renderDashboardPage() {
     </div>`;
 }
 
-// 3. Réservations Page (NO CREDITS)
+// 3. Réservations Page
 function renderReservationsPage() {
+    const allRes = [];
+    state.reservations.forEach(r => {
+        if (r.multi) {
+            r.multi.forEach(m => allRes.push({ ...m, hour: r.hour, date: '30 sept 2026' }));
+        } else {
+            allRes.push({ ...r, date: r.date || '30 sept 2026' });
+        }
+    });
+
     return `
     <div class="space-y-6 max-w-6xl mx-auto">
         <div class="flex items-center justify-between">
@@ -485,7 +762,10 @@ function renderReservationsPage() {
                 <h1 class="text-xl font-bold text-slate-800">Gestion des Réservations</h1>
                 <p class="text-xs text-slate-500">Historique et créneaux planifiés cette semaine</p>
             </div>
-            <a href="/calendrier" class="px-4 py-2 bg-[#00897b] text-white rounded text-xs font-bold shadow-xs">Réserver sur le calendrier</a>
+            <a href="/reserver" class="px-5 py-2.5 bg-[#00897b] hover:bg-[#00796b] text-white rounded text-xs font-bold shadow-xs flex items-center space-x-1.5">
+                <span>+</span>
+                <span>Nouvelle réservation</span>
+            </a>
         </div>
 
         <div class="bg-white rounded-lg border border-slate-200 shadow-xs overflow-hidden">
@@ -494,37 +774,27 @@ function renderReservationsPage() {
                     <tr>
                         <th class="p-3.5">Machine</th>
                         <th class="p-3.5">Bénéficiaire</th>
-                        <th class="p-3.5">Créneau</th>
+                        <th class="p-3.5">Date & Créneau</th>
                         <th class="p-3.5">Décompte Quota</th>
                         <th class="p-3.5">Statut</th>
                         <th class="p-3.5 text-right">Action</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100">
-                    <tr>
-                        <td class="p-3.5 font-bold text-[#e53935]">ML1-OM (Lave-linge)</td>
-                        <td class="p-3.5">Alex Rivera (STU-98241)</td>
-                        <td class="p-3.5">30 sept 2026 • 00:00 - 01:00</td>
-                        <td class="p-3.5 text-slate-600 font-semibold">1 rés. semaine</td>
-                        <td class="p-3.5"><span class="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-bold text-[10px]">Actif</span></td>
-                        <td class="p-3.5 text-right"><button class="text-rose-600 hover:underline font-semibold">Annuler</button></td>
+                    ${allRes.map(res => `
+                    <tr class="hover:bg-slate-50/60 transition-colors">
+                        <td class="p-3.5 font-bold">
+                            <span style="background-color: ${res.bg || '#00897b'};" class="px-2.5 py-1 rounded text-xs font-mono font-bold ${res.textColor || 'text-white'} shadow-xs inline-block">
+                                ${res.code}
+                            </span>
+                        </td>
+                        <td class="p-3.5 font-semibold text-slate-700">${res.user || (state.isAdmin ? 'R. Omari' : 'Alex Rivera')}</td>
+                        <td class="p-3.5 text-slate-600 font-mono">${res.date || '30 sept 2026'} • ${res.time}</td>
+                        <td class="p-3.5 text-slate-600 font-semibold">${res.durationHours || 1} h crédit décomptée</td>
+                        <td class="p-3.5"><span class="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-bold text-[10px]">Confirmé</span></td>
+                        <td class="p-3.5 text-right"><span class="text-emerald-600 font-semibold text-xs">Actif</span></td>
                     </tr>
-                    <tr>
-                        <td class="p-3.5 font-bold text-[#ffd600] text-slate-900">ML2-PE (Lave-linge)</td>
-                        <td class="p-3.5">Sara Bennani (STU-88219)</td>
-                        <td class="p-3.5">30 sept 2026 • 07:00 - 09:00</td>
-                        <td class="p-3.5 text-slate-600 font-semibold">1 rés. semaine</td>
-                        <td class="p-3.5"><span class="px-2 py-0.5 rounded bg-sky-100 text-sky-800 font-bold text-[10px]">Confirmé</span></td>
-                        <td class="p-3.5 text-right"><button class="text-rose-600 hover:underline font-semibold">Annuler</button></td>
-                    </tr>
-                    <tr>
-                        <td class="p-3.5 font-bold text-[#1a237e] text-white">SL1-PE (Sèche-linge)</td>
-                        <td class="p-3.5">Youssef Alami (STU-99014)</td>
-                        <td class="p-3.5">30 sept 2026 • 06:00 - 07:00</td>
-                        <td class="p-3.5 text-slate-600 font-semibold">1 rés. semaine</td>
-                        <td class="p-3.5"><span class="px-2 py-0.5 rounded bg-blue-100 text-blue-800 font-bold text-[10px]">En cours</span></td>
-                        <td class="p-3.5 text-right"><span class="text-slate-400">Verrouillé</span></td>
-                    </tr>
+                    `).join('')}
                 </tbody>
             </table>
         </div>
@@ -596,7 +866,7 @@ function renderMachinesPage() {
     </div>`;
 }
 
-// 5. Gestion des utilisateurs (ADMIN ONLY - NO CREDITS)
+// 5. Gestion des utilisateurs (ADMIN ONLY)
 function renderUsersPage() {
     if (!state.isAdmin) {
         return `<div class="p-8 text-center text-rose-600 font-bold bg-white rounded border border-rose-200">Accès interdit : Cette page est réservée aux administrateurs.</div>`;
@@ -638,16 +908,16 @@ function renderUsersPage() {
                         <td class="p-3.5 text-slate-600">alex.rivera@fecc.ma</td>
                         <td class="p-3.5 text-slate-500 font-mono">STU-98241 (Bât. Omar, Ch. 214)</td>
                         <td class="p-3.5"><span class="px-2.5 py-0.5 rounded bg-blue-100 text-blue-800 font-bold text-[10px]">Étudiant</span></td>
-                        <td class="p-3.5 font-bold text-emerald-600">${state.user.weeklyUsed} / ${state.weeklyLimit} utilisée (${state.weeklyLimit - state.user.weeklyUsed} restantes)</td>
-                        <td class="p-3.5 text-right space-x-2"><a href="/reset-quota" class="text-[#00897b] hover:underline font-semibold">Réinitialiser quota</a></td>
+                        <td class="p-3.5 font-bold text-emerald-600">${state.user.weeklyUsed}h / ${state.weeklyLimit}h utilisées (${state.weeklyLimit - state.user.weeklyUsed}h restantes)</td>
+                        <td class="p-3.5 text-right space-x-2"><a href="/reset-quota" class="text-[#00897b] hover:underline font-semibold">Réinitialiser quota (8h)</a></td>
                     </tr>
                     <tr>
                         <td class="p-3.5 font-bold text-slate-800">Sara Bennani</td>
                         <td class="p-3.5 text-slate-600">sara.bennani@fecc.ma</td>
                         <td class="p-3.5 text-slate-500 font-mono">STU-88219 (Bât. Petit, Ch. 108)</td>
                         <td class="p-3.5"><span class="px-2.5 py-0.5 rounded bg-blue-100 text-blue-800 font-bold text-[10px]">Étudiant</span></td>
-                        <td class="p-3.5 font-bold text-amber-600">2 / 3 utilisées (1 restante)</td>
-                        <td class="p-3.5 text-right space-x-2"><button class="text-[#00897b] hover:underline font-semibold">Réinitialiser quota</button></td>
+                        <td class="p-3.5 font-bold text-amber-600">3h / 8h utilisées (5h restantes)</td>
+                        <td class="p-3.5 text-right space-x-2"><button class="text-[#00897b] hover:underline font-semibold">Réinitialiser quota (8h)</button></td>
                     </tr>
                 </tbody>
             </table>
@@ -699,7 +969,7 @@ function renderComplaintsPage() {
     </div>`;
 }
 
-// 7. Paramètres Page (ADMIN ONLY - NO CREDITS)
+// 7. Paramètres Page (ADMIN ONLY)
 function renderSettingsPage() {
     if (!state.isAdmin) {
         return `<div class="p-8 text-center text-rose-600 font-bold bg-white rounded border border-rose-200">Accès interdit : Cette page est réservée aux administrateurs.</div>`;
@@ -713,8 +983,8 @@ function renderSettingsPage() {
                 <h2 class="font-bold text-sm text-slate-800 border-b border-slate-200 pb-2 mb-4">Politique des Quotas Hebdomadaires</h2>
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="block font-semibold text-slate-700 mb-1">Nombre maximal de réservations par semaine</label>
-                        <div class="flex items-center space-x-2"><input type="number" value="${state.weeklyLimit}" class="w-24 px-3 py-2 border border-slate-300 rounded"><span class="text-slate-500">réservations / étudiant</span></div>
+                        <label class="block font-semibold text-slate-700 mb-1">Quota maximal d'heures par semaine</label>
+                        <div class="flex items-center space-x-2"><input type="number" value="${state.weeklyLimit}" class="w-24 px-3 py-2 border border-slate-300 rounded"><span class="text-slate-500">heures / étudiant / semaine (1h = 1 crédit)</span></div>
                     </div>
                     <div>
                         <label class="block font-semibold text-slate-700 mb-1">Jour de réinitialisation automatique</label>
@@ -807,42 +1077,80 @@ const server = http.createServer((req, res) => {
         return res.end();
     }
 
-    // HANDLE RESERVATION ACTION (NO PAGE SHUFFLE!)
+    // HANDLE MULTI-SLOT RESERVATION ACTION WITH 8H WEEKLY QUOTA SURVEILLANCE
     if (pathname === '/reserver' && req.method === 'POST') {
         let body = '';
         req.on('data', chunk => body += chunk);
         req.on('end', () => {
             const params = new URLSearchParams(body);
             const machineCode = params.get('machine') || 'ML1-OM';
-            const slotHour = params.get('hour') || '14:00 - 15:00';
-            const machine = state.machines.find(m => m.code === machineCode) || state.machines[0];
-
-            // Parse hour for schedule table (e.g. "14:00 - 15:00" -> "14 h")
-            const hourPrefix = slotHour.split(':')[0] + ' h';
-
-            // Add reservation to calendar timetable
-            state.reservations.push({
-                hour: hourPrefix,
-                time: slotHour,
-                code: machine.code,
-                bg: machine.bg,
-                textColor: machine.text,
-                user: state.isAdmin ? 'R. Omari' : 'Alex Rivera'
-            });
-
-            // Increment weekly quota if student
-            if (!state.isAdmin) {
-                state.user.weeklyUsed = Math.min(state.weeklyLimit, state.user.weeklyUsed + 1);
+            const bookingDate = params.get('date') || '2026-09-30';
+            
+            // Support multiple hours selected (hours or hours[])
+            let selectedHours = params.getAll('hours');
+            if (selectedHours.length === 0) {
+                selectedHours = params.getAll('hours[]');
+            }
+            if (selectedHours.length === 0 && params.get('hour')) {
+                selectedHours = [params.get('hour')];
             }
 
-            const remaining = Math.max(0, state.weeklyLimit - state.user.weeklyUsed);
-            const quotaMsg = state.isAdmin ? '(Quota Illimité - Admin)' : `(Quota restant : ${remaining}/${state.weeklyLimit} cette semaine)`;
-            const msg = encodeURIComponent(`Réservation confirmée pour la machine ${machine.code} (${slotHour}) ! ${quotaMsg}`);
+            if (selectedHours.length === 0) {
+                const msg = encodeURIComponent("Erreur : Aucun créneau sélectionné.");
+                res.writeHead(302, { 'Location': `/reserver?machine=${machineCode}&flash=${msg}` });
+                return res.end();
+            }
+
+            const machine = state.machines.find(m => m.code === machineCode) || state.machines[0];
+            const hoursCount = selectedHours.length;
+
+            // Check quota for non-admin
+            if (!state.isAdmin) {
+                const remaining = Math.max(0, state.weeklyLimit - state.user.weeklyUsed);
+                if (hoursCount > remaining) {
+                    const msg = encodeURIComponent(`Quota insuffisant : Vous avez sélectionné ${hoursCount}h mais il ne vous reste que ${remaining}h sur vos 8h cette semaine.`);
+                    res.writeHead(302, { 'Location': `/reserver?machine=${machineCode}&flash=${msg}` });
+                    return res.end();
+                }
+            }
+
+            // Create reservation for each selected 1-hour slot on the same machine
+            for (const slotHour of selectedHours) {
+                const hourPrefix = slotHour.split(':')[0].trim() + ' h';
+                state.reservations.push({
+                    date: bookingDate,
+                    hour: hourPrefix,
+                    time: slotHour,
+                    code: machine.code,
+                    bg: machine.bg,
+                    textColor: machine.text,
+                    user: state.isAdmin ? 'R. Omari' : 'Alex Rivera',
+                    durationHours: 1
+                });
+            }
+
+            if (!state.isAdmin) {
+                state.user.weeklyUsed = Math.min(state.weeklyLimit, state.user.weeklyUsed + hoursCount);
+            }
+
+            const remainingAfter = Math.max(0, state.weeklyLimit - state.user.weeklyUsed);
+            const quotaMsg = state.isAdmin 
+                ? '(Régime Administrateur - Quota Illimité)' 
+                : `(Quota restant : ${remainingAfter}h / ${state.weeklyLimit}h cette semaine)`;
+            const slotSummary = selectedHours.join(', ');
+            const msg = encodeURIComponent(`Réservation validée pour la machine ${machine.code} (${hoursCount} heure${hoursCount > 1 ? 's' : ''} : ${slotSummary}) le ${bookingDate} ! Décompte : ${hoursCount} heure${hoursCount > 1 ? 's' : ''}. ${quotaMsg}`);
 
             res.writeHead(302, { 'Location': `/calendrier?flash=${msg}` });
             return res.end();
         });
         return;
+    }
+
+    // Dedicated reservation page
+    if (pathname === '/reserver' && req.method === 'GET') {
+        const preselectedMachine = urlObj.searchParams.get('machine') || 'ML1-OM';
+        res.writeHead(200, { 'Content-Type': 'text/html' });
+        return res.end(renderLayout('Réserver une machine', renderDedicatedReservationPage(preselectedMachine), '/reserver'));
     }
 
     // Authenticated Routes:

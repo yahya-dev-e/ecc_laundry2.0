@@ -12,16 +12,18 @@ return [
     |
     */
 
-    // Maximum number of machine reservations allowed per student per calendar week
-    'weekly_reservation_limit' => (int) env('LAUNDRY_WEEKLY_LIMIT', 3),
+    // Maximum number of hours allowed per student per calendar week (8 hours / week)
+    'weekly_reservation_limit' => (int) env('LAUNDRY_WEEKLY_LIMIT', 8),
+    'weekly_hours_limit' => (int) env('LAUNDRY_WEEKLY_HOURS_LIMIT', 8),
+    'cost_per_hour_slot' => 1,
 
     // Maximum simultaneous active reservations allowed per student
-    'max_simultaneous_reservations' => 1,
+    'max_simultaneous_reservations' => 3,
 
     // Cycle durations (minutes)
     'cycle_durations' => [
-        'washer' => 45,
-        'dryer'  => 40,
+        'washer' => 60,
+        'dryer'  => 60,
     ],
 
     // How many minutes a user has to start before auto-release

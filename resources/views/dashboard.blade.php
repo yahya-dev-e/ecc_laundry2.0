@@ -3,32 +3,24 @@
 @section('content')
 <div class="space-y-6 max-w-6xl mx-auto" x-data="{
     search: '',
-    selectedMachine: 'ML1-OM',
-    showModal: false,
-    modalMachine: 'ML1-OM',
-    modalDate: '2026-09-30',
-    modalHour: '14:00',
-    openReservation(code) {
-        this.modalMachine = code || this.selectedMachine || 'ML1-OM';
-        this.showModal = true;
-    }
+    selectedMachine: 'ML1-OM'
 }">
 
-    <!-- Info Notice Banner with Quota reminder -->
+    <!-- Info Notice Banner -->
     <div class="bg-white border-l-4 border-[#00897b] p-3.5 rounded shadow-xs flex items-center justify-between">
         <div class="flex items-center space-x-3">
             <div class="w-5 h-5 rounded-full bg-[#00897b]/10 text-[#00897b] flex items-center justify-center font-bold text-xs shrink-0">
                 i
             </div>
             <span class="text-xs text-slate-700">
-                Cliquez sur une machine pour voir ses créneaux, puis sur <strong>« Réserver »</strong> pour planifier votre lavage.
+                Cliquez sur une machine pour voir les créneaux déjà réservés.
             </span>
         </div>
 
         @if(!auth()->check() || !auth()->user()->isAdmin())
             <div class="hidden sm:flex items-center space-x-2 text-xs font-semibold px-2.5 py-1 rounded bg-emerald-50 text-emerald-800 border border-emerald-200">
                 <span>Quota restant :</span>
-                <span class="font-bold">2 / 3 réservations</span>
+                <span class="font-bold">6 / 8 heures</span>
             </div>
         @else
             <div class="hidden sm:flex items-center space-x-2 text-xs font-semibold px-2.5 py-1 rounded bg-amber-50 text-amber-800 border border-amber-200">
@@ -155,15 +147,18 @@
         </div>
     </div>
 
-    <!-- Réserver Action Button (Opens Reservation Modal Directly - No Shuffling!) -->
-    <div class="flex justify-between items-center max-w-2xl mx-auto">
-        <div class="text-xs text-slate-500">
-            Machine sélectionnée : <span class="font-bold text-[#00897b]" x-text="selectedMachine || 'Aucune (veuillez choisir)'"></span>
+    <!-- Action Button Réserver (Direct Link to Dedicated Page) -->
+    <div class="flex flex-col sm:flex-row justify-between items-center gap-3 max-w-2xl mx-auto bg-slate-50 p-3.5 rounded-lg border border-slate-200 shadow-xs">
+        <div class="text-xs text-slate-600">
+            Machine sélectionnée : <span class="font-bold text-[#00897b] bg-[#00897b]/10 px-2.5 py-1 rounded text-sm" x-text="selectedMachine">ML1-OM</span>
         </div>
-        <button type="button" @click="openReservation(selectedMachine)" 
-                class="px-6 py-2 rounded bg-[#00897b] hover:bg-[#00796b] text-white text-xs font-bold transition-all shadow-xs cursor-pointer active:scale-95">
-            Réserver ce créneau
-        </button>
+        <div>
+            <a :href="'/reserver?machine=' + encodeURIComponent(selectedMachine)" 
+               class="px-6 py-2.5 rounded bg-[#00897b] hover:bg-[#00796b] text-white text-xs font-bold transition-all shadow-md flex items-center space-x-2 cursor-pointer active:scale-95">
+                <span>Réserver cette machine</span>
+                <span>&rarr;</span>
+            </a>
+        </div>
     </div>
 
     <!-- Date Title & Navigation Controls -->
@@ -251,111 +246,6 @@
                 </div>
             @endforeach
 
-        </div>
-    </div>
-
-    <!-- MODAL DE RÉSERVATION INTERACTIVE (Fixes the page shuffle issue) -->
-    <div x-show="showModal" x-cloak
-         class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-        
-        <div @click.away="showModal = false"
-             class="bg-white rounded-xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden transform transition-all">
-            
-            <div class="bg-[#00897b] px-5 py-4 text-white flex items-center justify-between">
-                <div class="flex items-center space-x-2">
-                    <span class="text-base font-bold">Réserver une machine</span>
-                </div>
-                <button type="button" @click="showModal = false" class="text-white/80 hover:text-white text-lg font-bold">
-                    &times;
-                </button>
-            </div>
-
-            <form method="POST" action="{{ route('bookings.store') }}" class="p-6 space-y-4">
-                @csrf
-
-                <!-- Selected Machine -->
-                <div>
-                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                        Machine
-                    </label>
-                    <select name="machine_id" x-model="modalMachine" 
-                            class="w-full px-3 py-2 border border-slate-300 rounded text-xs focus:border-[#00897b] focus:outline-none">
-                        <optgroup label="Machines à laver">
-                            <option value="ML1-OM">ML1-OM (Bâtiment Omar, RDC - 9.0kg)</option>
-                            <option value="ML2-OM">ML2-OM (Bâtiment Omar, RDC - 9.0kg)</option>
-                            <option value="ML1-PE">ML1-PE (Bâtiment Petit, Étage 1 - 8.0kg)</option>
-                            <option value="ML2-PE">ML2-PE (Bâtiment Petit, Étage 1 - 8.0kg)</option>
-                            <option value="ML3-PE">ML3-PE (Bâtiment Petit, Étage 1 - 8.5kg)</option>
-                            <option value="ML4-PE">ML4-PE (Bâtiment Petit, Étage 2 - 8.5kg)</option>
-                            <option value="ML3-OM">ML3-OM (Bâtiment Omar, RDC - 10.0kg)</option>
-                        </optgroup>
-                        <optgroup label="Sèche-linge">
-                            <option value="SL1-OM">SL1-OM (Bâtiment Omar, RDC - 9.5kg)</option>
-                            <option value="SL2-OM">SL2-OM (Bâtiment Omar, RDC - 9.5kg)</option>
-                            <option value="SL1-PE">SL1-PE (Bâtiment Petit, Étage 1 - 8.0kg)</option>
-                            <option value="SL2-PE">SL2-PE (Bâtiment Petit, Étage 1 - 8.0kg)</option>
-                            <option value="SL3-PE">SL3-PE (Bâtiment Petit, Étage 2 - 8.5kg)</option>
-                            <option value="SL3-OM">SL3-OM (Bâtiment Omar, RDC - 9.5kg)</option>
-                        </optgroup>
-                    </select>
-                </div>
-
-                <!-- Date -->
-                <div>
-                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                        Date de réservation
-                    </label>
-                    <input type="date" name="date" x-model="modalDate" value="2026-09-30" 
-                           class="w-full px-3 py-2 border border-slate-300 rounded text-xs focus:border-[#00897b] focus:outline-none">
-                </div>
-
-                <!-- Hour slot -->
-                <div>
-                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                        Créneau horaire (1 heure)
-                    </label>
-                    <select name="start_time" x-model="modalHour"
-                            class="w-full px-3 py-2 border border-slate-300 rounded text-xs focus:border-[#00897b] focus:outline-none">
-                        <option value="08:00">08:00 - 09:00</option>
-                        <option value="09:00">09:00 - 10:00</option>
-                        <option value="10:00">10:00 - 11:00</option>
-                        <option value="11:00">11:00 - 12:00</option>
-                        <option value="12:00">12:00 - 13:00</option>
-                        <option value="13:00">13:00 - 14:00</option>
-                        <option value="14:00" selected>14:00 - 15:00</option>
-                        <option value="15:00">15:00 - 16:00</option>
-                        <option value="16:00">16:00 - 17:00</option>
-                        <option value="17:00">17:00 - 18:00</option>
-                        <option value="18:00">18:00 - 19:00</option>
-                        <option value="19:00">19:00 - 20:00</option>
-                        <option value="20:00">20:00 - 21:00</option>
-                        <option value="21:00">21:00 - 22:00</option>
-                    </select>
-                </div>
-
-                <!-- Quota Information Box (No credits!) -->
-                <div class="p-3 rounded bg-slate-50 border border-slate-200 text-xs space-y-1">
-                    <div class="flex items-center justify-between font-semibold text-slate-800">
-                        <span>Quota hebdomadaire :</span>
-                        <span class="text-[#00897b]">2 / 3 réservations restantes</span>
-                    </div>
-                    <p class="text-[11px] text-slate-500">
-                        Cette réservation sera décomptée de votre quota de la semaine en cours.
-                    </p>
-                </div>
-
-                <!-- Actions -->
-                <div class="pt-2 flex items-center justify-end space-x-3">
-                    <button type="button" @click="showModal = false"
-                            class="px-4 py-2 border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-bold rounded">
-                        Annuler
-                    </button>
-                    <button type="submit"
-                            class="px-5 py-2 bg-[#00897b] hover:bg-[#00796b] text-white text-xs font-bold rounded shadow-xs">
-                        Confirmer la réservation
-                    </button>
-                </div>
-            </form>
         </div>
     </div>
 

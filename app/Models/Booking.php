@@ -14,6 +14,8 @@ class Booking extends Model
 {
     use HasFactory;
 
+    protected $table = 'reservations';
+
     protected $fillable = [
         'user_id',
         'machine_id',

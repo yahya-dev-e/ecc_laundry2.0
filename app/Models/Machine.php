@@ -46,6 +46,11 @@ class Machine extends Model
         return $this->hasMany(Booking::class);
     }
 
+    public function reservations(): HasMany
+    {
+        return $this->hasMany(Reservation::class);
+    }
+
     public function activeBooking(): HasOne
     {
         return $this->hasOne(Booking::class)
