@@ -2,7 +2,6 @@
 
 namespace Database\Seeders;
 
-use App\Enums\BookingStatus;
 use App\Models\Booking;
 use App\Models\Machine;
 use App\Models\Transaction;
@@ -60,25 +59,25 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
-        // 5. Seed an active booking for machine W-02
-        $machineW2 = Machine::where('code', 'W-02')->first();
+        // 5. Seed an active reservation for machine ML2-OM
+        $machineW2 = Machine::where('name', 'ML2-OM')->first();
         if ($machineW2) {
             $booking = Booking::create([
                 'user_id' => $student->id,
                 'machine_id' => $machineW2->id,
-                'status' => BookingStatus::IN_PROGRESS,
                 'start_time' => Carbon::now()->subMinutes(23),
                 'end_time' => Carbon::now()->addMinutes(22),
-                'credits_spent' => $machineW2->cost_per_cycle,
-                'started_at' => Carbon::now()->subMinutes(23),
+                'notified_start' => true,
+                'notified_end' => false,
+                'weekly_session_limit_remaining' => 6,
             ]);
 
             Transaction::create([
                 'user_id' => $student->id,
                 'booking_id' => $booking->id,
-                'amount' => -$machineW2->cost_per_cycle,
+                'amount' => -2,
                 'type' => 'booking_charge',
-                'description' => "Cycle started for {$machineW2->name} ({$machineW2->code})",
+                'description' => "Cycle started for {$machineW2->name}",
             ]);
         }
     }

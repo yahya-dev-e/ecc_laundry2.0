@@ -2,7 +2,6 @@
 
 namespace Tests\Feature;
 
-use App\Enums\BookingStatus;
 use App\Enums\MachineStatus;
 use App\Models\Booking;
 use App\Models\Machine;
@@ -22,7 +21,7 @@ class BookingTest extends TestCase
         $response = $this->actingAs($user)->get(route('bookings.index'));
 
         $response->assertStatus(200);
-        $response->assertSee('My Bookings & History');
+        $response->assertSee('Mes Réservations & Historique');
     }
 
     public function test_user_can_reserve_an_available_machine(): void
@@ -30,7 +29,6 @@ class BookingTest extends TestCase
         $user = User::factory()->create(['credits' => 10]);
         $machine = Machine::factory()->create([
             'status' => MachineStatus::AVAILABLE,
-            'cost_per_cycle' => 2,
         ]);
 
         $slotTime = Carbon::now()->addHours(2)->startOfHour();
@@ -41,22 +39,19 @@ class BookingTest extends TestCase
         ]);
 
         $response->assertRedirect(route('bookings.index'));
-        $this->assertDatabaseHas('bookings', [
+        $this->assertDatabaseHas('reservations', [
             'user_id' => $user->id,
             'machine_id' => $machine->id,
-            'status' => BookingStatus::CONFIRMED->value,
-            'credits_spent' => 2,
         ]);
 
-        $this->assertEquals(8, $user->fresh()->credits);
+        $this->assertEquals(9, $user->fresh()->credits);
     }
 
     public function test_user_cannot_reserve_machine_with_insufficient_credits(): void
     {
-        $user = User::factory()->create(['credits' => 1]);
+        $user = User::factory()->create(['credits' => 0]);
         $machine = Machine::factory()->create([
             'status' => MachineStatus::AVAILABLE,
-            'cost_per_cycle' => 2,
         ]);
 
         $slotTime = Carbon::now()->addHours(3)->startOfHour();
@@ -66,29 +61,29 @@ class BookingTest extends TestCase
             'start_time' => $slotTime->toIso8601String(),
         ]);
 
-        $this->assertDatabaseMissing('bookings', [
+        $this->assertDatabaseMissing('reservations', [
             'user_id' => $user->id,
             'machine_id' => $machine->id,
         ]);
-        $this->assertEquals(1, $user->fresh()->credits);
+        $this->assertEquals(0, $user->fresh()->credits);
     }
 
     public function test_user_can_cancel_booking_and_get_refund(): void
     {
         $user = User::factory()->create(['credits' => 10]);
-        $machine = Machine::factory()->create(['cost_per_cycle' => 2]);
+        $machine = Machine::factory()->create();
         $booking = Booking::factory()->create([
             'user_id' => $user->id,
             'machine_id' => $machine->id,
-            'status' => BookingStatus::CONFIRMED,
-            'credits_spent' => 2,
+            'start_time' => Carbon::now()->addHours(2),
+            'end_time' => Carbon::now()->addHours(3),
         ]);
 
         $response = $this->actingAs($user)->post(route('bookings.cancel', $booking));
 
         $response->assertRedirect(route('bookings.index'));
-        $this->assertEquals(BookingStatus::CANCELLED, $booking->fresh()->status);
-        $this->assertEquals(12, $user->fresh()->credits);
+        $this->assertDatabaseMissing('reservations', ['id' => $booking->id]);
+        $this->assertEquals(11, $user->fresh()->credits);
     }
 
     public function test_user_can_start_cycle_on_confirmed_booking(): void
@@ -96,19 +91,18 @@ class BookingTest extends TestCase
         $user = User::factory()->create();
         $machine = Machine::factory()->create([
             'status' => MachineStatus::AVAILABLE,
-            'default_duration_minutes' => 45,
         ]);
         $booking = Booking::factory()->create([
             'user_id' => $user->id,
             'machine_id' => $machine->id,
-            'status' => BookingStatus::CONFIRMED,
+            'start_time' => Carbon::now()->subMinutes(5),
+            'end_time' => Carbon::now()->addMinutes(40),
         ]);
 
         $response = $this->actingAs($user)->post(route('bookings.start', $booking));
 
         $response->assertRedirect(route('dashboard'));
-        $this->assertEquals(BookingStatus::IN_PROGRESS, $booking->fresh()->status);
+        $this->assertEquals('in_progress', $booking->fresh()->status);
         $this->assertEquals(MachineStatus::IN_USE, $machine->fresh()->status);
-        $this->assertNotNull($machine->fresh()->current_cycle_ends_at);
     }
 }

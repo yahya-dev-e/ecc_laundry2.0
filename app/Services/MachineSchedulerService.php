@@ -78,10 +78,10 @@ class MachineSchedulerService
             ->pluck('count', 'status')
             ->toArray();
 
-        $totalWashers = Machine::where('type', 'washer')->count();
+        $totalWashers = Machine::where('type', 'washing-machine')->count();
         $totalDryers = Machine::where('type', 'dryer')->count();
 
-        $activeWashers = Machine::where('type', 'washer')->where('status', MachineStatus::AVAILABLE)->count();
+        $activeWashers = Machine::where('type', 'washing-machine')->where('status', MachineStatus::AVAILABLE)->count();
         $activeDryers = Machine::where('type', 'dryer')->where('status', MachineStatus::AVAILABLE)->count();
 
         return [
@@ -89,7 +89,7 @@ class MachineSchedulerService
             'available' => $counts[MachineStatus::AVAILABLE->value] ?? 0,
             'in_use' => $counts[MachineStatus::IN_USE->value] ?? 0,
             'reserved' => $counts[MachineStatus::RESERVED->value] ?? 0,
-            'maintenance' => $counts[MachineStatus::MAINTENANCE->value] ?? 0,
+            'under_maintenance' => $counts[MachineStatus::UNDER_MAINTENANCE->value] ?? 0,
             'out_of_order' => $counts[MachineStatus::OUT_OF_ORDER->value] ?? 0,
             'washers_available_ratio' => "{$activeWashers}/{$totalWashers}",
             'dryers_available_ratio' => "{$activeDryers}/{$totalDryers}",

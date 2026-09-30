@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Enums\MachineStatus;
 use App\Models\Machine;
+use App\Models\Reservation;
 use App\Services\BookingService;
 use Carbon\Carbon;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -24,14 +25,20 @@ class CheckActiveCycles implements ShouldQueue
      */
     public function handle(BookingService $bookingService): void
     {
-        $finishedMachines = Machine::where('status', MachineStatus::IN_USE)
-            ->whereNotNull('current_cycle_ends_at')
-            ->where('current_cycle_ends_at', '<=', Carbon::now())
-            ->get();
+        $now = Carbon::now();
+        // Machines marked 'in-use' where active reservations have elapsed
+        $inUseMachines = Machine::where('status', MachineStatus::IN_USE)->get();
 
-        foreach ($finishedMachines as $machine) {
-            $bookingService->completeCycle($machine);
-            Log::info("CheckActiveCycles: Machine {$machine->code} cycle has naturally completed. Machine freed.");
+        foreach ($inUseMachines as $machine) {
+            $hasActiveCycle = Reservation::where('machine_id', $machine->id)
+                ->where('start_time', '<=', $now)
+                ->where('end_time', '>', $now)
+                ->exists();
+
+            if (!$hasActiveCycle) {
+                $bookingService->completeCycle($machine);
+                Log::info("CheckActiveCycles: Machine {$machine->name} cycle has naturally completed. Machine freed.");
+            }
         }
     }
 }

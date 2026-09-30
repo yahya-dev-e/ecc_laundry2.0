@@ -14,31 +14,49 @@ class Machine extends Model
 {
     use HasFactory;
 
+    /**
+     * Exact MySQL table name.
+     *
+     * @var string
+     */
+    protected $table = 'machines';
+
+    /**
+     * The attributes that are mass assignable.
+     * Strictly matching frozen MySQL schema columns:
+     * id, name, type, status, color, created_at, updated_at
+     *
+     * @var array<int, string>
+     */
     protected $fillable = [
         'name',
-        'code',
         'type',
         'status',
-        'capacity_kg',
-        'cost_per_cycle',
-        'default_duration_minutes',
-        'location',
-        'current_cycle_ends_at',
-        'last_maintenance_at',
-        'notes',
+        'color',
     ];
 
+    /**
+     * The attributes that should be cast.
+     *
+     * @return array<string, string>
+     */
     protected function casts(): array
     {
         return [
             'type' => MachineType::class,
             'status' => MachineStatus::class,
-            'capacity_kg' => 'decimal:1',
-            'cost_per_cycle' => 'integer',
-            'default_duration_minutes' => 'integer',
-            'current_cycle_ends_at' => 'datetime',
-            'last_maintenance_at' => 'datetime',
         ];
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Relationships
+    |--------------------------------------------------------------------------
+    */
+
+    public function reservations(): HasMany
+    {
+        return $this->hasMany(Reservation::class);
     }
 
     public function bookings(): HasMany
@@ -46,11 +64,9 @@ class Machine extends Model
         return $this->hasMany(Reservation::class);
     }
 
-    public function reservations(): HasMany
-    {
-        return $this->hasMany(Reservation::class);
-    }
-
+    /**
+     * Active booking currently running on this machine (time-derived).
+     */
     public function activeBooking(): HasOne
     {
         $now = Carbon::now();
@@ -59,6 +75,12 @@ class Machine extends Model
             ->where('end_time', '>=', $now)
             ->latestOfMany('start_time');
     }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Status Check Helpers
+    |--------------------------------------------------------------------------
+    */
 
     public function isAvailable(): bool
     {
@@ -75,27 +97,72 @@ class Machine extends Model
         return $this->status === MachineStatus::RESERVED;
     }
 
-    public function remainingCycleSeconds(): int
-    {
-        if (!$this->current_cycle_ends_at) {
-            return 0;
-        }
+    /*
+    |--------------------------------------------------------------------------
+    | Dynamic Accessors for Business Logic & Backward Compatibility
+    |--------------------------------------------------------------------------
+    */
 
-        $diff = Carbon::now()->diffInSeconds($this->current_cycle_ends_at, false);
-        return max(0, (int) $diff);
+    /**
+     * Alias code to name so any legacy call to $machine->code safely returns name.
+     */
+    public function getCodeAttribute(): string
+    {
+        return $this->name;
     }
 
+    /**
+     * Dynamic cycle duration based on machine type.
+     */
+    public function getDefaultDurationMinutesAttribute(): int
+    {
+        return $this->type?->defaultDurationMinutes() ?? 45;
+    }
+
+    /**
+     * Dynamic cycle credit cost based on machine type.
+     */
+    public function getCostPerCycleAttribute(): int
+    {
+        return $this->type?->defaultCost() ?? 2;
+    }
+
+    /**
+     * Default load capacity in kg.
+     */
+    public function getCapacityKgAttribute(): float
+    {
+        return $this->type === MachineType::DRYER ? 8.5 : 8.0;
+    }
+
+    /**
+     * Dynamically derive current cycle end time from active reservation.
+     */
+    public function getCurrentCycleEndsAtAttribute(): ?Carbon
+    {
+        return $this->activeBooking?->end_time;
+    }
+
+    /**
+     * Dynamically calculate cycle progress percentage from active reservation.
+     */
     public function cycleProgressPercentage(): int
     {
-        if (!$this->isInUse() || !$this->current_cycle_ends_at) {
+        if (!$this->isInUse()) {
             return 0;
         }
 
-        $totalSeconds = $this->default_duration_minutes * 60;
-        $remaining = $this->remainingCycleSeconds();
-        $elapsed = max(0, $totalSeconds - $remaining);
+        $active = $this->activeBooking;
+        if ($active && $active->start_time && $active->end_time) {
+            $totalSeconds = $active->start_time->diffInSeconds($active->end_time);
+            if ($totalSeconds <= 0) {
+                return 0;
+            }
+            $elapsed = Carbon::now()->diffInSeconds($active->start_time);
+            $percentage = (int) round(($elapsed / $totalSeconds) * 100);
+            return min(100, max(0, $percentage));
+        }
 
-        $percentage = (int) round(($elapsed / $totalSeconds) * 100);
-        return min(100, max(0, $percentage));
+        return 0;
     }
 }

@@ -13,30 +13,23 @@ class MachineFactory extends Factory
 
     public function definition(): array
     {
-        $type = fake()->randomElement([MachineType::WASHER, MachineType::DRYER]);
-        $prefix = $type === MachineType::WASHER ? 'W' : 'D';
+        $type = fake()->randomElement([MachineType::WASHING_MACHINE, MachineType::DRYER]);
+        $prefix = $type === MachineType::WASHING_MACHINE ? 'ML' : 'SL';
         $number = fake()->unique()->numberBetween(1, 99);
+        $location = fake()->randomElement(['OM', 'PE']);
 
         return [
-            'name' => ($type === MachineType::WASHER ? 'Eco Wash ' : 'Turbo Dry ') . sprintf('%02d', $number),
-            'code' => sprintf('%s-%02d', $prefix, $number),
+            'name' => sprintf('%s%d-%s', $prefix, $number, $location),
             'type' => $type,
             'status' => MachineStatus::AVAILABLE,
-            'capacity_kg' => fake()->randomElement([7.5, 8.5, 10.0]),
-            'cost_per_cycle' => 2,
-            'default_duration_minutes' => $type === MachineType::WASHER ? 45 : 40,
-            'location' => 'Block ' . fake()->randomElement(['A', 'B', 'C']) . ' - Level ' . fake()->numberBetween(1, 3),
-            'current_cycle_ends_at' => null,
-            'last_maintenance_at' => fake()->dateTimeBetween('-3 months', 'now'),
-            'notes' => null,
+            'color' => fake()->randomElement(['#e53935', '#00e676', '#2979ff', '#ffd600', '#ff007f', '#ff9100', '#004d40', '#4e342e', '#4caf50', '#1a237e', '#827717', '#8e24aa', '#212121']),
         ];
     }
 
     public function washer(): static
     {
         return $this->state(fn (array $attributes) => [
-            'type' => MachineType::WASHER,
-            'default_duration_minutes' => 45,
+            'type' => MachineType::WASHING_MACHINE,
         ]);
     }
 
@@ -44,7 +37,6 @@ class MachineFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'type' => MachineType::DRYER,
-            'default_duration_minutes' => 40,
         ]);
     }
 
@@ -52,15 +44,13 @@ class MachineFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'status' => MachineStatus::IN_USE,
-            'current_cycle_ends_at' => now()->addMinutes(25),
         ]);
     }
 
     public function maintenance(): static
     {
         return $this->state(fn (array $attributes) => [
-            'status' => MachineStatus::MAINTENANCE,
-            'notes' => 'Scheduled sensor inspection',
+            'status' => MachineStatus::UNDER_MAINTENANCE,
         ]);
     }
 }

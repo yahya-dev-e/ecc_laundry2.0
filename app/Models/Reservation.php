@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use App\Enums\BookingStatus;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -14,7 +13,7 @@ class Reservation extends Model
     use HasFactory;
 
     /**
-     * Exact database table name in MySQL.
+     * Exact MySQL database table name.
      *
      * @var string
      */
@@ -123,25 +122,21 @@ class Reservation extends Model
 
     /**
      * Dynamically derive status from start_time and end_time.
-     * Returns a BookingStatus Enum with value, label(), badgeClass(), canBeStarted(), etc.
+     * Returns 'in_progress', 'upcoming', or 'completed' based on timestamps.
      */
-    public function getStatusAttribute(): BookingStatus
+    public function getStatusAttribute(): string
     {
         $now = Carbon::now();
 
-        if (!$this->start_time || !$this->end_time) {
-            return BookingStatus::CONFIRMED;
+        if ($this->end_time && $this->end_time->lessThan($now)) {
+            return 'completed';
         }
 
-        if ($this->end_time->isPast()) {
-            return BookingStatus::COMPLETED;
+        if ($this->start_time && $this->end_time && $this->start_time->lessThanOrEqualTo($now) && $this->end_time->greaterThanOrEqualTo($now)) {
+            return 'in_progress';
         }
 
-        if ($this->start_time->isPast() && $this->end_time->isFuture()) {
-            return BookingStatus::IN_PROGRESS;
-        }
-
-        return BookingStatus::CONFIRMED;
+        return 'upcoming';
     }
 
     /**
@@ -149,7 +144,7 @@ class Reservation extends Model
      */
     public function isInProgress(): bool
     {
-        return $this->start_time && $this->end_time && Carbon::now()->between($this->start_time, $this->end_time);
+        return $this->status === 'in_progress';
     }
 
     /**
@@ -157,7 +152,7 @@ class Reservation extends Model
      */
     public function isUpcoming(): bool
     {
-        return $this->start_time && $this->start_time->isFuture();
+        return $this->status === 'upcoming';
     }
 
     /**
@@ -165,7 +160,23 @@ class Reservation extends Model
      */
     public function isCompleted(): bool
     {
-        return $this->end_time && $this->end_time->isPast();
+        return $this->status === 'completed';
+    }
+
+    /**
+     * Helper: Check if reservation cycle can be started.
+     */
+    public function canBeStarted(): bool
+    {
+        return $this->status === 'upcoming' || $this->status === 'in_progress';
+    }
+
+    /**
+     * Helper: Check if reservation can be cancelled.
+     */
+    public function canBeCancelled(): bool
+    {
+        return $this->status === 'upcoming';
     }
 
     /**

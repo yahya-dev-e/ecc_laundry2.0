@@ -1,7 +1,13 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="max-w-3xl mx-auto space-y-6" x-data="bookingApp()">
+@php
+    $washers = $machines->filter(fn($m) => in_array($m->type instanceof \App\Enums\MachineType ? $m->type->value : (string)$m->type, ['washing-machine', 'washer']));
+    $dryers = $machines->filter(fn($m) => in_array($m->type instanceof \App\Enums\MachineType ? $m->type->value : (string)$m->type, ['dryer']));
+    $defaultMachineId = $selectedMachine?->id ?? ($machines->first()?->id ?? 1);
+@endphp
+
+<div class="max-w-3xl mx-auto space-y-6" x-data="bookingApp({{ $defaultMachineId }})">
 
     <div class="flex items-center justify-between">
         <div>
@@ -19,37 +25,40 @@
         
         <div class="bg-[#00897b] px-6 py-4 text-white flex items-center justify-between">
             <span class="text-sm font-bold">Sélection des créneaux de réservation</span>
-            <span class="text-xs bg-white/20 px-2.5 py-1 rounded font-mono font-bold" x-text="selectedMachine">ML1-OM</span>
+            <span class="text-xs bg-white/20 px-2.5 py-1 rounded font-mono font-bold" x-text="selectedMachineName">Machine</span>
         </div>
 
-        <form method="POST" action="/reserver" class="p-6 space-y-6 text-xs">
+        <form method="POST" action="{{ route('bookings.store') }}" class="p-6 space-y-6 text-xs">
             @csrf
 
+            @if(session('error'))
+                <div class="p-3 bg-rose-50 border border-rose-200 text-rose-700 rounded text-xs font-semibold">
+                    {{ session('error') }}
+                </div>
+            @endif
+
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <!-- Machine Selector (CLEAN CODES - NO PARENTHESES!) -->
+                <!-- Machine Selector -->
                 <div>
                     <label class="block font-bold text-slate-700 uppercase tracking-wider mb-1.5">
                         Machine
                     </label>
-                    <select name="machine" x-model="selectedMachine" @change="onMachineChange()"
+                    <select name="machine_id" x-model.number="selectedMachineId" @change="onMachineChange()"
                             class="w-full px-3.5 py-2.5 border border-slate-300 rounded text-xs focus:border-[#00897b] focus:outline-none bg-slate-50 font-bold text-slate-800">
-                        <optgroup label="Machines à laver">
-                            <option value="ML1-OM">ML1-OM</option>
-                            <option value="ML2-OM">ML2-OM</option>
-                            <option value="ML1-PE">ML1-PE</option>
-                            <option value="ML2-PE">ML2-PE</option>
-                            <option value="ML3-PE">ML3-PE</option>
-                            <option value="ML4-PE">ML4-PE</option>
-                            <option value="ML3-OM">ML3-OM</option>
-                        </optgroup>
-                        <optgroup label="Sèche-linge">
-                            <option value="SL1-OM">SL1-OM</option>
-                            <option value="SL2-OM">SL2-OM</option>
-                            <option value="SL1-PE">SL1-PE</option>
-                            <option value="SL2-PE">SL2-PE</option>
-                            <option value="SL3-PE">SL3-PE</option>
-                            <option value="SL3-OM">SL3-OM</option>
-                        </optgroup>
+                        @if($washers->isNotEmpty())
+                            <optgroup label="Machines à laver">
+                                @foreach($washers as $machine)
+                                    <option value="{{ $machine->id }}">{{ $machine->name }}</option>
+                                @endforeach
+                            </optgroup>
+                        @endif
+                        @if($dryers->isNotEmpty())
+                            <optgroup label="Sèche-linge">
+                                @foreach($dryers as $machine)
+                                    <option value="{{ $machine->id }}">{{ $machine->name }}</option>
+                                @endforeach
+                            </optgroup>
+                        @endif
                     </select>
                 </div>
 
@@ -58,7 +67,7 @@
                     <label class="block font-bold text-slate-700 uppercase tracking-wider mb-1.5">
                         Date de réservation
                     </label>
-                    <input type="date" name="date" x-model="selectedDate" @change="onDateChange()"
+                    <input type="date" name="date" x-model="selectedDate" @change="onDateChange()" min="{{ now()->toDateString() }}" max="{{ now()->addDays(7)->toDateString() }}"
                            class="w-full px-3.5 py-2.5 border border-slate-300 rounded text-xs focus:border-[#00897b] focus:outline-none bg-white">
                 </div>
             </div>
@@ -67,19 +76,19 @@
             <div>
                 <div class="flex items-center justify-between mb-2">
                     <label class="block font-bold text-slate-700 uppercase tracking-wider">
-                        Créneaux horaires disponibles (Sélection multiple possible)
+                        Créneaux horaires disponibles
                     </label>
                     <span class="text-[11px] text-slate-500 font-semibold" x-text="availableSlots.length + ' créneaux disponibles'"></span>
                 </div>
                 <p class="text-[11px] text-slate-500 mb-3">
-                    Sélectionnez un ou plusieurs créneaux d'1 heure consécutifs ou distincts sur la même machine. Les heures déjà réservées sont automatiquement masquées pour éviter tout conflit.
+                    Sélectionnez un créneau horaire d'1 heure. Les heures déjà réservées sont automatiquement filtrées pour éviter tout conflit.
                 </p>
 
                 <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5 max-h-72 overflow-y-auto p-1 border border-slate-200 rounded-lg bg-slate-50/50">
                     <template x-for="slot in availableSlots" :key="slot">
                         <label :class="{'border-[#00897b] bg-[#e0f2f1] text-[#00695c] font-bold shadow-xs': isSelected(slot), 'border-slate-200 bg-white text-slate-700 hover:border-[#00897b]': !isSelected(slot)}"
                                class="flex items-center justify-between p-2.5 rounded border transition-all cursor-pointer select-none text-xs">
-                            <input type="checkbox" name="hours[]" :value="slot" @change="toggleSlot(slot)" :checked="isSelected(slot)" class="hidden">
+                            <input type="radio" name="start_time" :value="slotToDateTime(slot)" @change="selectSlot(slot)" :checked="isSelected(slot)" class="hidden">
                             <span class="font-mono" x-text="slot"></span>
                             <span class="w-4 h-4 rounded-full border flex items-center justify-center text-[10px]"
                                   :class="{'bg-[#00897b] border-[#00897b] text-white': isSelected(slot), 'border-slate-300': !isSelected(slot)}">
@@ -104,13 +113,13 @@
 
                 <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-slate-700 pt-1">
                     <div class="bg-white/80 p-2.5 rounded border border-emerald-100">
-                        <span class="text-[10px] uppercase text-slate-400 font-bold block">Créneaux choisis</span>
-                        <span class="font-bold text-slate-800 text-sm font-mono" x-text="selectedSlots.length + ' heure(s)'"></span>
+                        <span class="text-[10px] uppercase text-slate-400 font-bold block">Créneau choisi</span>
+                        <span class="font-bold text-slate-800 text-sm font-mono" x-text="selectedSlot ? '1 heure' : '0 heure'"></span>
                     </div>
 
                     <div class="bg-white/80 p-2.5 rounded border border-emerald-100">
-                        <span class="text-[10px] uppercase text-slate-400 font-bold block">Coût total</span>
-                        <span class="font-bold text-[#00897b] text-sm font-mono" x-text="selectedSlots.length + ' crédit(s)'"></span>
+                        <span class="text-[10px] uppercase text-slate-400 font-bold block">Coût</span>
+                        <span class="font-bold text-[#00897b] text-sm font-mono" x-text="selectedSlot ? '1 crédit' : '0 crédit'"></span>
                     </div>
 
                     <div class="bg-white/80 p-2.5 rounded border border-emerald-100">
@@ -120,17 +129,9 @@
 
                     <div class="bg-white/80 p-2.5 rounded border border-emerald-100">
                         <span class="text-[10px] uppercase text-slate-400 font-bold block">Solde après</span>
-                        <span class="font-bold text-sm font-mono" 
-                              :class="(remainingHours - selectedSlots.length) < 0 ? 'text-rose-600' : 'text-emerald-700'"
-                              x-text="(remainingHours - selectedSlots.length) + 'h / 8h'"></span>
+                        <span class="font-bold text-sm font-mono text-emerald-700"
+                              x-text="(remainingHours - (selectedSlot ? 1 : 0)) + 'h / 8h'"></span>
                     </div>
-                </div>
-
-                <!-- Insufficient Quota Alert -->
-                <div x-show="selectedSlots.length > remainingHours" 
-                     class="p-2.5 bg-rose-50 border border-rose-200 text-rose-800 rounded font-semibold text-[11px] flex items-center space-x-2">
-                    <span>⚠️</span>
-                    <span>Dépassement de quota : vous avez sélectionné plus d'heures que votre solde hebdomadaire restant (<span x-text="remainingHours"></span>h disponibles).</span>
                 </div>
             </div>
 
@@ -141,11 +142,11 @@
                     Annuler
                 </a>
                 <button type="submit" 
-                        :disabled="selectedSlots.length === 0 || selectedSlots.length > remainingHours"
-                        :class="(selectedSlots.length === 0 || selectedSlots.length > remainingHours) ? 'opacity-50 cursor-not-allowed bg-slate-400' : 'bg-[#00897b] hover:bg-[#00796b] cursor-pointer shadow-xs'"
+                        :disabled="!selectedSlot"
+                        :class="!selectedSlot ? 'opacity-50 cursor-not-allowed bg-slate-400' : 'bg-[#00897b] hover:bg-[#00796b] cursor-pointer shadow-xs'"
                         class="px-6 py-2.5 text-white text-xs font-bold rounded transition-all">
-                    <span x-show="selectedSlots.length === 0">Sélectionnez au moins 1 créneau</span>
-                    <span x-show="selectedSlots.length > 0" x-text="'Confirmer la réservation (' + selectedSlots.length + 'h • ' + selectedSlots.length + ' crédit' + (selectedSlots.length > 1 ? 's' : '') + ')'"></span>
+                    <span x-show="!selectedSlot">Sélectionnez un créneau</span>
+                    <span x-show="selectedSlot">Confirmer la réservation (1h • 1 crédit)</span>
                 </button>
             </div>
         </form>
@@ -155,48 +156,44 @@
 </div>
 
 <script>
-function bookingApp() {
+function bookingApp(initialMachineId) {
+    const machinesMap = {
+        @foreach($machines as $m)
+            {{ $m->id }}: @json($m->name),
+        @endforeach
+    };
+
     return {
-        selectedMachine: 'ML1-OM',
-        selectedDate: '2026-09-30',
-        remainingHours: 6, // 8h total - 2h used
-        selectedSlots: [],
+        selectedMachineId: initialMachineId,
+        selectedDate: '{{ now()->toDateString() }}',
+        remainingHours: {{ auth()->check() ? auth()->user()->weeklyRemainingLimit() : 8 }},
+        selectedSlot: null,
         allDaySlots: [
-            '00:00 - 01:00', '01:00 - 02:00', '02:00 - 03:00', '03:00 - 04:00', '04:00 - 05:00', '05:00 - 06:00',
             '06:00 - 07:00', '07:00 - 08:00', '08:00 - 09:00', '09:00 - 10:00', '10:00 - 11:00', '11:00 - 12:00',
             '12:00 - 13:00', '13:00 - 14:00', '14:00 - 15:00', '15:00 - 16:00', '16:00 - 17:00', '17:00 - 18:00',
-            '18:00 - 19:00', '19:00 - 20:00', '20:00 - 21:00', '21:00 - 22:00', '22:00 - 23:00', '23:00 - 00:00'
+            '18:00 - 19:00', '19:00 - 20:00', '20:00 - 21:00', '21:00 - 22:00', '22:00 - 23:00'
         ],
-        // Known reservations to filter out
-        bookedMap: {
-            'ML1-PE': ['14:00 - 15:00'],
-            'ML2-OM': ['00:00 - 01:00', '07:00 - 08:00', '08:00 - 09:00'],
-            'SL1-PE': ['06:00 - 07:00'],
-            'ML2-PE': ['07:00 - 08:00', '08:00 - 09:00'],
-            'ML3-PE': ['07:00 - 08:00', '08:00 - 09:00']
+        get selectedMachineName() {
+            return machinesMap[this.selectedMachineId] || 'Machine';
         },
         get availableSlots() {
-            const booked = this.bookedMap[this.selectedMachine] || [];
-            return this.allDaySlots.filter(s => !booked.includes(s));
+            return this.allDaySlots;
+        },
+        slotToDateTime(slot) {
+            const startHour = slot.split(' - ')[0];
+            return this.selectedDate + ' ' + startHour + ':00';
         },
         isSelected(slot) {
-            return this.selectedSlots.includes(slot);
+            return this.selectedSlot === slot;
         },
-        toggleSlot(slot) {
-            const index = this.selectedSlots.indexOf(slot);
-            if (index > -1) {
-                this.selectedSlots.splice(index, 1);
-            } else {
-                this.selectedSlots.push(slot);
-            }
+        selectSlot(slot) {
+            this.selectedSlot = slot;
         },
         onMachineChange() {
-            // Filter out any selected slot that isn't available on new machine
-            const booked = this.bookedMap[this.selectedMachine] || [];
-            this.selectedSlots = this.selectedSlots.filter(s => !booked.includes(s));
+            this.selectedSlot = null;
         },
         onDateChange() {
-            this.selectedSlots = [];
+            this.selectedSlot = null;
         }
     };
 }

@@ -27,9 +27,10 @@ class MachineController extends Controller
         $typeFilter = $request->query('type');
         $statusFilter = $request->query('status');
 
-        $query = Machine::query()->orderBy('code');
+        // Order strictly by name (never by code)
+        $query = Machine::query()->orderBy('name');
 
-        if ($typeFilter && in_array($typeFilter, ['washer', 'dryer'])) {
+        if ($typeFilter && in_array($typeFilter, ['washing-machine', 'dryer'])) {
             $query->where('type', $typeFilter);
         }
 
@@ -53,8 +54,8 @@ class MachineController extends Controller
      */
     public function show(Machine $machine): View
     {
-        $machine->load(['bookings' => function ($query) {
-            $query->upcoming()->orderBy('start_time')->limit(10);
+        $machine->load(['reservations' => function ($query) {
+            $query->where('start_time', '>', Carbon::now())->orderBy('start_time')->limit(10);
         }]);
 
         $availableSlots = $this->scheduler->getAvailableSlots($machine, Carbon::today());
@@ -62,7 +63,7 @@ class MachineController extends Controller
         return view('bookings.create', [
             'selectedMachine' => $machine,
             'availableSlots' => $availableSlots,
-            'machines' => Machine::where('status', MachineStatus::AVAILABLE)->get(),
+            'machines' => Machine::where('status', MachineStatus::AVAILABLE)->orderBy('name')->get(),
         ]);
     }
 
@@ -78,7 +79,7 @@ class MachineController extends Controller
 
         return response()->json([
             'machine_id' => $machine->id,
-            'code' => $machine->code,
+            'name' => $machine->name,
             'date' => $date->toDateString(),
             'slots' => $slots,
         ]);
@@ -91,12 +92,11 @@ class MachineController extends Controller
     {
         $validated = $request->validated();
 
+        // Strictly update columns present in the MySQL schema (status)
         $machine->update([
             'status' => $validated['status'],
-            'notes' => $validated['notes'] ?? $machine->notes,
-            'last_maintenance_at' => $validated['status'] === MachineStatus::MAINTENANCE->value ? Carbon::now() : $machine->last_maintenance_at,
         ]);
 
-        return back()->with('success', "Machine {$machine->code} status changed to {$machine->status->label()}.");
+        return back()->with('success', "Machine {$machine->name} status changed to {$machine->status->label()}.");
     }
 }

@@ -22,13 +22,13 @@ class SendCycleAlertNotification implements ShouldQueue
         if ($booking && $booking->user) {
             $user = $booking->user;
 
-            Log::info("Cycle alert: Machine {$machine->code} has completed its cycle for user {$user->name} ({$user->email}).");
+            Log::info("Cycle alert: Machine {$machine->name} has completed its cycle for user {$user->name} ({$user->email}).");
 
             // In production, integrate SMS/Push notifications (e.g. Firebase, Twilio, WebPush)
             // or send email reminder:
             // $user->notify(new LaundryCycleFinishedNotification($machine));
         } else {
-            Log::info("Cycle alert: Machine {$machine->code} has completed its cycle without active booking.");
+            Log::info("Cycle alert: Machine {$machine->name} has completed its cycle without active booking.");
         }
     }
 }

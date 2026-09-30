@@ -2,7 +2,6 @@
 
 namespace Tests\Unit;
 
-use App\Enums\BookingStatus;
 use App\Enums\MachineStatus;
 use App\Events\CycleCompleted;
 use App\Events\CycleStarted;
@@ -36,16 +35,14 @@ class BookingServiceTest extends TestCase
         $user = User::factory()->create(['credits' => 10]);
         $machine = Machine::factory()->create([
             'status' => MachineStatus::AVAILABLE,
-            'cost_per_cycle' => 2,
-            'default_duration_minutes' => 45,
         ]);
 
         $start = Carbon::now()->addHours(2);
         $booking = $this->service->createBooking($user, $machine, $start);
 
-        $this->assertEquals(BookingStatus::CONFIRMED, $booking->status);
-        $this->assertEquals(8, $user->fresh()->credits);
-        $this->assertEquals($start->addMinutes(45)->toIso8601String(), $booking->end_time->toIso8601String());
+        $this->assertEquals('upcoming', $booking->status);
+        $this->assertEquals(9, $user->fresh()->credits);
+        $this->assertEquals($start->copy()->addMinutes(45)->toIso8601String(), $booking->end_time->toIso8601String());
     }
 
     public function test_cannot_book_when_slot_has_conflict(): void
@@ -69,12 +66,13 @@ class BookingServiceTest extends TestCase
         $booking = Booking::factory()->create([
             'user_id' => $user->id,
             'machine_id' => $machine->id,
-            'status' => BookingStatus::CONFIRMED,
+            'start_time' => Carbon::now()->subMinutes(5),
+            'end_time' => Carbon::now()->addMinutes(40),
         ]);
 
         $this->service->startCycle($booking);
 
-        $this->assertEquals(BookingStatus::IN_PROGRESS, $booking->fresh()->status);
+        $this->assertEquals('in_progress', $booking->fresh()->status);
         $this->assertEquals(MachineStatus::IN_USE, $machine->fresh()->status);
         Event::assertDispatched(CycleStarted::class);
     }
@@ -88,13 +86,14 @@ class BookingServiceTest extends TestCase
         $booking = Booking::factory()->create([
             'user_id' => $user->id,
             'machine_id' => $machine->id,
-            'status' => BookingStatus::IN_PROGRESS,
+            'start_time' => Carbon::now()->subHours(2),
+            'end_time' => Carbon::now()->subHours(1),
         ]);
 
         $this->service->completeCycle($machine);
 
         $this->assertEquals(MachineStatus::AVAILABLE, $machine->fresh()->status);
-        $this->assertEquals(BookingStatus::COMPLETED, $booking->fresh()->status);
+        $this->assertEquals('completed', $booking->fresh()->status);
         Event::assertDispatched(CycleCompleted::class);
     }
 }

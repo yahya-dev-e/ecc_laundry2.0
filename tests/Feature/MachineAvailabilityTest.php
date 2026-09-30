@@ -2,7 +2,6 @@
 
 namespace Tests\Feature;
 
-use App\Enums\BookingStatus;
 use App\Enums\MachineStatus;
 use App\Models\Booking;
 use App\Models\Machine;
@@ -20,7 +19,6 @@ class MachineAvailabilityTest extends TestCase
         $user = User::factory()->create();
         $machine = Machine::factory()->create([
             'status' => MachineStatus::AVAILABLE,
-            'default_duration_minutes' => 45,
         ]);
 
         $today = Carbon::today()->toDateString();
@@ -32,7 +30,7 @@ class MachineAvailabilityTest extends TestCase
         $response->assertStatus(200);
         $response->assertJsonStructure([
             'machine_id',
-            'code',
+            'name',
             'date',
             'slots' => [
                 '*' => ['start_time', 'end_time', 'datetime', 'is_available', 'is_past'],
@@ -43,7 +41,7 @@ class MachineAvailabilityTest extends TestCase
     public function test_conflicting_slot_is_marked_unavailable(): void
     {
         $user = User::factory()->create();
-        $machine = Machine::factory()->create(['default_duration_minutes' => 45]);
+        $machine = Machine::factory()->create();
 
         $tomorrowTenAm = Carbon::tomorrow()->setTime(10, 0, 0);
         $tomorrowTenFortyFive = Carbon::tomorrow()->setTime(10, 45, 0);
@@ -51,10 +49,11 @@ class MachineAvailabilityTest extends TestCase
         Booking::create([
             'user_id' => $user->id,
             'machine_id' => $machine->id,
-            'status' => BookingStatus::CONFIRMED,
             'start_time' => $tomorrowTenAm,
             'end_time' => $tomorrowTenFortyFive,
-            'credits_spent' => 2,
+            'notified_start' => false,
+            'notified_end' => false,
+            'weekly_session_limit_remaining' => 8,
         ]);
 
         $response = $this->actingAs($user)->getJson(route('machines.slots', [
@@ -75,12 +74,10 @@ class MachineAvailabilityTest extends TestCase
         $machine = Machine::factory()->create(['status' => MachineStatus::AVAILABLE]);
 
         $response = $this->actingAs($admin)->patch(route('machines.update-status', $machine), [
-            'status' => MachineStatus::MAINTENANCE->value,
-            'notes' => 'Replacing water pump seal',
+            'status' => MachineStatus::UNDER_MAINTENANCE->value,
         ]);
 
         $response->assertSessionHasNoErrors();
-        $this->assertEquals(MachineStatus::MAINTENANCE, $machine->fresh()->status);
-        $this->assertEquals('Replacing water pump seal', $machine->fresh()->notes);
+        $this->assertEquals(MachineStatus::UNDER_MAINTENANCE, $machine->fresh()->status);
     }
 }

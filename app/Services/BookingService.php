@@ -28,11 +28,11 @@ class BookingService
         $endTime = (clone $startTime)->addMinutes($duration);
 
         if (!$machine->status->isOperable()) {
-            throw new InvalidArgumentException("Machine {$machine->code} is currently out of service.");
+            throw new InvalidArgumentException("Machine {$machine->name} is currently out of service.");
         }
 
         if (!$this->scheduler->isMachineAvailableForSlot($machine, $startTime, $endTime)) {
-            throw new InvalidArgumentException("Machine {$machine->code} already has a conflicting reservation during this slot.");
+            throw new InvalidArgumentException("Machine {$machine->name} already has a conflicting reservation during this slot.");
         }
 
         $cost = max(1, (int) round($duration / 60));
@@ -51,7 +51,7 @@ class BookingService
                 'weekly_session_limit_remaining' => $user->weeklyRemainingLimit(),
             ]);
 
-            $user->deductCredits($cost, "Reservation for machine {$machine->code}", $reservation->id);
+            $user->deductCredits($cost, "Reservation for machine {$machine->name}", $reservation->id);
 
             // If reservation starts within 15 minutes, set machine status to RESERVED
             if ($startTime->lessThanOrEqualTo(Carbon::now()->addMinutes(15)) && $machine->isAvailable()) {
@@ -67,18 +67,15 @@ class BookingService
      */
     public function startCycle(Reservation $booking): Machine
     {
-        if (!$booking->status->canBeStarted()) {
+        if (!$booking->canBeStarted()) {
             throw new InvalidArgumentException("This reservation cannot be started because it is not within the start window.");
         }
 
         $machine = $booking->machine;
-        $duration = $machine->default_duration_minutes;
-        $endsAt = Carbon::now()->addMinutes($duration);
 
-        DB::transaction(function () use ($machine, $endsAt) {
+        DB::transaction(function () use ($machine) {
             $machine->update([
                 'status' => MachineStatus::IN_USE,
-                'current_cycle_ends_at' => $endsAt,
             ]);
         });
 
@@ -102,7 +99,6 @@ class BookingService
         DB::transaction(function () use ($machine) {
             $machine->update([
                 'status' => MachineStatus::AVAILABLE,
-                'current_cycle_ends_at' => null,
             ]);
         });
 
@@ -114,7 +110,7 @@ class BookingService
      */
     public function cancelBooking(Reservation $booking, string $reason = 'Cancelled by user'): void
     {
-        if (!$booking->status->canBeCancelled()) {
+        if (!$booking->canBeCancelled()) {
             throw new InvalidArgumentException("Cannot cancel this reservation.");
         }
 
@@ -128,7 +124,7 @@ class BookingService
             // Refund credits
             $booking->user->addCredits(
                 $creditsToRefund,
-                "Refund for cancelled reservation on {$machine->code}"
+                "Refund for cancelled reservation on {$machine->name}"
             );
 
             // Revert machine status to available if it was reserved

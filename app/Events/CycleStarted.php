@@ -2,8 +2,8 @@
 
 namespace App\Events;
 
-use App\Models\Booking;
 use App\Models\Machine;
+use App\Models\Reservation;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
@@ -16,7 +16,7 @@ class CycleStarted implements ShouldBroadcast
 
     public function __construct(
         public Machine $machine,
-        public Booking $booking
+        public Reservation $booking
     ) {}
 
     /**
@@ -36,9 +36,9 @@ class CycleStarted implements ShouldBroadcast
     {
         return [
             'machine_id' => $this->machine->id,
-            'machine_code' => $this->machine->code,
+            'machine_name' => $this->machine->name,
             'booking_id' => $this->booking->id,
-            'ends_at' => $this->machine->current_cycle_ends_at?->toIso8601String(),
+            'ends_at' => $this->booking->end_time?->toIso8601String(),
             'status' => $this->machine->status->value,
         ];
     }

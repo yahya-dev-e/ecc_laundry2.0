@@ -2,8 +2,8 @@
 
 namespace App\Events;
 
-use App\Models\Booking;
 use App\Models\Machine;
+use App\Models\Reservation;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
@@ -16,7 +16,7 @@ class CycleCompleted implements ShouldBroadcast
 
     public function __construct(
         public Machine $machine,
-        public ?Booking $booking = null
+        public ?Reservation $booking = null
     ) {}
 
     /**
@@ -39,10 +39,10 @@ class CycleCompleted implements ShouldBroadcast
     {
         return [
             'machine_id' => $this->machine->id,
-            'machine_code' => $this->machine->code,
+            'machine_name' => $this->machine->name,
             'booking_id' => $this->booking?->id,
             'status' => 'available',
-            'message' => "Cycle on {$this->machine->code} completed! Please collect your laundry.",
+            'message' => "Cycle on {$this->machine->name} completed! Please collect your laundry.",
         ];
     }
 }

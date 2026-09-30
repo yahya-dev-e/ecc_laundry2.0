@@ -25,13 +25,14 @@ class DashboardController extends Controller
         // 1. Fetch user's currently active cycles (time-derived: start_time <= now <= end_time)
         $activeCycles = $user ? $user->reservations()
             ->with('machine')
-            ->inProgress()
+            ->where('start_time', '<=', Carbon::now())
+            ->where('end_time', '>=', Carbon::now())
             ->get() : collect();
 
         // 2. Fetch user's next upcoming reservation (time-derived: start_time > now)
         $nextBooking = $user ? $user->reservations()
             ->with('machine')
-            ->upcoming()
+            ->where('start_time', '>', Carbon::now())
             ->orderBy('start_time')
             ->first() : null;
 
@@ -39,9 +40,10 @@ class DashboardController extends Controller
         $typeFilter = $request->query('type');
         $statusFilter = $request->query('status');
 
-        $machinesQuery = Machine::query()->orderBy('code');
+        // Order strictly by name (never by code)
+        $machinesQuery = Machine::query()->orderBy('name');
 
-        if ($typeFilter && in_array($typeFilter, ['washer', 'dryer'])) {
+        if ($typeFilter && in_array($typeFilter, ['washing-machine', 'dryer'])) {
             $machinesQuery->where('type', $typeFilter);
         }
 

@@ -27,25 +27,27 @@ class BookingController extends Controller
     public function index(Request $request): View
     {
         $user = $request->user();
+        $now = Carbon::now();
 
-        // Active reservations currently in progress (start_time <= now <= end_time)
+        // Active reservations currently in progress: start_time <= now AND end_time >= now
         $activeBookings = $user ? $user->reservations()
             ->with('machine')
-            ->inProgress()
+            ->where('start_time', '<=', $now)
+            ->where('end_time', '>=', $now)
             ->latest('start_time')
             ->get() : collect();
 
-        // Upcoming reservations (start_time > now)
+        // Upcoming reservations: start_time > now
         $upcomingBookings = $user ? $user->reservations()
             ->with('machine')
-            ->upcoming()
+            ->where('start_time', '>', $now)
             ->orderBy('start_time')
             ->get() : collect();
 
-        // Completed reservations in the past (end_time < now)
+        // Completed reservations in the past: end_time < now
         $pastBookings = $user ? $user->reservations()
             ->with('machine')
-            ->completed()
+            ->where('end_time', '<', $now)
             ->latest('start_time')
             ->paginate(10) : collect();
 
@@ -70,9 +72,10 @@ class BookingController extends Controller
         $selectedMachineId = $request->query('machine_id');
         $selectedMachine = $selectedMachineId ? Machine::find($selectedMachineId) : null;
 
+        // Order strictly by name (never by code)
         $machines = Machine::where('status', MachineStatus::AVAILABLE)
             ->orWhere('id', $selectedMachineId)
-            ->orderBy('code')
+            ->orderBy('name')
             ->get();
 
         $availableSlots = [];
@@ -105,7 +108,7 @@ class BookingController extends Controller
             );
 
             return redirect()->route('bookings.index')
-                ->with('success', "Reservation confirmed for {$machine->code} at {$startTime->format('M d, H:i')}!");
+                ->with('success', "Reservation confirmed for {$machine->name} at {$startTime->format('M d, H:i')}!");
         } catch (InvalidArgumentException $e) {
             return back()->withInput()->with('error', $e->getMessage());
         }
@@ -124,7 +127,7 @@ class BookingController extends Controller
             $this->bookingService->startCycle($booking);
 
             return redirect()->route('dashboard')
-                ->with('success', "Cycle started on {$booking->machine->code}! The timer is now running.");
+                ->with('success', "Cycle started on {$booking->machine->name}! The timer is now running.");
         } catch (InvalidArgumentException $e) {
             return back()->with('error', $e->getMessage());
         }
