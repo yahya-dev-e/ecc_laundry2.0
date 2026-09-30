@@ -6,7 +6,7 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const PORT = 3000;
+const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 
 function getAssets() {
     let cssFile = 'assets/app-BaKgmCTs.css';
@@ -277,12 +277,49 @@ function renderLayout(title, content, currentPath = '/', flash = '') {
 </html>`;
 }
 
-// 1. Calendrier Page (Image 2) with fixed viewport popup modal
-function renderCalendarPage() {
+// 1. Calendrier Page (Image 2) with date navigation
+function renderCalendarPage(selectedDateStr = '2026-09-30') {
     const washers = state.machines.filter(m => m.type === 'washer');
     const dryers = state.machines.filter(m => m.type === 'dryer');
     const hours = ['00 h', '01 h', '02 h', '03 h', '04 h', '05 h', '06 h', '07 h', '08 h', '09 h', '10 h', '11 h', '12 h', '13 h', '14 h', '15 h', '16 h', '17 h', '18 h', '19 h', '20 h', '21 h', '22 h', '23 h'];
     const remaining = Math.max(0, state.weeklyLimit - state.user.weeklyUsed);
+
+    const d = new Date(selectedDateStr + 'T00:00:00');
+    const prevDate = new Date(d);
+    prevDate.setDate(prevDate.getDate() - 1);
+    const prevDateStr = prevDate.toISOString().split('T')[0];
+
+    const nextDate = new Date(d);
+    nextDate.setDate(nextDate.getDate() + 1);
+    const nextDateStr = nextDate.toISOString().split('T')[0];
+
+    const todayStr = '2026-09-30';
+
+    const dayNames = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'];
+    const monthNames = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
+    const dayName = isNaN(d.getDay()) ? 'mercredi' : dayNames[d.getDay()];
+    const dateFormatted = isNaN(d.getDate()) ? '30 septembre 2026' : (d.getDate() + ' ' + monthNames[d.getMonth()] + ' ' + d.getFullYear());
+
+    // Calculate Monday of the current selected week
+    const currentDayOfWeek = d.getDay();
+    const diffToMonday = currentDayOfWeek === 0 ? -6 : 1 - currentDayOfWeek;
+    const monday = new Date(d);
+    monday.setDate(monday.getDate() + diffToMonday);
+
+    const weekDays = [];
+    const shortDays = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
+    for (let i = 0; i < 7; i++) {
+        const wDay = new Date(monday);
+        wDay.setDate(monday.getDate() + i);
+        const wDateStr = wDay.toISOString().split('T')[0];
+        weekDays.push({
+            date: wDateStr,
+            dayNumber: wDay.getDate(),
+            shortName: shortDays[wDay.getDay()],
+            isToday: wDateStr === todayStr,
+            isSelected: wDateStr === selectedDateStr,
+        });
+    }
 
     return `
     <div class="space-y-6 max-w-6xl mx-auto">
@@ -351,26 +388,54 @@ function renderCalendarPage() {
             </div>
         </div>
 
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-4 border-t border-slate-200">
-            <h2 class="text-xl font-normal text-slate-700">30 septembre 2026</h2>
-            <div class="inline-flex rounded shadow-xs text-xs">
-                <button class="px-3.5 py-1.5 bg-[#546e7a] hover:bg-[#455a64] text-white font-medium rounded-l">Aujourd'hui</button>
-                <button class="px-3.5 py-1.5 bg-[#37474f] hover:bg-[#263238] text-white font-medium">Précédent</button>
-                <button class="px-3.5 py-1.5 bg-[#263238] hover:bg-black text-white font-medium rounded-r">Suivant</button>
+        <!-- Date Controls and 7-day strip -->
+        <div class="space-y-3 pt-4 border-t border-slate-200">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div class="flex items-center space-x-3">
+                    <h2 class="text-xl font-normal text-slate-700 capitalize">${dayName}, ${dateFormatted}</h2>
+                    <input type="date" value="${selectedDateStr}" 
+                           onchange="window.location.href = '/calendrier?date=' + this.value"
+                           class="px-2.5 py-1 text-xs border border-slate-300 rounded bg-white text-slate-700 hover:border-[#00897b] focus:outline-none focus:border-[#00897b] cursor-pointer shadow-xs font-medium"
+                           title="Choisir une date quelconque">
+                </div>
+                <div class="inline-flex rounded shadow-xs text-xs">
+                    <a href="/calendrier?date=${todayStr}" class="px-3.5 py-1.5 ${selectedDateStr === todayStr ? 'bg-[#00897b] text-white font-bold' : 'bg-[#546e7a] hover:bg-[#455a64] text-white font-medium'} rounded-l transition-colors flex items-center">Aujourd'hui</a>
+                    <a href="/calendrier?date=${prevDateStr}" class="px-3.5 py-1.5 bg-[#37474f] hover:bg-[#263238] text-white font-medium transition-colors flex items-center space-x-1" title="Jour précédent (${prevDateStr})">
+                        <span>&larr;</span>
+                        <span>Précédent</span>
+                    </a>
+                    <a href="/calendrier?date=${nextDateStr}" class="px-3.5 py-1.5 bg-[#263238] hover:bg-black text-white font-medium rounded-r transition-colors flex items-center space-x-1" title="Jour suivant (${nextDateStr})">
+                        <span>Suivant</span>
+                        <span>&rarr;</span>
+                    </a>
+                </div>
+            </div>
+
+            <!-- 7-Day Quick Jump Strip -->
+            <div class="grid grid-cols-7 gap-1 sm:gap-2 p-1.5 bg-white rounded-lg border border-slate-200 shadow-xs">
+                ${weekDays.map(w => `
+                    <a href="/calendrier?date=${w.date}" 
+                       class="py-2 px-1 text-center rounded transition-all flex flex-col items-center justify-center ${w.isSelected ? 'bg-[#00897b] text-white font-bold shadow-xs scale-102' : 'hover:bg-slate-100 text-slate-700'}">
+                        <span class="text-[10px] uppercase font-semibold ${w.isSelected ? 'text-emerald-100' : 'text-slate-400'}">${w.shortName}</span>
+                        <span class="text-sm font-bold ${w.isSelected ? 'text-white' : (w.isToday ? 'text-[#00897b]' : 'text-slate-800')}">${w.dayNumber}</span>
+                        ${w.isToday ? `<span class="w-1.5 h-1.5 rounded-full ${w.isSelected ? 'bg-white' : 'bg-[#00897b]'} mt-0.5"></span>` : '<span class="w-1.5 h-1.5 mt-0.5"></span>'}
+                    </a>
+                `).join('')}
             </div>
         </div>
 
         <div class="bg-white rounded-lg border border-slate-300 shadow-xs overflow-hidden">
             <div class="flex border-b border-slate-300 bg-[#f9f9e8] text-xs font-semibold text-slate-700">
                 <div class="w-16 p-2 text-center border-r border-slate-300 text-[11px] text-slate-500">Toute la journée</div>
-                <div class="flex-1 p-2 text-center font-bold text-slate-800">mercredi</div>
+                <div class="flex-1 p-2 text-center font-bold text-slate-800 capitalize">${dayName} (${dateFormatted})</div>
             </div>
 
             <div class="divide-y divide-slate-200 text-xs">
                 ${hours.map(h => {
                     const matching = [];
                     state.reservations.forEach(r => {
-                        if (r.hour === h) {
+                        const rDate = r.date || '2026-09-30';
+                        if (rDate === selectedDateStr && r.hour === h) {
                             if (r.multi) {
                                 r.multi.forEach(m => matching.push(m));
                             } else {
@@ -1156,8 +1221,9 @@ const server = http.createServer((req, res) => {
     // Authenticated Routes:
     if (pathname === '/' || pathname === '/calendrier' || pathname === '/admin/reservation/calendrier') {
         const flash = urlObj.searchParams.get('flash') || '';
+        const date = urlObj.searchParams.get('date') || '2026-09-30';
         res.writeHead(200, { 'Content-Type': 'text/html' });
-        return res.end(renderLayout('Calendrier des réservations', renderCalendarPage(), '/calendrier', flash));
+        return res.end(renderLayout('Calendrier des réservations', renderCalendarPage(date), '/calendrier', flash));
     }
 
     if (pathname === '/dashboard') {

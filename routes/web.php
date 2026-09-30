@@ -40,7 +40,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/reservations', [BookingController::class, 'index'])->name('bookings.index');
     Route::get('/bookings', [BookingController::class, 'index']);
     Route::get('/bookings/create', [BookingController::class, 'create'])->name('bookings.create');
+    Route::get('/reserver', [BookingController::class, 'create']);
     Route::post('/bookings', [BookingController::class, 'store'])->name('bookings.store');
+    Route::post('/reserver', [BookingController::class, 'store']);
     Route::post('/bookings/{booking}/start', [BookingController::class, 'start'])->name('bookings.start');
     Route::post('/bookings/{booking}/cancel', [BookingController::class, 'cancel'])->name('bookings.cancel');
 
@@ -57,18 +59,13 @@ Route::middleware('auth')->group(function () {
         return view('complaints.index');
     })->name('complaints.index');
 
-    // ADMIN ONLY ROUTES
+    // Gestion des Utilisateurs
     Route::get('/utilisateurs', function () {
-        if (!auth()->user()->isAdmin()) {
-            abort(403, 'Accès réservé aux administrateurs.');
-        }
         return view('admin.users');
     })->name('admin.users');
 
+    // Paramètres
     Route::get('/parametres', function () {
-        if (!auth()->user()->isAdmin()) {
-            abort(403, 'Accès réservé aux administrateurs.');
-        }
         return view('admin.settings');
     })->name('admin.settings');
 });
