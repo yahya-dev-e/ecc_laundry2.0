@@ -1,0 +1,66 @@
+@import 'tailwindcss/base';
+@import 'tailwindcss/components';
+@import 'tailwindcss/utilities';
+
+@layer base {
+    body {
+        @apply bg-[#f4f7f6] text-slate-800 antialiased font-sans;
+    }
+}
+
+/* Background for login screen */
+.login-bg {
+    background: radial-gradient(circle at 10% 20%, #0097a7 0%, #00796b 40%, #004d40 100%);
+    position: relative;
+    overflow: hidden;
+}
+.login-bg::before {
+    content: '';
+    position: absolute;
+    width: 800px;
+    height: 800px;
+    border-radius: 50%;
+    border: 80px solid rgba(255, 255, 255, 0.05);
+    top: -200px;
+    left: -200px;
+    pointer-events: none;
+}
+.login-bg::after {
+    content: '';
+    position: absolute;
+    width: 600px;
+    height: 600px;
+    border-radius: 50%;
+    border: 60px solid rgba(255, 255, 255, 0.04);
+    bottom: -150px;
+    right: -100px;
+    pointer-events: none;
+}
+
+/* Sidebar styling matching Image 2 */
+.admin-sidebar {
+    background-color: #00796b;
+    color: #e0f2f1;
+}
+
+.sidebar-link {
+    @apply flex items-center space-x-3 px-4 py-2.5 text-xs font-medium text-emerald-100/90 hover:bg-[#00695c] hover:text-white transition-colors;
+}
+
+.sidebar-link.active {
+    @apply bg-[#00695c] text-white font-semibold;
+}
+
+/* Machine badges */
+.badge-machine {
+    @apply inline-flex items-center justify-between px-3 py-1.5 rounded text-white text-xs font-bold transition-transform hover:scale-105 cursor-pointer shadow-sm;
+}
+
+/* Table timeline */
+.timeline-cell {
+    @apply border-b border-r border-slate-200 h-10 relative;
+}
+
+.timeline-hour {
+    @apply border-b border-r border-slate-300 bg-slate-50 text-[11px] font-medium text-slate-600 px-2 py-1 text-center w-14 shrink-0;
+}
