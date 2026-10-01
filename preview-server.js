@@ -30,8 +30,37 @@ const ALL_HOURLY_SLOTS = [
 ];
 
 function parseTimeToMinutes(t) {
-    const parts = t.trim().replace('h', ':00').split(':');
-    return parseInt(parts[0], 10) * 60 + (parts[1] ? parseInt(parts[1], 10) : 0);
+    if (!t) return 0;
+    const parts = String(t).trim().replace('h', ':00').split(':');
+    const h = parseInt(parts[0], 10) || 0;
+    const m = parts[1] ? (parseInt(parts[1], 10) || 0) : 0;
+    return h * 60 + m;
+}
+
+function parseReservationTimes(timeStr, defaultDurationHours = 1) {
+    if (!timeStr) {
+        return { startMinutes: 0, endMinutes: 60, durationMinutes: 60, formattedTime: '00:00 - 01:00' };
+    }
+    const clean = String(timeStr).trim();
+    if (clean.includes('-')) {
+        const parts = clean.split('-').map(s => s.trim());
+        const startM = parseTimeToMinutes(parts[0]);
+        let endM = parseTimeToMinutes(parts[1]);
+        if (isNaN(endM) || (endM === 0 && startM > 0)) {
+            endM = (parts[1] && (parts[1].startsWith('00') || parts[1].startsWith('24'))) ? 24 * 60 : startM + 60;
+        }
+        if (endM <= startM) endM = startM + 60;
+        const dur = endM - startM;
+        const sH = String(Math.floor(startM / 60)).padStart(2, '0') + ':' + String(startM % 60).padStart(2, '0');
+        const eH = String(Math.floor(endM / 60)).padStart(2, '0') + ':' + String(endM % 60).padStart(2, '0');
+        return { startMinutes: startM, endMinutes: endM, durationMinutes: dur, formattedTime: `${sH} - ${eH}` };
+    } else {
+        const startM = parseTimeToMinutes(clean);
+        const endM = Math.min(24 * 60, startM + (defaultDurationHours * 60));
+        const sH = String(Math.floor(startM / 60)).padStart(2, '0') + ':' + String(startM % 60).padStart(2, '0');
+        const eH = String(Math.floor(endM / 60)).padStart(2, '0') + ':' + String(endM % 60).padStart(2, '0');
+        return { startMinutes: startM, endMinutes: endM, durationMinutes: endM - startM, formattedTime: `${sH} - ${eH}` };
+    }
 }
 
 function isSlotBooked(reservations, machineCode, date, slotTime) {
@@ -76,23 +105,24 @@ const state = {
         weeklyUsed: 2, // 2 hours used out of 8 (6 hours remaining)
     },
     machines: [
-        { code: 'ML1-OM', name: 'Machine à laver 1 Omar', type: 'washer', bg: '#e53935', text: 'text-white', icon: '👕', status: 'available', cap: '9.0 kg', loc: 'Bâtiment Omar, RDC' },
-        { code: 'ML2-OM', name: 'Machine à laver 2 Omar', type: 'washer', bg: '#00e676', text: 'text-slate-900', icon: '👕', status: 'in_use', cap: '9.0 kg', loc: 'Bâtiment Omar, RDC' },
-        { code: 'ML1-PE', name: 'Machine à laver 1 Petit', type: 'washer', bg: '#2979ff', text: 'text-white', icon: '👕', status: 'available', cap: '8.0 kg', loc: 'Bâtiment Petit, Étage 1' },
-        { code: 'ML2-PE', name: 'Machine à laver 2 Petit', type: 'washer', bg: '#ffd600', text: 'text-slate-900', icon: '👕', status: 'reserved', cap: '8.0 kg', loc: 'Bâtiment Petit, Étage 1' },
-        { code: 'ML3-PE', name: 'Machine à laver 3 Petit', type: 'washer', bg: '#ff007f', text: 'text-white', icon: '👕', status: 'reserved', cap: '8.5 kg', loc: 'Bâtiment Petit, Étage 1' },
-        { code: 'ML4-PE', name: 'Machine à laver 4 Petit', type: 'washer', bg: '#ff9100', text: 'text-white', icon: '👕', status: 'available', cap: '8.5 kg', loc: 'Bâtiment Petit, Étage 2' },
-        { code: 'ML3-OM', name: 'Machine à laver 3 Omar', type: 'washer', bg: '#004d40', text: 'text-white', icon: '👕', status: 'available', cap: '10.0 kg', loc: 'Bâtiment Omar, RDC' },
+        { code: 'ML1-OM', name: 'Machine à laver 1 Omar', type: 'washer', bg: '#e53935', text: 'text-white', status: 'available', cap: '9.0 kg', loc: 'Bâtiment Omar, RDC' },
+        { code: 'ML2-OM', name: 'Machine à laver 2 Omar', type: 'washer', bg: '#00e676', text: 'text-slate-900', status: 'in_use', cap: '9.0 kg', loc: 'Bâtiment Omar, RDC' },
+        { code: 'ML1-PE', name: 'Machine à laver 1 Petit', type: 'washer', bg: '#2979ff', text: 'text-white', status: 'available', cap: '8.0 kg', loc: 'Bâtiment Petit, Étage 1' },
+        { code: 'ML2-PE', name: 'Machine à laver 2 Petit', type: 'washer', bg: '#ffd600', text: 'text-slate-900', status: 'reserved', cap: '8.0 kg', loc: 'Bâtiment Petit, Étage 1' },
+        { code: 'ML3-PE', name: 'Machine à laver 3 Petit', type: 'washer', bg: '#ff007f', text: 'text-white', status: 'reserved', cap: '8.5 kg', loc: 'Bâtiment Petit, Étage 1' },
+        { code: 'ML4-PE', name: 'Machine à laver 4 Petit', type: 'washer', bg: '#ff9100', text: 'text-white', status: 'available', cap: '8.5 kg', loc: 'Bâtiment Petit, Étage 2' },
+        { code: 'ML3-OM', name: 'Machine à laver 3 Omar', type: 'washer', bg: '#004d40', text: 'text-white', status: 'available', cap: '10.0 kg', loc: 'Bâtiment Omar, RDC' },
         
-        { code: 'SL1-OM', name: 'Sèche-linge 1 Omar', type: 'dryer', bg: '#4e342e', text: 'text-white', icon: '🔄', status: 'available', cap: '9.5 kg', loc: 'Bâtiment Omar, RDC' },
-        { code: 'SL2-OM', name: 'Sèche-linge 2 Omar', type: 'dryer', bg: '#4caf50', text: 'text-white', icon: '🔄', status: 'available', cap: '9.5 kg', loc: 'Bâtiment Omar, RDC' },
-        { code: 'SL1-PE', name: 'Sèche-linge 1 Petit', type: 'dryer', bg: '#1a237e', text: 'text-white', icon: '🔄', status: 'in_use', cap: '8.0 kg', loc: 'Bâtiment Petit, Étage 1' },
-        { code: 'SL2-PE', name: 'Sèche-linge 2 Petit', type: 'dryer', bg: '#827717', text: 'text-white', icon: '🔄', status: 'available', cap: '8.0 kg', loc: 'Bâtiment Petit, Étage 1' },
-        { code: 'SL3-PE', name: 'Sèche-linge 3 Petit', type: 'dryer', bg: '#8e24aa', text: 'text-white', icon: '🔄', status: 'available', cap: '8.5 kg', loc: 'Bâtiment Petit, Étage 2' },
-        { code: 'SL3-OM', name: 'Sèche-linge 3 Omar', type: 'dryer', bg: '#212121', text: 'text-white', icon: '🔄', status: 'available', cap: '9.5 kg', loc: 'Bâtiment Omar, RDC' },
+        { code: 'SL1-OM', name: 'Sèche-linge 1 Omar', type: 'dryer', bg: '#4e342e', text: 'text-white', status: 'available', cap: '9.5 kg', loc: 'Bâtiment Omar, RDC' },
+        { code: 'SL2-OM', name: 'Sèche-linge 2 Omar', type: 'dryer', bg: '#4caf50', text: 'text-white', status: 'available', cap: '9.5 kg', loc: 'Bâtiment Omar, RDC' },
+        { code: 'SL1-PE', name: 'Sèche-linge 1 Petit', type: 'dryer', bg: '#1a237e', text: 'text-white', status: 'in_use', cap: '8.0 kg', loc: 'Bâtiment Petit, Étage 1' },
+        { code: 'SL2-PE', name: 'Sèche-linge 2 Petit', type: 'dryer', bg: '#827717', text: 'text-white', status: 'available', cap: '8.0 kg', loc: 'Bâtiment Petit, Étage 1' },
+        { code: 'SL3-PE', name: 'Sèche-linge 3 Petit', type: 'dryer', bg: '#8e24aa', text: 'text-white', status: 'available', cap: '8.5 kg', loc: 'Bâtiment Petit, Étage 2' },
+        { code: 'SL3-OM', name: 'Sèche-linge 3 Omar', type: 'dryer', bg: '#212121', text: 'text-white', status: 'available', cap: '9.5 kg', loc: 'Bâtiment Omar, RDC' },
     ],
     reservations: [
-        { date: '2026-09-30', hour: '00 h', time: '00:00 - 01:00', code: 'ML2-OM', bg: '#00e676', textColor: 'text-slate-900', user: 'Alex Rivera', durationHours: 1 },
+        // ML2-OM on Mercredi 30 Septembre extended to 2am (00:00 - 02:00, 2h)
+        { date: '2026-09-30', hour: '00 h', time: '00:00 - 02:00', code: 'ML2-OM', bg: '#00e676', textColor: 'text-slate-900', user: 'Alex Rivera', durationHours: 2 },
         { date: '2026-09-30', hour: '06 h', time: '06:00 - 07:00', code: 'SL1-PE', bg: '#1a237e', textColor: 'text-white', user: 'Youssef Alami', durationHours: 1 },
         { 
             date: '2026-09-30',
@@ -103,9 +133,16 @@ const state = {
                 { time: '07:00 - 09:00', code: 'ML2-OM', bg: '#00e676', textColor: 'text-slate-900', user: 'Sara Bennani' }
             ]
         },
-        // Pre-seeded reservation for ML1-PE from 2pm to 3pm (14:00 - 15:00) as requested
+        { date: '2026-09-30', hour: '09 h', time: '09:00 - 11:00', code: 'ML1-OM', bg: '#e53935', textColor: 'text-white', user: 'Hamza Idrissi', durationHours: 2 },
+        { date: '2026-09-30', hour: '11 h', time: '11:00 - 12:00', code: 'SL1-OM', bg: '#4e342e', textColor: 'text-white', user: 'Amine Chraibi', durationHours: 1 },
+        { date: '2026-09-30', hour: '12 h', time: '12:00 - 14:00', code: 'ML4-PE', bg: '#ff9100', textColor: 'text-white', user: 'Leila Benjelloun', durationHours: 2 },
         { date: '2026-09-30', hour: '14 h', time: '14:00 - 15:00', code: 'ML1-PE', bg: '#2979ff', textColor: 'text-white', user: 'Mehdi Tazi', durationHours: 1 },
-        // Pre-seeded reservations for 2026-10-01 (Jeudi, 1 Octobre 2026) matching user screenshot
+        { date: '2026-09-30', hour: '15 h', time: '15:00 - 17:00', code: 'SL3-PE', bg: '#8e24aa', textColor: 'text-white', user: 'Khadija Mansour', durationHours: 2 },
+        { date: '2026-09-30', hour: '17 h', time: '17:00 - 18:00', code: 'ML3-OM', bg: '#004d40', textColor: 'text-white', user: 'Omar Fassi', durationHours: 1 },
+        { date: '2026-09-30', hour: '18 h', time: '18:00 - 20:00', code: 'ML2-OM', bg: '#00e676', textColor: 'text-slate-900', user: 'Sara Bennani', durationHours: 2 },
+        { date: '2026-09-30', hour: '20 h', time: '20:00 - 21:00', code: 'SL2-PE', bg: '#827717', textColor: 'text-white', user: 'Alex Rivera', durationHours: 1 },
+        { date: '2026-09-30', hour: '21 h', time: '21:00 - 23:00', code: 'ML1-PE', bg: '#2979ff', textColor: 'text-white', user: 'Youssef Alami', durationHours: 2 },
+        // Pre-seeded reservations for 2026-10-01 (Jeudi, 1 Octobre 2026)
         { date: '2026-10-01', hour: '00 h', time: '00:00 - 01:00', code: 'SL3-PE', bg: '#8e24aa', textColor: 'text-white', user: 'Coulibaly', durationHours: 1 },
         { date: '2026-10-01', hour: '00 h', time: '00:00 - 02:00', code: 'ML1-PE', bg: '#2979ff', textColor: 'text-white', user: 'ghadi', durationHours: 2 },
         { date: '2026-10-01', hour: '02 h', time: '02:00 - 04:00', code: 'SL2-PE', bg: '#827717', textColor: 'text-white', user: 'ghadi', durationHours: 2 }
@@ -135,8 +172,10 @@ function renderLayout(title, content, currentPath = '/', flash = '') {
         <div>
             <!-- Header -->
             <div class="px-5 py-5 flex items-center space-x-3 border-b border-[#00695c]">
-                <div class="w-9 h-9 rounded-full bg-white flex items-center justify-center text-[#00796b] shadow font-black text-lg">
-                    ${state.isAdmin ? '☺' : '🎓'}
+                <div class="w-9 h-9 rounded-full bg-white flex items-center justify-center text-[#00796b] shadow font-black text-sm">
+                    ${state.isAdmin 
+                        ? '<svg class="w-5 h-5 text-[#00796b]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>' 
+                        : '<svg class="w-5 h-5 text-[#00796b]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l9-5-9-5-9 5 9 5z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z"/></svg>'}
                 </div>
                 <div>
                     <span class="text-xs font-black tracking-wider uppercase text-white block">
@@ -215,7 +254,7 @@ function renderLayout(title, content, currentPath = '/', flash = '') {
                 <span class="text-xs text-slate-400 font-medium">laundry.fecc.ma${currentPath}</span>
                 
                 <a href="/toggle-role" class="px-2.5 py-1 rounded-full text-[11px] font-bold border transition-all ${state.isAdmin ? 'bg-amber-50 text-amber-800 border-amber-300' : 'bg-blue-50 text-blue-800 border-blue-300'}" title="Cliquez pour basculer entre vue Administrateur et vue Étudiant">
-                    ${state.isAdmin ? '👑 Mode: ADMIN (Cliquez pour tester vue Étudiant)' : '🎓 Mode: ÉTUDIANT (Cliquez pour tester vue Admin)'}
+                    ${state.isAdmin ? 'Mode: ADMIN (Cliquez pour tester vue Étudiant)' : 'Mode: ÉTUDIANT (Cliquez pour tester vue Admin)'}
                 </a>
             </div>
 
@@ -228,7 +267,7 @@ function renderLayout(title, content, currentPath = '/', flash = '') {
                 </div>
 
                 <div class="flex items-center space-x-1 cursor-pointer">
-                    <span class="text-base" title="Français">🇫🇷</span>
+                    <span class="text-xs font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">FR</span>
                 </div>
 
                 <div class="flex items-center space-x-2.5">
@@ -245,7 +284,7 @@ function renderLayout(title, content, currentPath = '/', flash = '') {
         <div class="px-6 pt-4">
             <div class="p-3.5 rounded bg-emerald-50 border-l-4 border-emerald-500 text-emerald-800 text-xs flex items-center justify-between shadow-xs">
                 <div class="flex items-center space-x-2">
-                    <span class="font-bold text-sm">✓</span>
+                    <svg class="w-4 h-4 text-emerald-600 inline-block shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
                     <span>${flash}</span>
                 </div>
                 <button onclick="this.parentElement.remove()" class="text-emerald-700 font-bold">&times;</button>
@@ -358,16 +397,13 @@ function renderCalendarPage(selectedDateStr = '2026-09-30') {
 
     // 2. Parse start and end times to minutes
     const dayParsed = dayRawReservations.map(r => {
-        const [startStr, endStr] = r.time.split('-').map(s => s.trim());
-        const startMinutes = parseTimeToMinutes(startStr);
-        let endMinutes = parseTimeToMinutes(endStr);
-        if (endMinutes === 0 && startMinutes > 0) endMinutes = 24 * 60;
-        if (endMinutes <= startMinutes) endMinutes = startMinutes + 60;
+        const parsed = parseReservationTimes(r.time, r.durationHours || 1);
         return {
             ...r,
-            startMinutes,
-            endMinutes,
-            durationMinutes: endMinutes - startMinutes,
+            startMinutes: parsed.startMinutes,
+            endMinutes: parsed.endMinutes,
+            durationMinutes: parsed.durationMinutes,
+            time: parsed.formattedTime,
         };
     });
 
@@ -506,7 +542,6 @@ function renderCalendarPage(selectedDateStr = '2026-09-30') {
                                 style="background-color: ${m.bg};"
                                 class="badge-machine badge-machine-btn ${m.text} ${m.code === 'ML1-OM' ? 'ring-3 ring-slate-900 scale-105 shadow-md' : ''}">
                             <span>${m.code}</span>
-                            <span class="text-sm">${m.icon}</span>
                         </button>
                     `).join('')}
                 </div>
@@ -519,7 +554,6 @@ function renderCalendarPage(selectedDateStr = '2026-09-30') {
                                 style="background-color: ${m.bg};"
                                 class="badge-machine badge-machine-btn ${m.text}">
                             <span>${m.code}</span>
-                            <span class="text-xs">${m.icon}</span>
                         </button>
                     `).join('')}
                 </div>
@@ -595,9 +629,8 @@ function renderCalendarPage(selectedDateStr = '2026-09-30') {
                             const top = h * 52;
                             const hourLabel = String(h === 24 ? 24 : h).padStart(2, '0') + ':00';
                             return `
-                            <div class="absolute right-0 pr-2 flex items-center -translate-y-1/2 pointer-events-none" style="top: ${top}px;">
-                                <span class="text-[11px] font-semibold text-slate-600 font-mono tracking-tight">${hourLabel}</span>
-                                <span class="w-1.5 h-[1.5px] bg-slate-400 ml-1.5 inline-block"></span>
+                            <div class="absolute right-0 pr-3 flex items-center -translate-y-1/2 pointer-events-none" style="top: ${top}px;">
+                                <span class="text-[11px] font-bold text-slate-500 font-mono tracking-tight">${hourLabel}</span>
                             </div>`;
                         }).join('')}
                     </div>
@@ -627,63 +660,41 @@ function renderCalendarPage(selectedDateStr = '2026-09-30') {
                         ${calendarBlocks.map(block => {
                             const isMultiHour = block.durationMinutes > 60;
                             const machineColor = block.bg || '#00897b';
+                            const isDarkText = block.textColor === 'text-slate-900';
+                            const badgeBg = isDarkText ? 'bg-black/15 text-slate-900' : 'bg-black/25 text-white';
+                            const subText = isDarkText ? 'text-slate-800' : 'text-white/90';
                             return `
                             <div style="background-color: ${machineColor}; top: ${block.top + 1}px; height: ${block.height - 2}px; left: calc(${block.leftPct}% + 4px); width: calc(${block.widthPct}% - 8px);"
-                                 class="absolute rounded-md text-white overflow-hidden transition-all cursor-pointer border border-white/20 select-none shadow-sm hover:shadow-md hover:brightness-105 z-20"
+                                 class="absolute rounded-md ${block.textColor || 'text-white'} overflow-hidden transition-all cursor-pointer border border-white/25 select-none shadow-sm hover:shadow-md hover:brightness-105 z-20"
                                  onclick="pickMachine('${block.code}')"
                                  title="${block.code} • ${block.time} (${block.user || 'Occupé'}) - Cliquer pour sélectionner la machine">
                                 
-                                ${!isMultiHour ? `
-                                    <div class="h-full px-2.5 py-1 flex items-center justify-between text-xs leading-none">
+                                <div class="h-full p-2 flex flex-col justify-between">
+                                    <div class="flex items-center justify-between text-xs leading-tight">
                                         <div class="flex items-center space-x-1.5 truncate">
-                                            <span class="font-mono font-bold text-[11px] bg-black/25 px-1.5 py-0.5 rounded">${block.time}</span>
+                                            <span class="font-mono font-bold text-[11px] ${badgeBg} px-1.5 py-0.5 rounded">${block.time}</span>
                                             <span class="opacity-60">•</span>
                                             <span class="font-bold text-[12px] truncate">${block.code}</span>
+                                            ${isMultiHour ? `<span class="text-[10px] font-semibold px-1.5 py-0.5 rounded ${badgeBg} uppercase tracking-wider">${block.durationFormatted}</span>` : ''}
                                         </div>
                                         ${block.user ? `
-                                            <span class="opacity-90 text-[11px] font-medium truncate max-w-[140px] ml-2">(${block.user})</span>
+                                            <span class="text-[11px] font-medium truncate max-w-[140px] ml-2 ${subText}">(${block.user})</span>
                                         ` : ''}
                                     </div>
-                                ` : `
-                                    <div class="h-full p-2.5 flex flex-col justify-between">
-                                        <div class="flex items-start justify-between gap-2">
-                                            <div>
-                                                <div class="inline-flex items-center space-x-1.5 px-2 py-0.5 rounded bg-black/25 font-mono font-bold text-[11px] tracking-tight mb-1">
-                                                    <span>${block.time}</span>
-                                                    <span class="opacity-75">(${block.durationFormatted})</span>
-                                                </div>
-                                                <div class="text-sm font-black flex items-center space-x-1.5">
-                                                    <span>${block.code}</span>
-                                                    <span class="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-white/20 uppercase tracking-wider">
-                                                        Créneau continu
-                                                    </span>
-                                                </div>
-                                            </div>
-                                            ${block.user ? `
-                                                <div class="text-right shrink-0">
-                                                    <span class="text-[9px] uppercase font-semibold tracking-wider opacity-75 block">Réservé par</span>
-                                                    <span class="text-xs font-bold bg-white/15 px-2 py-0.5 rounded inline-block mt-0.5">${block.user}</span>
-                                                </div>
-                                            ` : ''}
+                                    ${block.height >= 70 ? `
+                                        <div class="flex items-center justify-between text-[10px] opacity-80 pt-1 border-t border-black/10">
+                                            <span>Machine : <strong class="font-bold">${block.code}</strong></span>
+                                            <span class="text-[9px] italic">Créneau continu</span>
                                         </div>
-                                        ${block.height >= 80 ? `
-                                            <div class="flex items-center justify-between text-[10px] opacity-80 pt-1.5 border-t border-white/20">
-                                                <span class="flex items-center space-x-1">
-                                                    <span>Machine :</span>
-                                                    <strong class="font-bold">${block.code}</strong>
-                                                </span>
-                                                <span class="italic text-[9px]">Cliquer pour sélectionner</span>
-                                            </div>
-                                        ` : ''}
-                                    </div>
-                                `}
+                                    ` : ''}
+                                </div>
                             </div>`;
                         }).join('')}
 
                         ${calendarBlocks.length === 0 ? `
                             <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
                                 <div class="bg-white/90 border border-slate-200 shadow-sm rounded-lg p-4 text-center max-w-sm">
-                                    <span class="text-2xl block mb-1">📅</span>
+                                    <svg class="w-8 h-8 mx-auto mb-1 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
                                     <span class="text-xs font-bold text-slate-700 block">Aucune réservation pour cette journée</span>
                                     <span class="text-[11px] text-slate-500 block mt-1">Cliquez sur un créneau horaire ou sélectionnez une machine ci-dessus pour réserver.</span>
                                 </div>
@@ -777,7 +788,7 @@ function renderDedicatedReservationPage(selectedMachine = 'ML1-OM') {
                 <div class="p-4 rounded-lg bg-emerald-50/80 border border-emerald-200 text-xs space-y-2.5">
                     <div class="flex items-center justify-between font-bold text-emerald-900 border-b border-emerald-200/60 pb-2">
                         <span class="flex items-center space-x-1.5">
-                            <span>⚡</span>
+                            <svg class="w-4 h-4 text-emerald-700 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
                             <span>Surveillance du Quota Hebdomadaire (8h / semaine)</span>
                         </span>
                         <span class="text-xs font-mono bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded">
@@ -809,7 +820,7 @@ function renderDedicatedReservationPage(selectedMachine = 'ML1-OM') {
 
                     <!-- Insufficient Quota Alert -->
                     <div id="quotaExceededAlert" class="hidden p-2.5 bg-rose-50 border border-rose-200 text-rose-800 rounded font-semibold text-[11px] flex items-center space-x-2">
-                        <span>⚠️</span>
+                        <svg class="w-4 h-4 text-rose-600 shrink-0 inline-block mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
                         <span>Dépassement de quota : vous avez sélectionné plus d'heures que votre solde hebdomadaire restant (<span id="alertRemainingSpan">${remaining}</span>h disponibles sur 8h).</span>
                     </div>
                 </div>
@@ -919,7 +930,7 @@ function renderDedicatedReservationPage(selectedMachine = 'ML1-OM') {
             card.classList.remove('border-slate-200', 'bg-white', 'text-slate-700');
             check.classList.add('bg-[#00897b]', 'border-[#00897b]', 'text-white');
             check.classList.remove('border-slate-300');
-            check.innerHTML = '✓';
+            check.innerHTML = '<svg class="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>';
         } else {
             card.classList.remove('border-[#00897b]', 'bg-[#e0f2f1]', 'text-[#00695c]', 'font-bold', 'shadow-xs');
             card.classList.add('border-slate-200', 'bg-white', 'text-slate-700');
@@ -1408,18 +1419,19 @@ const server = http.createServer((req, res) => {
                 }
             }
 
-            // Create reservation for each selected 1-hour slot on the same machine
+            // Create reservation for each selected slot on the same machine
             for (const slotHour of selectedHours) {
-                const hourPrefix = slotHour.split(':')[0].trim() + ' h';
+                const parsed = parseReservationTimes(slotHour, 1);
+                const hourPrefix = parsed.formattedTime.split(':')[0].trim() + ' h';
                 state.reservations.push({
                     date: bookingDate,
                     hour: hourPrefix,
-                    time: slotHour,
+                    time: parsed.formattedTime,
                     code: machine.code,
                     bg: machine.bg,
                     textColor: machine.text,
                     user: state.isAdmin ? 'R. Omari' : 'Alex Rivera',
-                    durationHours: 1
+                    durationHours: parsed.durationMinutes / 60
                 });
             }
 

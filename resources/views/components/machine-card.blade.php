@@ -21,7 +21,11 @@
             <div class="flex items-center space-x-3">
                 <span style="background-color: {{ $machine->color ?? '#00897b' }};" 
                       class="w-10 h-10 rounded text-white font-black text-sm flex items-center justify-center shrink-0 shadow-xs">
-                    {{ $isWasher ? '👕' : '🔄' }}
+                    @if($isWasher)
+                        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="4" y="2" width="16" height="20" rx="2" stroke-width="2"/><circle cx="12" cy="14" r="4" stroke-width="2"/><circle cx="8" cy="6" r="1" fill="currentColor"/></svg>
+                    @else
+                        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="4" y="2" width="16" height="20" rx="2" stroke-width="2"/><circle cx="12" cy="13" r="5" stroke-dasharray="3 3" stroke-width="2"/><circle cx="12" cy="13" r="2" stroke-width="2"/></svg>
+                    @endif
                 </span>
                 <div>
                     <div class="flex items-center space-x-2">

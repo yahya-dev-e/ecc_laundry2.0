@@ -90,7 +90,6 @@
                             style="background-color: {{ $machine->color ?? '#00897b' }};"
                             class="badge-machine text-white hover:opacity-90">
                         <span class="truncate">{{ $machine->name }}</span>
-                        <span class="text-sm">👕</span>
                     </button>
                 @empty
                     <p class="text-xs text-slate-400 col-span-3 text-center py-2">Aucun lave-linge</p>
@@ -105,7 +104,6 @@
                             style="background-color: {{ $machine->color ?? '#263238' }};"
                             class="badge-machine text-white hover:opacity-90">
                         <span class="truncate">{{ $machine->name }}</span>
-                        <span class="text-xs">🔄</span>
                     </button>
                 @empty
                     <p class="text-xs text-slate-400 col-span-2 text-center py-2">Aucun sèche-linge</p>
@@ -217,9 +215,8 @@
                             $top = $h * 52;
                             $hourLabel = sprintf('%02d:00', $h === 24 ? 24 : $h);
                         @endphp
-                        <div class="absolute right-0 pr-2 flex items-center -translate-y-1/2 pointer-events-none" style="top: {{ $top }}px;">
-                            <span class="text-[11px] font-semibold text-slate-600 font-mono tracking-tight">{{ $hourLabel }}</span>
-                            <span class="w-1.5 h-[1.5px] bg-slate-400 ml-1.5 inline-block"></span>
+                        <div class="absolute right-0 pr-3 flex items-center -translate-y-1/2 pointer-events-none" style="top: {{ $top }}px;">
+                            <span class="text-[11px] font-bold text-slate-500 font-mono tracking-tight">{{ $hourLabel }}</span>
                         </div>
                     @endfor
                 </div>
@@ -338,7 +335,7 @@
                         <!-- Empty Day State Overlay -->
                         <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
                             <div class="bg-white/90 border border-slate-200 shadow-sm rounded-lg p-4 text-center max-w-sm">
-                                <span class="text-2xl block mb-1">📅</span>
+                                <svg class="w-8 h-8 mx-auto mb-1 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
                                 <span class="text-xs font-bold text-slate-700 block">Aucune réservation pour cette journée</span>
                                 <span class="text-[11px] text-slate-500 block mt-1">Cliquez sur un créneau horaire ou sélectionnez une machine ci-dessus pour réserver.</span>
                             </div>

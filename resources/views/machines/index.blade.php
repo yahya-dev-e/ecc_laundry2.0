@@ -57,7 +57,7 @@
                     <div class="p-3.5 flex items-center justify-between hover:bg-slate-50 transition-colors">
                         <div class="flex items-center space-x-3">
                             <span style="background-color: {{ $w->color ?? '#00897b' }};" class="w-8 h-8 rounded text-white font-black text-xs flex items-center justify-center shrink-0">
-                                👕
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="4" y="2" width="16" height="20" rx="2" stroke-width="2"/><circle cx="12" cy="14" r="4" stroke-width="2"/><circle cx="8" cy="6" r="1" fill="currentColor"/></svg>
                             </span>
                             <div>
                                 <span class="font-bold text-xs text-slate-800">{{ $w->name }}</span>
@@ -90,7 +90,7 @@
                     <div class="p-3.5 flex items-center justify-between hover:bg-slate-50 transition-colors">
                         <div class="flex items-center space-x-3">
                             <span style="background-color: {{ $d->color ?? '#263238' }};" class="w-8 h-8 rounded text-white font-black text-xs flex items-center justify-center shrink-0">
-                                🔄
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="4" y="2" width="16" height="20" rx="2" stroke-width="2"/><circle cx="12" cy="13" r="5" stroke-dasharray="3 3" stroke-width="2"/><circle cx="12" cy="13" r="2" stroke-width="2"/></svg>
                             </span>
                             <div>
                                 <span class="font-bold text-xs text-slate-800">{{ $d->name }}</span>
