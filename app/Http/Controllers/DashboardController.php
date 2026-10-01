@@ -75,27 +75,166 @@ class DashboardController extends Controller
         // 2. Fetch all reservations for the selected calendar day
         $dayStart = $selectedDate->copy()->startOfDay();
         $dayEnd = $selectedDate->copy()->endOfDay();
+        $dayEndExclusive = $selectedDate->copy()->addDay()->startOfDay();
 
         $dayReservations = Reservation::with(['machine', 'user'])
-            ->where(function ($q) use ($dayStart, $dayEnd) {
-                $q->whereBetween('start_time', [$dayStart, $dayEnd])
-                  ->orWhereBetween('end_time', [$dayStart, $dayEnd])
-                  ->orWhere(function ($sub) use ($dayStart, $dayEnd) {
-                      $sub->where('start_time', '<=', $dayStart)
-                          ->where('end_time', '>=', $dayEnd);
-                  });
+            ->where(function ($q) use ($dayStart, $dayEndExclusive) {
+                $q->where('start_time', '<', $dayEndExclusive)
+                  ->where('end_time', '>', $dayStart);
             })
             ->get();
 
-        // Map reservations by hour of day (0 to 23)
+        // Map reservations by hour of day (0 to 23) using half-open intervals [hourStart, nextHourStart)
+        // This ensures a 9am-11am reservation appears in hour 9 and 10, never hour 11
         $reservationsByHour = [];
         for ($h = 0; $h < 24; $h++) {
             $hourStart = $selectedDate->copy()->setTime($h, 0, 0);
-            $hourEnd = $selectedDate->copy()->setTime($h, 59, 59);
+            $nextHourStart = $h === 23 ? $dayEndExclusive : $selectedDate->copy()->setTime($h + 1, 0, 0);
 
-            $reservationsByHour[$h] = $dayReservations->filter(function ($res) use ($hourStart, $hourEnd) {
-                return $res->start_time && $res->end_time && $res->start_time <= $hourEnd && $res->end_time >= $hourStart;
+            $reservationsByHour[$h] = $dayReservations->filter(function ($res) use ($hourStart, $nextHourStart) {
+                return $res->start_time && $res->end_time && $res->start_time < $nextHourStart && $res->end_time > $hourStart;
             })->values();
+        }
+
+        // Build continuous blocks:
+        // Coalesce contiguous / back-to-back reservations for the SAME machine & SAME user
+        $hourHeight = 52; // Height in pixels for each 1-hour slot
+
+        $sortedReservations = $dayReservations->filter(function ($res) {
+            return $res->start_time && $res->end_time && $res->end_time > $res->start_time;
+        })->sortBy([
+            ['machine_id', 'asc'],
+            ['start_time', 'asc'],
+        ])->values();
+
+        $mergedBlocks = [];
+        foreach ($sortedReservations as $res) {
+            $lastIndex = count($mergedBlocks) - 1;
+            if ($lastIndex >= 0) {
+                $last = &$mergedBlocks[$lastIndex];
+                $sameMachine = (int)$last['machine_id'] === (int)$res->machine_id;
+                $sameUser = ($last['user_id'] === $res->user_id) && ($last['user_id'] !== null);
+                $isContiguous = $res->start_time->lte($last['end_time']);
+
+                if ($sameMachine && $sameUser && $isContiguous) {
+                    if ($res->end_time->gt($last['end_time'])) {
+                        $last['end_time'] = $res->end_time->copy();
+                    }
+                    $last['reservation_ids'][] = $res->id;
+                    continue;
+                }
+            }
+
+            $mergedBlocks[] = [
+                'id' => $res->id,
+                'reservation_ids' => [$res->id],
+                'machine_id' => $res->machine_id,
+                'machine' => $res->machine,
+                'user_id' => $res->user_id,
+                'user' => $res->user,
+                'start_time' => $res->start_time->copy(),
+                'end_time' => $res->end_time->copy(),
+            ];
+        }
+
+        // Calculate time offsets in minutes clamped to the current day
+        $blocksWithTime = [];
+        foreach ($mergedBlocks as $block) {
+            $clampedStart = $block['start_time']->lt($dayStart) ? $dayStart->copy() : $block['start_time'];
+            $clampedEnd = $block['end_time']->gt($dayEndExclusive) ? $dayEndExclusive->copy() : $block['end_time'];
+
+            $startMinutes = $clampedStart->diffInMinutes($dayStart);
+            $endMinutes = $clampedEnd->diffInMinutes($dayStart);
+            if ($endMinutes <= $startMinutes) {
+                $endMinutes = $startMinutes + 30;
+            }
+
+            $durationMinutes = $endMinutes - $startMinutes;
+            $durationFormatted = $durationMinutes >= 60 
+                ? ($durationMinutes % 60 === 0 ? ($durationMinutes / 60) . ' h' : sprintf('%dh%02d', floor($durationMinutes/60), $durationMinutes%60))
+                : $durationMinutes . ' min';
+
+            $blocksWithTime[] = array_merge($block, [
+                'startMinutes' => $startMinutes,
+                'endMinutes' => $endMinutes,
+                'durationMinutes' => $durationMinutes,
+                'durationFormatted' => $durationFormatted,
+                'timeFormatted' => $block['start_time']->format('H:i') . ' - ' . $block['end_time']->format('H:i'),
+            ]);
+        }
+
+        // Cluster overlapping blocks for responsive side-by-side columns
+        usort($blocksWithTime, function ($a, $b) {
+            if ($a['startMinutes'] === $b['startMinutes']) {
+                return $b['durationMinutes'] <=> $a['durationMinutes'];
+            }
+            return $a['startMinutes'] <=> $b['startMinutes'];
+        });
+
+        $clusters = [];
+        $currentCluster = [];
+        $clusterEnd = 0;
+
+        foreach ($blocksWithTime as $block) {
+            if (empty($currentCluster)) {
+                $currentCluster[] = $block;
+                $clusterEnd = $block['endMinutes'];
+            } else {
+                if ($block['startMinutes'] < $clusterEnd) {
+                    $currentCluster[] = $block;
+                    $clusterEnd = max($clusterEnd, $block['endMinutes']);
+                } else {
+                    $clusters[] = $currentCluster;
+                    $currentCluster = [$block];
+                    $clusterEnd = $block['endMinutes'];
+                }
+            }
+        }
+        if (!empty($currentCluster)) {
+            $clusters[] = $currentCluster;
+        }
+
+        $calendarBlocks = [];
+        foreach ($clusters as $cluster) {
+            $columns = [];
+            $assignments = [];
+
+            foreach ($cluster as $idx => $b) {
+                $placed = false;
+                foreach ($columns as $colIdx => $colEnd) {
+                    if ($b['startMinutes'] >= $colEnd) {
+                        $columns[$colIdx] = $b['endMinutes'];
+                        $assignments[$idx] = $colIdx;
+                        $placed = true;
+                        break;
+                    }
+                }
+                if (!$placed) {
+                    $newCol = count($columns);
+                    $columns[$newCol] = $b['endMinutes'];
+                    $assignments[$idx] = $newCol;
+                }
+            }
+
+            $numCols = max(1, count($columns));
+
+            foreach ($cluster as $idx => $b) {
+                $colIdx = $assignments[$idx];
+                $widthPct = 100 / $numCols;
+                $leftPct = $colIdx * $widthPct;
+
+                $top = ($b['startMinutes'] / 60) * $hourHeight;
+                $height = ($b['durationMinutes'] / 60) * $hourHeight;
+
+                $b['top'] = $top;
+                $b['height'] = max(34, $height);
+                $b['leftPct'] = $leftPct;
+                $b['widthPct'] = $widthPct;
+                $b['numCols'] = $numCols;
+                $b['colIdx'] = $colIdx;
+
+                $calendarBlocks[] = $b;
+            }
         }
 
         // 3. Fetch user's currently active cycles (time-derived: start_time <= now <= end_time)
@@ -146,6 +285,7 @@ class DashboardController extends Controller
             'dayName' => $dayOfWeek,
             'dayReservations' => $dayReservations,
             'reservationsByHour' => $reservationsByHour,
+            'calendarBlocks' => $calendarBlocks,
         ]);
     }
 }

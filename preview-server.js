@@ -104,7 +104,11 @@ const state = {
             ]
         },
         // Pre-seeded reservation for ML1-PE from 2pm to 3pm (14:00 - 15:00) as requested
-        { date: '2026-09-30', hour: '14 h', time: '14:00 - 15:00', code: 'ML1-PE', bg: '#2979ff', textColor: 'text-white', user: 'Mehdi Tazi', durationHours: 1 }
+        { date: '2026-09-30', hour: '14 h', time: '14:00 - 15:00', code: 'ML1-PE', bg: '#2979ff', textColor: 'text-white', user: 'Mehdi Tazi', durationHours: 1 },
+        // Pre-seeded reservations for 2026-10-01 (Jeudi, 1 Octobre 2026) matching user screenshot
+        { date: '2026-10-01', hour: '00 h', time: '00:00 - 01:00', code: 'SL3-PE', bg: '#8e24aa', textColor: 'text-white', user: 'Coulibaly', durationHours: 1 },
+        { date: '2026-10-01', hour: '00 h', time: '00:00 - 02:00', code: 'ML1-PE', bg: '#2979ff', textColor: 'text-white', user: 'ghadi', durationHours: 2 },
+        { date: '2026-10-01', hour: '02 h', time: '02:00 - 04:00', code: 'SL2-PE', bg: '#827717', textColor: 'text-white', user: 'ghadi', durationHours: 2 }
     ]
 };
 
@@ -321,6 +325,154 @@ function renderCalendarPage(selectedDateStr = '2026-09-30') {
         });
     }
 
+    // 1. Gather all reservations for this date
+    const dayRawReservations = [];
+    state.reservations.forEach(r => {
+        const rDate = r.date || '2026-09-30';
+        if (rDate === selectedDateStr) {
+            if (r.multi) {
+                r.multi.forEach(m => {
+                    dayRawReservations.push({
+                        ...m,
+                        date: rDate,
+                        time: m.time,
+                        code: m.code,
+                        user: m.user,
+                        bg: m.bg,
+                        textColor: m.textColor,
+                    });
+                });
+            } else {
+                dayRawReservations.push({
+                    ...r,
+                    date: rDate,
+                    time: r.time,
+                    code: r.code,
+                    user: r.user,
+                    bg: r.bg,
+                    textColor: r.textColor,
+                });
+            }
+        }
+    });
+
+    // 2. Parse start and end times to minutes
+    const dayParsed = dayRawReservations.map(r => {
+        const [startStr, endStr] = r.time.split('-').map(s => s.trim());
+        const startMinutes = parseTimeToMinutes(startStr);
+        let endMinutes = parseTimeToMinutes(endStr);
+        if (endMinutes === 0 && startMinutes > 0) endMinutes = 24 * 60;
+        if (endMinutes <= startMinutes) endMinutes = startMinutes + 60;
+        return {
+            ...r,
+            startMinutes,
+            endMinutes,
+            durationMinutes: endMinutes - startMinutes,
+        };
+    });
+
+    // 3. Sort by machine code, then startMinutes
+    dayParsed.sort((a, b) => {
+        if (a.code !== b.code) return a.code.localeCompare(b.code);
+        return a.startMinutes - b.startMinutes;
+    });
+
+    // 4. Coalesce adjacent / contiguous reservations for SAME machine and SAME user into a single continuous block
+    const mergedBlocks = [];
+    for (const res of dayParsed) {
+        const last = mergedBlocks[mergedBlocks.length - 1];
+        if (last && last.code === res.code && last.user && last.user === res.user && res.startMinutes <= last.endMinutes) {
+            last.endMinutes = Math.max(last.endMinutes, res.endMinutes);
+            last.durationMinutes = last.endMinutes - last.startMinutes;
+            const startH = String(Math.floor(last.startMinutes / 60)).padStart(2, '0') + ':' + String(last.startMinutes % 60).padStart(2, '0');
+            const endH = String(Math.floor(last.endMinutes / 60)).padStart(2, '0') + ':' + String(last.endMinutes % 60).padStart(2, '0');
+            last.time = `${startH} - ${endH}`;
+        } else {
+            mergedBlocks.push({ ...res });
+        }
+    }
+
+    // 5. Cluster overlapping blocks for side-by-side columns
+    mergedBlocks.sort((a, b) => {
+        if (a.startMinutes === b.startMinutes) {
+            return b.durationMinutes - a.durationMinutes;
+        }
+        return a.startMinutes - b.startMinutes;
+    });
+
+    const clusters = [];
+    let currentCluster = [];
+    let clusterEnd = 0;
+
+    for (const block of mergedBlocks) {
+        if (currentCluster.length === 0) {
+            currentCluster.push(block);
+            clusterEnd = block.endMinutes;
+        } else {
+            if (block.startMinutes < clusterEnd) {
+                currentCluster.push(block);
+                clusterEnd = Math.max(clusterEnd, block.endMinutes);
+            } else {
+                clusters.push(currentCluster);
+                currentCluster = [block];
+                clusterEnd = block.endMinutes;
+            }
+        }
+    }
+    if (currentCluster.length > 0) {
+        clusters.push(currentCluster);
+    }
+
+    const hourHeight = 52;
+    const calendarBlocks = [];
+
+    for (const cluster of clusters) {
+        const columns = []; // tracks end minute of last event in column
+        const assignments = [];
+
+        cluster.forEach((b, idx) => {
+            let placed = false;
+            for (let c = 0; c < columns.length; c++) {
+                if (b.startMinutes >= columns[c]) {
+                    columns[c] = b.endMinutes;
+                    assignments[idx] = c;
+                    placed = true;
+                    break;
+                }
+            }
+            if (!placed) {
+                assignments[idx] = columns.length;
+                columns.push(b.endMinutes);
+            }
+        });
+
+        const numCols = Math.max(1, columns.length);
+
+        cluster.forEach((b, idx) => {
+            const colIdx = assignments[idx];
+            const widthPct = 100 / numCols;
+            const leftPct = colIdx * widthPct;
+
+            const top = (b.startMinutes / 60) * hourHeight;
+            const height = (b.durationMinutes / 60) * hourHeight;
+
+            const durFormatted = b.durationMinutes >= 60
+                ? (b.durationMinutes % 60 === 0 ? (b.durationMinutes / 60) + ' h' : `${Math.floor(b.durationMinutes / 60)}h${String(b.durationMinutes % 60).padStart(2, '0')}`)
+                : `${b.durationMinutes} min`;
+
+            calendarBlocks.push({
+                ...b,
+                top,
+                height: Math.max(34, height),
+                leftPct,
+                widthPct,
+                numCols,
+                colIdx,
+                durationFormatted: durFormatted,
+            });
+        });
+    }
+
     return `
     <div class="space-y-6 max-w-6xl mx-auto">
         <div class="bg-white border-l-4 border-[#00897b] p-3.5 rounded shadow-xs flex items-center justify-between">
@@ -424,45 +576,122 @@ function renderCalendarPage(selectedDateStr = '2026-09-30') {
             </div>
         </div>
 
+        <!-- Timetable / Calendar Timeline Grid with Continuous Blocks & Limitor Lines -->
         <div class="bg-white rounded-lg border border-slate-300 shadow-xs overflow-hidden">
             <div class="flex border-b border-slate-300 bg-[#f9f9e8] text-xs font-semibold text-slate-700">
-                <div class="w-16 p-2 text-center border-r border-slate-300 text-[11px] text-slate-500">Toute la journée</div>
-                <div class="flex-1 p-2 text-center font-bold text-slate-800 capitalize">${dayName} (${dateFormatted})</div>
+                <div class="w-16 sm:w-20 p-2.5 text-center border-r border-slate-300 text-[11px] text-slate-500 font-semibold tracking-tight">Horaires</div>
+                <div class="flex-1 p-2.5 text-center font-bold text-slate-800 capitalize flex items-center justify-center space-x-2">
+                    <span>${dayName} (${dateFormatted})</span>
+                    ${calendarBlocks.length > 0 ? `<span class="text-[10px] font-normal text-slate-500 bg-white/80 px-2 py-0.5 rounded border border-slate-200">${calendarBlocks.length} créneau${calendarBlocks.length > 1 ? 'x' : ''} continu${calendarBlocks.length > 1 ? 's' : ''}</span>` : ''}
+                </div>
             </div>
 
-            <div class="divide-y divide-slate-200 text-xs">
-                ${hours.map(h => {
-                    const matching = [];
-                    state.reservations.forEach(r => {
-                        const rDate = r.date || '2026-09-30';
-                        if (rDate === selectedDateStr && r.hour === h) {
-                            if (r.multi) {
-                                r.multi.forEach(m => matching.push(m));
-                            } else {
-                                matching.push(r);
-                            }
-                        }
-                    });
+            <div class="relative overflow-x-auto">
+                <div class="flex min-w-[620px] relative select-none">
+                    
+                    <!-- Left Axis: Hours of the Day directly ON the line as limitor indicators -->
+                    <div class="w-16 sm:w-20 shrink-0 border-r border-slate-300 bg-slate-50/70 relative select-none" style="height: ${24 * 52}px;">
+                        ${Array.from({ length: 25 }, (_, h) => {
+                            const top = h * 52;
+                            const hourLabel = String(h === 24 ? 24 : h).padStart(2, '0') + ':00';
+                            return `
+                            <div class="absolute right-0 pr-2 flex items-center -translate-y-1/2 pointer-events-none" style="top: ${top}px;">
+                                <span class="text-[11px] font-semibold text-slate-600 font-mono tracking-tight">${hourLabel}</span>
+                                <span class="w-1.5 h-[1.5px] bg-slate-400 ml-1.5 inline-block"></span>
+                            </div>`;
+                        }).join('')}
+                    </div>
 
-                    if (matching.length > 0) {
-                        return `
-                        <div class="flex items-center min-h-[42px] py-1 hover:bg-slate-50/50">
-                            <div class="timeline-hour">${h}</div>
-                            <div class="flex-1 px-2 h-full flex flex-wrap items-center gap-1.5">
-                                ${matching.map(slot => `
-                                    <div style="background-color: ${slot.bg};" class="h-7 rounded ${slot.textColor} font-bold text-[11px] px-2.5 flex items-center shadow-xs">
-                                        ${slot.time} • ${slot.code}
+                    <!-- Schedule Area: Horizontal Limitor Lines & Continuous Blocks -->
+                    <div class="flex-1 relative bg-white" style="height: ${24 * 52}px;">
+                        
+                        <!-- Background: 24 hour rows with click-to-book and horizontal divider lines -->
+                        ${Array.from({ length: 24 }, (_, h) => {
+                            const top = h * 52;
+                            const hourStr = String(h).padStart(2, '0') + ':00';
+                            return `
+                            <div class="absolute left-0 right-0 border-t border-slate-200 pointer-events-none" style="top: ${top}px;"></div>
+                            <div class="absolute left-0 right-0 border-t border-dashed border-slate-100 pointer-events-none" style="top: ${top + 26}px;"></div>
+                            <a href="/reserver?machine=ML1-OM&date=${selectedDateStr}&hour=${encodeURIComponent(hourStr)}" 
+                               class="absolute left-0 right-0 h-[52px] hover:bg-slate-50/60 transition-colors group cursor-pointer"
+                               style="top: ${top}px;"
+                               title="Cliquer pour réserver le créneau ${hourStr}">
+                                <div class="w-full h-full flex items-center px-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <span class="text-[10px] text-slate-400 font-medium">+ Réserver à ${hourStr}</span>
+                                </div>
+                            </a>`;
+                        }).join('')}
+                        <div class="absolute left-0 right-0 border-t border-slate-300 pointer-events-none" style="top: ${24 * 52}px;"></div>
+
+                        <!-- Continuous Blocks -->
+                        ${calendarBlocks.map(block => {
+                            const isMultiHour = block.durationMinutes > 60;
+                            const machineColor = block.bg || '#00897b';
+                            return `
+                            <div style="background-color: ${machineColor}; top: ${block.top + 1}px; height: ${block.height - 2}px; left: calc(${block.leftPct}% + 4px); width: calc(${block.widthPct}% - 8px);"
+                                 class="absolute rounded-md text-white overflow-hidden transition-all cursor-pointer border border-white/20 select-none shadow-sm hover:shadow-md hover:brightness-105 z-20"
+                                 onclick="pickMachine('${block.code}')"
+                                 title="${block.code} • ${block.time} (${block.user || 'Occupé'}) - Cliquer pour sélectionner la machine">
+                                
+                                ${!isMultiHour ? `
+                                    <div class="h-full px-2.5 py-1 flex items-center justify-between text-xs leading-none">
+                                        <div class="flex items-center space-x-1.5 truncate">
+                                            <span class="font-mono font-bold text-[11px] bg-black/25 px-1.5 py-0.5 rounded">${block.time}</span>
+                                            <span class="opacity-60">•</span>
+                                            <span class="font-bold text-[12px] truncate">${block.code}</span>
+                                        </div>
+                                        ${block.user ? `
+                                            <span class="opacity-90 text-[11px] font-medium truncate max-w-[140px] ml-2">(${block.user})</span>
+                                        ` : ''}
                                     </div>
-                                `).join('')}
+                                ` : `
+                                    <div class="h-full p-2.5 flex flex-col justify-between">
+                                        <div class="flex items-start justify-between gap-2">
+                                            <div>
+                                                <div class="inline-flex items-center space-x-1.5 px-2 py-0.5 rounded bg-black/25 font-mono font-bold text-[11px] tracking-tight mb-1">
+                                                    <span>${block.time}</span>
+                                                    <span class="opacity-75">(${block.durationFormatted})</span>
+                                                </div>
+                                                <div class="text-sm font-black flex items-center space-x-1.5">
+                                                    <span>${block.code}</span>
+                                                    <span class="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-white/20 uppercase tracking-wider">
+                                                        Créneau continu
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            ${block.user ? `
+                                                <div class="text-right shrink-0">
+                                                    <span class="text-[9px] uppercase font-semibold tracking-wider opacity-75 block">Réservé par</span>
+                                                    <span class="text-xs font-bold bg-white/15 px-2 py-0.5 rounded inline-block mt-0.5">${block.user}</span>
+                                                </div>
+                                            ` : ''}
+                                        </div>
+                                        ${block.height >= 80 ? `
+                                            <div class="flex items-center justify-between text-[10px] opacity-80 pt-1.5 border-t border-white/20">
+                                                <span class="flex items-center space-x-1">
+                                                    <span>Machine :</span>
+                                                    <strong class="font-bold">${block.code}</strong>
+                                                </span>
+                                                <span class="italic text-[9px]">Cliquer pour sélectionner</span>
+                                            </div>
+                                        ` : ''}
+                                    </div>
+                                `}
+                            </div>`;
+                        }).join('')}
+
+                        ${calendarBlocks.length === 0 ? `
+                            <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                <div class="bg-white/90 border border-slate-200 shadow-sm rounded-lg p-4 text-center max-w-sm">
+                                    <span class="text-2xl block mb-1">📅</span>
+                                    <span class="text-xs font-bold text-slate-700 block">Aucune réservation pour cette journée</span>
+                                    <span class="text-[11px] text-slate-500 block mt-1">Cliquez sur un créneau horaire ou sélectionnez une machine ci-dessus pour réserver.</span>
+                                </div>
                             </div>
-                        </div>`;
-                    }
-                    return `
-                    <div class="flex items-center h-9 hover:bg-slate-50/50">
-                        <div class="timeline-hour">${h}</div>
-                        <div class="flex-1 h-full border-t border-dashed border-slate-200"></div>
-                    </div>`;
-                }).join('')}
+                        ` : ''}
+
+                    </div>
+                </div>
             </div>
         </div>
     </div>`;

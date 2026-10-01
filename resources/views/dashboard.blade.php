@@ -190,46 +190,163 @@
         @endif
     </div>
 
-    <!-- Timetable / Calendar Timeline Grid -->
+    <!-- Timetable / Calendar Timeline Grid with Continuous Blocks & Limitor Lines -->
     <div class="bg-white rounded-lg border border-slate-300 shadow-xs overflow-hidden">
         
         <div class="flex border-b border-slate-300 bg-[#f9f9e8] text-xs font-semibold text-slate-700">
-            <div class="w-16 p-2 text-center border-r border-slate-300 text-[11px] text-slate-500">
-                Toute la journée
+            <div class="w-16 sm:w-20 p-2.5 text-center border-r border-slate-300 text-[11px] text-slate-500 font-semibold tracking-tight">
+                Horaires
             </div>
-            <div class="flex-1 p-2 text-center font-bold text-slate-800 capitalize">
-                {{ $dayName }} ({{ $dateFormatted }})
+            <div class="flex-1 p-2.5 text-center font-bold text-slate-800 capitalize flex items-center justify-center space-x-2">
+                <span>{{ $dayName }} ({{ $dateFormatted }})</span>
+                @if(isset($calendarBlocks) && count($calendarBlocks) > 0)
+                    <span class="text-[10px] font-normal text-slate-500 bg-white/80 px-2 py-0.5 rounded border border-slate-200">
+                        {{ count($calendarBlocks) }} créneau{{ count($calendarBlocks) > 1 ? 'x' : '' }} continu{{ count($calendarBlocks) > 1 ? 's' : '' }}
+                    </span>
+                @endif
             </div>
         </div>
 
-        <div class="divide-y divide-slate-200 text-xs">
-            @for ($h = 0; $h < 24; $h++)
-                @php
-                    $hourStr = sprintf('%02d h', $h);
-                    $matching = $reservationsByHour[$h] ?? collect();
-                @endphp
-                <div class="flex items-center min-h-[42px] py-1 hover:bg-slate-50/60 transition-colors">
-                    <div class="timeline-hour">{{ $hourStr }}</div>
-                    <div class="flex-1 px-2 h-full flex flex-wrap items-center gap-2">
-                        @forelse($matching as $res)
-                            <div style="background-color: {{ $res->machine->color ?? '#00897b' }};" 
-                                 :class="{'ring-2 ring-slate-900 scale-105 shadow-md': selectedMachineId === {{ $res->machine_id }}}"
-                                 class="h-7 rounded text-white font-bold text-[11px] px-2.5 flex items-center space-x-2 shadow-xs transition-all cursor-pointer"
-                                 @click="selectMachine('{{ $res->machine->name }}', {{ $res->machine_id }})"
-                                 title="Machine: {{ $res->machine->name }} (Cliquer pour sélectionner)">
-                                <span>{{ $res->start_time->format('H:i') }} - {{ $res->end_time->format('H:i') }}</span>
-                                <span>•</span>
-                                <span>{{ $res->machine->name }}</span>
-                                @if($res->user)
-                                    <span class="opacity-80 text-[10px] font-normal">({{ $res->user->name }})</span>
-                                @endif
-                            </div>
-                        @empty
-                            <div class="w-full h-full border-t border-dashed border-slate-200"></div>
-                        @endforelse
-                    </div>
+        <div class="relative overflow-x-auto">
+            <div class="flex min-w-[620px] relative select-none">
+                
+                <!-- Left Axis: Hours of the Day directly ON the line as limitor indicators -->
+                <div class="w-16 sm:w-20 shrink-0 border-r border-slate-300 bg-slate-50/70 relative select-none" style="height: {{ 24 * 52 }}px;">
+                    @for ($h = 0; $h <= 24; $h++)
+                        @php
+                            $top = $h * 52;
+                            $hourLabel = sprintf('%02d:00', $h === 24 ? 24 : $h);
+                        @endphp
+                        <div class="absolute right-0 pr-2 flex items-center -translate-y-1/2 pointer-events-none" style="top: {{ $top }}px;">
+                            <span class="text-[11px] font-semibold text-slate-600 font-mono tracking-tight">{{ $hourLabel }}</span>
+                            <span class="w-1.5 h-[1.5px] bg-slate-400 ml-1.5 inline-block"></span>
+                        </div>
+                    @endfor
                 </div>
-            @endfor
+
+                <!-- Schedule Area: Horizontal Limitor Lines & Continuous Blocks -->
+                <div class="flex-1 relative bg-white" style="height: {{ 24 * 52 }}px;">
+                    
+                    <!-- Background: 24 hour rows with click-to-book and horizontal divider lines -->
+                    @for ($h = 0; $h < 24; $h++)
+                        @php
+                            $top = $h * 52;
+                            $hourStr = sprintf('%02d:00', $h);
+                        @endphp
+                        <!-- Limitor boundary line at top of hour -->
+                        <div class="absolute left-0 right-0 border-t border-slate-200 pointer-events-none" style="top: {{ $top }}px;"></div>
+                        
+                        <!-- Mid-hour subtle 30m dashed guide line -->
+                        <div class="absolute left-0 right-0 border-t border-dashed border-slate-100 pointer-events-none" style="top: {{ $top + 26 }}px;"></div>
+
+                        <!-- Clickable / Hoverable hour row slot -->
+                        <a :href="'{{ route('bookings.create') }}?machine_id=' + selectedMachineId + '&start_time={{ $selectedDate }}T{{ sprintf('%02d', $h) }}:00:00'" 
+                           class="absolute left-0 right-0 h-[52px] hover:bg-slate-50/60 transition-colors group cursor-pointer"
+                           style="top: {{ $top }}px;"
+                           title="Cliquer pour réserver le créneau {{ $hourStr }}">
+                            <div class="w-full h-full flex items-center px-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <span class="text-[10px] text-slate-400 font-medium">+ Réserver à {{ $hourStr }}</span>
+                            </div>
+                        </a>
+                    @endfor
+                    <!-- Final boundary line at bottom (24:00) -->
+                    <div class="absolute left-0 right-0 border-t border-slate-300 pointer-events-none" style="top: {{ 24 * 52 }}px;"></div>
+
+                    <!-- Current Time Indicator (if viewing today) -->
+                    @if($selectedDate === $todayDate)
+                        @php
+                            $now = \Carbon\Carbon::now();
+                            $nowMinutes = ($now->hour * 60) + $now->minute;
+                            $nowTop = ($nowMinutes / 60) * 52;
+                        @endphp
+                        @if($nowMinutes >= 0 && $nowMinutes <= 1440)
+                            <div class="absolute left-0 right-0 z-30 pointer-events-none flex items-center" style="top: {{ $nowTop }}px;">
+                                <div class="w-2.5 h-2.5 rounded-full bg-rose-500 shadow -ml-1.5 shrink-0 ring-2 ring-white"></div>
+                                <div class="flex-1 border-t-2 border-rose-500 shadow-xs"></div>
+                                <span class="bg-rose-500 text-white font-mono text-[9px] font-bold px-1.5 py-0.5 rounded shadow -mr-1">
+                                    {{ $now->format('H:i') }}
+                                </span>
+                            </div>
+                        @endif
+                    @endif
+
+                    <!-- Render Continuous Blocks -->
+                    @forelse($calendarBlocks ?? [] as $block)
+                        @php
+                            $isMultiHour = $block['durationMinutes'] > 60;
+                            $machineColor = $block['machine']->color ?? '#00897b';
+                        @endphp
+                        <div style="background-color: {{ $machineColor }}; top: {{ $block['top'] + 1 }}px; height: {{ $block['height'] - 2 }}px; left: calc({{ $block['leftPct'] }}% + 4px); width: calc({{ $block['widthPct'] }}% - 8px);"
+                             :class="{'ring-3 ring-slate-900 shadow-xl scale-[1.01] z-30': selectedMachineId === {{ $block['machine_id'] }}, 'shadow-sm hover:shadow-md hover:brightness-105 z-20': selectedMachineId !== {{ $block['machine_id'] }}}"
+                             class="absolute rounded-md text-white overflow-hidden transition-all cursor-pointer border border-white/20 select-none"
+                             @click.stop="selectMachine('{{ $block['machine']->name }}', {{ $block['machine_id'] }})"
+                             title="{{ $block['machine']->name }} • {{ $block['timeFormatted'] }} ({{ $block['user']?->name ?? 'Occupé' }}) - Cliquer pour sélectionner la machine">
+                            
+                            @if(!$isMultiHour)
+                                <!-- Single Hour Slot Compact View -->
+                                <div class="h-full px-2.5 py-1 flex items-center justify-between text-xs leading-none">
+                                    <div class="flex items-center space-x-1.5 truncate">
+                                        <span class="font-mono font-bold text-[11px] bg-black/25 px-1.5 py-0.5 rounded">{{ $block['timeFormatted'] }}</span>
+                                        <span class="opacity-60">•</span>
+                                        <span class="font-bold text-[12px] truncate">{{ $block['machine']->name }}</span>
+                                    </div>
+                                    @if($block['user'])
+                                        <span class="opacity-90 text-[11px] font-medium truncate max-w-[140px] ml-2">
+                                            ({{ $block['user']->name }})
+                                        </span>
+                                    @endif
+                                </div>
+                            @else
+                                <!-- Multi-Hour Continuous Block (Expanded View) -->
+                                <div class="h-full p-2.5 flex flex-col justify-between">
+                                    <div class="flex items-start justify-between gap-2">
+                                        <div>
+                                            <div class="inline-flex items-center space-x-1.5 px-2 py-0.5 rounded bg-black/25 font-mono font-bold text-[11px] tracking-tight mb-1">
+                                                <span>{{ $block['timeFormatted'] }}</span>
+                                                <span class="opacity-75">({{ $block['durationFormatted'] }})</span>
+                                            </div>
+                                            <div class="text-sm font-black flex items-center space-x-1.5">
+                                                <span>{{ $block['machine']->name }}</span>
+                                                <span class="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-white/20 uppercase tracking-wider">
+                                                    Créneau continu
+                                                </span>
+                                            </div>
+                                        </div>
+                                        @if($block['user'])
+                                            <div class="text-right shrink-0">
+                                                <span class="text-[9px] uppercase font-semibold tracking-wider opacity-75 block">Réservé par</span>
+                                                <span class="text-xs font-bold bg-white/15 px-2 py-0.5 rounded inline-block mt-0.5">
+                                                    {{ $block['user']->name }}
+                                                </span>
+                                            </div>
+                                        @endif
+                                    </div>
+
+                                    @if($block['height'] >= 80)
+                                        <div class="flex items-center justify-between text-[10px] opacity-80 pt-1.5 border-t border-white/20">
+                                            <span class="flex items-center space-x-1">
+                                                <span>Machine :</span>
+                                                <strong class="font-bold">{{ $block['machine']->name }}</strong>
+                                            </span>
+                                            <span class="italic text-[9px]">Cliquer pour sélectionner</span>
+                                        </div>
+                                    @endif
+                                </div>
+                            @endif
+                        </div>
+                    @empty
+                        <!-- Empty Day State Overlay -->
+                        <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+                            <div class="bg-white/90 border border-slate-200 shadow-sm rounded-lg p-4 text-center max-w-sm">
+                                <span class="text-2xl block mb-1">📅</span>
+                                <span class="text-xs font-bold text-slate-700 block">Aucune réservation pour cette journée</span>
+                                <span class="text-[11px] text-slate-500 block mt-1">Cliquez sur un créneau horaire ou sélectionnez une machine ci-dessus pour réserver.</span>
+                            </div>
+                        </div>
+                    @endforelse
+
+                </div>
+            </div>
         </div>
     </div>
 
