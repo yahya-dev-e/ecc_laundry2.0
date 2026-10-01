@@ -279,13 +279,15 @@
                              @click.stop="selectMachine('{{ $block['machine']->name }}', {{ $block['machine_id'] }})"
                              title="{{ $block['machine']->name }} • {{ $block['timeFormatted'] }} ({{ $block['user']?->name ?? 'Occupé' }}) - Cliquer pour sélectionner la machine">
                             
-                            @if(!$isMultiHour)
-                                <!-- Single Hour Slot Compact View -->
-                                <div class="h-full px-2.5 py-1 flex items-center justify-between text-xs leading-none">
+                            <div class="h-full p-2 flex flex-col justify-between">
+                                <div class="flex items-center justify-between text-xs leading-tight">
                                     <div class="flex items-center space-x-1.5 truncate">
                                         <span class="font-mono font-bold text-[11px] bg-black/25 px-1.5 py-0.5 rounded">{{ $block['timeFormatted'] }}</span>
                                         <span class="opacity-60">•</span>
                                         <span class="font-bold text-[12px] truncate">{{ $block['machine']->name }}</span>
+                                        @if($isMultiHour)
+                                            <span class="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-black/25 uppercase tracking-wider">{{ $block['durationFormatted'] }}</span>
+                                        @endif
                                     </div>
                                     @if($block['user'])
                                         <span class="opacity-90 text-[11px] font-medium truncate max-w-[140px] ml-2">
@@ -293,43 +295,13 @@
                                         </span>
                                     @endif
                                 </div>
-                            @else
-                                <!-- Multi-Hour Continuous Block (Expanded View) -->
-                                <div class="h-full p-2.5 flex flex-col justify-between">
-                                    <div class="flex items-start justify-between gap-2">
-                                        <div>
-                                            <div class="inline-flex items-center space-x-1.5 px-2 py-0.5 rounded bg-black/25 font-mono font-bold text-[11px] tracking-tight mb-1">
-                                                <span>{{ $block['timeFormatted'] }}</span>
-                                                <span class="opacity-75">({{ $block['durationFormatted'] }})</span>
-                                            </div>
-                                            <div class="text-sm font-black flex items-center space-x-1.5">
-                                                <span>{{ $block['machine']->name }}</span>
-                                                <span class="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-white/20 uppercase tracking-wider">
-                                                    Créneau continu
-                                                </span>
-                                            </div>
-                                        </div>
-                                        @if($block['user'])
-                                            <div class="text-right shrink-0">
-                                                <span class="text-[9px] uppercase font-semibold tracking-wider opacity-75 block">Réservé par</span>
-                                                <span class="text-xs font-bold bg-white/15 px-2 py-0.5 rounded inline-block mt-0.5">
-                                                    {{ $block['user']->name }}
-                                                </span>
-                                            </div>
-                                        @endif
+                                @if($block['height'] >= 70)
+                                    <div class="flex items-center justify-between text-[10px] opacity-80 pt-1 border-t border-white/20">
+                                        <span>Machine : <strong class="font-bold">{{ $block['machine']->name }}</strong></span>
+                                        <span class="text-[9px] italic">Créneau continu</span>
                                     </div>
-
-                                    @if($block['height'] >= 80)
-                                        <div class="flex items-center justify-between text-[10px] opacity-80 pt-1.5 border-t border-white/20">
-                                            <span class="flex items-center space-x-1">
-                                                <span>Machine :</span>
-                                                <strong class="font-bold">{{ $block['machine']->name }}</strong>
-                                            </span>
-                                            <span class="italic text-[9px]">Cliquer pour sélectionner</span>
-                                        </div>
-                                    @endif
-                                </div>
-                            @endif
+                                @endif
+                            </div>
                         </div>
                     @empty
                         <!-- Empty Day State Overlay -->

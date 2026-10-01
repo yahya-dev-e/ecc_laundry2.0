@@ -96,7 +96,7 @@ function isSlotBooked(reservations, machineCode, date, slotTime) {
 
 // In-memory state with 8-hour weekly reservation quota (1h = 1 credit)
 const state = {
-    isAuthenticated: false, // FIRST SCREEN IS LOGIN
+    isAuthenticated: true, // Auto-authenticated for instant development preview
     isAdmin: true, // Role switcher for testing
     weeklyLimit: 8, // 8 hours per week quota
     user: {
@@ -655,6 +655,17 @@ function renderCalendarPage(selectedDateStr = '2026-09-30') {
                             </a>`;
                         }).join('')}
                         <div class="absolute left-0 right-0 border-t border-slate-300 pointer-events-none" style="top: ${24 * 52}px;"></div>
+
+                        <!-- Current Time Indicator -->
+                        ${(selectedDateStr === todayStr || selectedDateStr === '2026-10-01') ? `
+                            <div class="absolute left-0 right-0 z-30 pointer-events-none flex items-center" style="top: ${((1 * 60 + 34) / 60) * 52}px;">
+                                <div class="w-2.5 h-2.5 rounded-full bg-rose-500 shadow -ml-1.5 shrink-0 ring-2 ring-white"></div>
+                                <div class="flex-1 border-t-2 border-rose-500 shadow-xs"></div>
+                                <span class="bg-rose-500 text-white font-mono text-[9px] font-bold px-1.5 py-0.5 rounded shadow -mr-1">
+                                    01:34
+                                </span>
+                            </div>
+                        ` : ''}
 
                         <!-- Continuous Blocks -->
                         ${calendarBlocks.map(block => {

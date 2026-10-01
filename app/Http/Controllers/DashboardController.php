@@ -111,16 +111,15 @@ class DashboardController extends Controller
         foreach ($sortedReservations as $res) {
             $lastIndex = count($mergedBlocks) - 1;
             if ($lastIndex >= 0) {
-                $last = &$mergedBlocks[$lastIndex];
-                $sameMachine = (int)$last['machine_id'] === (int)$res->machine_id;
-                $sameUser = ($last['user_id'] === $res->user_id) && ($last['user_id'] !== null);
-                $isContiguous = $res->start_time->lte($last['end_time']);
+                $sameMachine = (int)$mergedBlocks[$lastIndex]['machine_id'] === (int)$res->machine_id;
+                $sameUser = ($mergedBlocks[$lastIndex]['user_id'] === $res->user_id) && ($mergedBlocks[$lastIndex]['user_id'] !== null);
+                $isContiguous = $res->start_time->lte($mergedBlocks[$lastIndex]['end_time']);
 
                 if ($sameMachine && $sameUser && $isContiguous) {
-                    if ($res->end_time->gt($last['end_time'])) {
-                        $last['end_time'] = $res->end_time->copy();
+                    if ($res->end_time->gt($mergedBlocks[$lastIndex]['end_time'])) {
+                        $mergedBlocks[$lastIndex]['end_time'] = $res->end_time->copy();
                     }
-                    $last['reservation_ids'][] = $res->id;
+                    $mergedBlocks[$lastIndex]['reservation_ids'][] = $res->id;
                     continue;
                 }
             }
@@ -140,16 +139,13 @@ class DashboardController extends Controller
         // Calculate time offsets in minutes clamped to the current day
         $blocksWithTime = [];
         foreach ($mergedBlocks as $block) {
-            $clampedStart = $block['start_time']->lt($dayStart) ? $dayStart->copy() : $block['start_time'];
-            $clampedEnd = $block['end_time']->gt($dayEndExclusive) ? $dayEndExclusive->copy() : $block['end_time'];
+            $clampedStart = $block['start_time']->lt($dayStart) ? $dayStart->copy() : $block['start_time']->copy();
+            $clampedEnd = $block['end_time']->gt($dayEndExclusive) ? $dayEndExclusive->copy() : $block['end_time']->copy();
 
-            $startMinutes = $clampedStart->diffInMinutes($dayStart);
-            $endMinutes = $clampedEnd->diffInMinutes($dayStart);
-            if ($endMinutes <= $startMinutes) {
-                $endMinutes = $startMinutes + 30;
-            }
+            $startMinutes = max(0, (int) $dayStart->diffInMinutes($clampedStart, false));
+            $durationMinutes = max(30, (int) $clampedStart->diffInMinutes($clampedEnd, false));
+            $endMinutes = $startMinutes + $durationMinutes;
 
-            $durationMinutes = $endMinutes - $startMinutes;
             $durationFormatted = $durationMinutes >= 60 
                 ? ($durationMinutes % 60 === 0 ? ($durationMinutes / 60) . ' h' : sprintf('%dh%02d', floor($durationMinutes/60), $durationMinutes%60))
                 : $durationMinutes . ' min';
