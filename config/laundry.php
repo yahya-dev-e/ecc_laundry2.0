@@ -15,6 +15,7 @@ return [
     // Maximum number of hours allowed per student per calendar week (8 hours / week)
     'weekly_reservation_limit' => (int) env('LAUNDRY_WEEKLY_LIMIT', 8),
     'weekly_hours_limit' => (int) env('LAUNDRY_WEEKLY_HOURS_LIMIT', 8),
+    'admin_weekly_hours_limit' => (int) env('LAUNDRY_ADMIN_WEEKLY_HOURS_LIMIT', 100),
     'cost_per_hour_slot' => 1,
 
     // Maximum simultaneous active reservations allowed per student

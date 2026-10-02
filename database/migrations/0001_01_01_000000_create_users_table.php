@@ -17,7 +17,7 @@ return new class extends Migration
             $table->string('email')->unique();
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
-            $table->integer('credits')->default(10);
+            $table->integer('credits')->default(8);
             $table->string('role')->default('student'); // student, staff, admin
             $table->string('student_id')->nullable()->unique();
             $table->string('room_number')->nullable();

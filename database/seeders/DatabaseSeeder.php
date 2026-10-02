@@ -23,7 +23,7 @@ class DatabaseSeeder extends Seeder
             [
                 'name' => 'Alex Rivera',
                 'password' => Hash::make('password123'),
-                'credits' => 18,
+                'credits' => 8,
                 'role' => 'student',
                 'student_id' => 'STU-98241',
                 'room_number' => 'Hall 4 - Room 312',

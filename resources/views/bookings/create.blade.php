@@ -114,7 +114,7 @@
                 <div class="flex items-center justify-between font-bold text-emerald-900 border-b border-emerald-200/60 pb-2">
                     <span class="flex items-center space-x-1.5">
                         <svg class="w-4 h-4 text-emerald-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
-                        <span>Surveillance du Quota Hebdomadaire (8h / semaine)</span>
+                        <span>Surveillance du Quota Hebdomadaire (<span x-text="weeklyLimit"></span> crédits / semaine)</span>
                     </span>
                     <span class="text-xs font-mono bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded">
                         1h = 1 crédit
@@ -134,21 +134,21 @@
 
                     <div class="bg-white/80 p-2.5 rounded border border-emerald-100">
                         <span class="text-[10px] uppercase text-slate-400 font-bold block">Solde actuel</span>
-                        <span class="font-bold text-slate-800 text-sm font-mono" x-text="isAdmin ? 'Illimité (Admin)' : (remainingHours + 'h / 8h')"></span>
+                        <span class="font-bold text-slate-800 text-sm font-mono" x-text="remainingHours + 'h / ' + weeklyLimit + 'h'"></span>
                     </div>
 
                     <div class="bg-white/80 p-2.5 rounded border border-emerald-100">
                         <span class="text-[10px] uppercase text-slate-400 font-bold block">Solde après</span>
                         <span class="font-bold text-sm font-mono"
-                              :class="!isAdmin && (remainingHours - selectedSlots.length < 0) ? 'text-rose-600' : 'text-emerald-700'"
-                              x-text="isAdmin ? 'Illimité' : ((remainingHours - selectedSlots.length) + 'h / 8h')"></span>
+                              :class="(remainingHours - selectedSlots.length < 0) ? 'text-rose-600' : 'text-emerald-700'"
+                              x-text="((remainingHours - selectedSlots.length) + 'h / ' + weeklyLimit + 'h')"></span>
                     </div>
                 </div>
 
                 <!-- Over quota alert -->
-                <div x-show="!isAdmin && selectedSlots.length > remainingHours" class="p-2.5 bg-rose-50 border border-rose-200 text-rose-800 rounded font-semibold text-[11px] flex items-center space-x-2">
+                <div x-show="selectedSlots.length > remainingHours" class="p-2.5 bg-rose-50 border border-rose-200 text-rose-800 rounded font-semibold text-[11px] flex items-center space-x-2">
                     <svg class="w-4 h-4 text-rose-600 shrink-0 inline-block mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
-                    <span>Dépassement de quota : vous avez sélectionné <span x-text="selectedSlots.length"></span>h alors qu'il ne vous reste que <span x-text="remainingHours"></span>h sur vos 8h cette semaine.</span>
+                    <span>Dépassement de quota : vous avez sélectionné <span x-text="selectedSlots.length"></span>h alors qu'il ne vous reste que <span x-text="remainingHours"></span>h sur vos <span x-text="weeklyLimit"></span>h cette semaine.</span>
                 </div>
             </div>
 
@@ -159,12 +159,12 @@
                     Annuler
                 </a>
                 <button type="submit" 
-                        :disabled="selectedSlots.length === 0 || (!isAdmin && selectedSlots.length > remainingHours)"
-                        :class="(selectedSlots.length === 0 || (!isAdmin && selectedSlots.length > remainingHours)) ? 'opacity-50 cursor-not-allowed bg-slate-400' : 'bg-[#00897b] hover:bg-[#00796b] cursor-pointer shadow-xs'"
+                        :disabled="selectedSlots.length === 0 || (selectedSlots.length > remainingHours)"
+                        :class="(selectedSlots.length === 0 || (selectedSlots.length > remainingHours)) ? 'opacity-50 cursor-not-allowed bg-slate-400' : 'bg-[#00897b] hover:bg-[#00796b] cursor-pointer shadow-xs'"
                         class="px-6 py-2.5 text-white text-xs font-bold rounded transition-all">
                     <span x-show="selectedSlots.length === 0">Sélectionnez au moins 1 créneau</span>
-                    <span x-show="selectedSlots.length > 0 && (!isAdmin && selectedSlots.length > remainingHours)">Quota insuffisant</span>
-                    <span x-show="selectedSlots.length > 0 && (isAdmin || selectedSlots.length <= remainingHours)"
+                    <span x-show="selectedSlots.length > 0 && (selectedSlots.length > remainingHours)">Quota insuffisant</span>
+                    <span x-show="selectedSlots.length > 0 && (selectedSlots.length <= remainingHours)"
                           x-text="'Confirmer la réservation (' + selectedSlots.length + 'h • ' + selectedSlots.length + ' crédit' + (selectedSlots.length > 1 ? 's' : '') + ')'"></span>
                 </button>
             </div>
@@ -196,6 +196,7 @@ function bookingApp(initialMachineId) {
     return {
         selectedMachineId: initialMachineId,
         selectedDate: '{{ now()->toDateString() }}',
+        weeklyLimit: {{ auth()->check() ? auth()->user()->weeklyLimit() : (auth()->check() && auth()->user()->isAdmin() ? 100 : 8) }},
         remainingHours: {{ auth()->check() ? auth()->user()->weeklyRemainingLimit() : 8 }},
         isAdmin: isAdminUser,
         selectedSlots: [],

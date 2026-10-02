@@ -61,6 +61,11 @@ class User extends Authenticatable
         return $this->hasMany(Reservation::class);
     }
 
+    public function weeklyLimit(): int
+    {
+        return $this->isAdmin() ? (int) config('laundry.admin_weekly_hours_limit', 100) : (int) config('laundry.weekly_hours_limit', 8);
+    }
+
     public function weeklyRemainingLimit(): int
     {
         $startOfWeek = \Carbon\Carbon::now()->startOfWeek();
@@ -71,7 +76,7 @@ class User extends Authenticatable
             ->where('start_time', '<=', $endOfWeek)
             ->count();
 
-        return max(0, config('laundry.weekly_hours_limit', 8) - $usedCount);
+        return max(0, $this->weeklyLimit() - $usedCount);
     }
 
     public function transactions(): HasMany

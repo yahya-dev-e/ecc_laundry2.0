@@ -3,9 +3,9 @@
 @section('content')
 @php
     $isAdmin = auth()->check() ? auth()->user()->isAdmin() : false;
-    $remainingHours = auth()->check() ? auth()->user()->weeklyRemainingLimit() : 8;
-    $weeklyLimit = config('laundry.weekly_limit_hours', 8);
-    $usedHours = $weeklyLimit - $remainingHours;
+    $weeklyLimit = auth()->check() ? auth()->user()->weeklyLimit() : ($isAdmin ? 100 : 8);
+    $remainingHours = auth()->check() ? auth()->user()->weeklyRemainingLimit() : $weeklyLimit;
+    $usedHours = max(0, $weeklyLimit - $remainingHours);
     $userName = auth()->check() ? auth()->user()->name : 'Étudiant';
 @endphp
 
@@ -19,7 +19,7 @@
             </div>
             <h1 class="text-2xl font-bold tracking-tight">Bonjour, {{ $userName }} !</h1>
             <p class="text-xs text-emerald-100/90 mt-1 max-w-xl leading-relaxed">
-                Bienvenue sur votre espace buanderie. Consultez ci-dessous vos heures de réservation disponibles ainsi que l'historique complet de vos créneaux.
+                Bienvenue sur votre espace buanderie. Consultez ci-dessous vos crédits disponibles ainsi que l'historique complet de vos créneaux.
             </p>
         </div>
         <div class="flex items-center space-x-3 shrink-0">
@@ -33,43 +33,39 @@
         </div>
     </div>
 
-    <!-- 2. Quota & Information Cards Grid -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+    <!-- 2. Quota & Information Cards Grid (No total reservations count, no machine count/names) -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
         <!-- Quota Remaining Card (Highlight) -->
-        <div class="bg-white rounded-xl p-5 border border-slate-200 shadow-xs flex flex-col justify-between">
+        <div class="bg-white rounded-xl p-6 border border-slate-200 shadow-xs flex flex-col justify-between">
             <div>
                 <div class="flex items-center justify-between">
                     <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Heures réservables</span>
-                    <span class="px-2 py-0.5 rounded text-[11px] font-mono font-bold {{ $isAdmin ? 'bg-amber-100 text-amber-800' : ($remainingHours > 0 ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800') }}">
-                        {{ $isAdmin ? 'Admin' : 'Quota 8h / sem' }}
+                    <span class="px-2.5 py-0.5 rounded text-[11px] font-mono font-bold {{ $isAdmin ? 'bg-amber-100 text-amber-800' : ($remainingHours > 0 ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800') }}">
+                        {{ $isAdmin ? 'Admin (100 crédits / sem)' : 'Étudiant (8 crédits / sem)' }}
                     </span>
                 </div>
 
                 <div class="mt-4 flex items-baseline space-x-2">
-                    <span class="text-3xl font-extrabold {{ $isAdmin ? 'text-emerald-700' : ($remainingHours > 0 ? 'text-emerald-600' : 'text-rose-600') }} font-mono">
-                        {{ $isAdmin ? 'Illimité' : "{$remainingHours}h" }}
+                    <span class="text-3xl font-extrabold {{ $isAdmin ? 'text-amber-700' : ($remainingHours > 0 ? 'text-emerald-600' : 'text-rose-600') }} font-mono">
+                        {{ $remainingHours }}h
                     </span>
-                    @if(!$isAdmin)
-                        <span class="text-xs text-slate-500 font-medium">restantes cette semaine</span>
-                    @else
-                        <span class="text-xs text-slate-500 font-medium">heures non plafonnées</span>
-                    @endif
+                    <span class="text-xs text-slate-500 font-medium">restantes sur {{ $weeklyLimit }}h cette semaine</span>
                 </div>
 
                 <!-- Visual Progress Bar -->
                 <div class="mt-3.5">
                     <div class="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
-                        <div class="h-2.5 rounded-full transition-all duration-500 {{ $remainingHours === 0 ? 'bg-rose-500' : 'bg-[#00897b]' }}"
-                             style="width: {{ $isAdmin ? '100%' : (round(($remainingHours / $weeklyLimit) * 100) . '%') }}"></div>
+                        <div class="h-2.5 rounded-full transition-all duration-500 {{ $remainingHours === 0 ? 'bg-rose-500' : ($isAdmin ? 'bg-amber-500' : 'bg-[#00897b]') }}"
+                             style="width: {{ min(100, round(($remainingHours / $weeklyLimit) * 100)) }}%"></div>
                     </div>
                     <div class="flex justify-between items-center text-[10px] text-slate-400 mt-1.5 font-medium">
-                        <span>{{ $isAdmin ? 'Régime Administrateur' : "{$usedHours}h utilisées sur {$weeklyLimit}h" }}</span>
-                        <span>{{ $isAdmin ? 'Sans limite' : "{$remainingHours}h disponibles" }}</span>
+                        <span>{{ $usedHours }}h utilisées sur {{ $weeklyLimit }}h</span>
+                        <span>{{ $remainingHours }}h disponibles</span>
                     </div>
                 </div>
             </div>
 
-            <div class="pt-4 mt-4 border-t border-slate-100 flex items-center justify-between text-[11px]">
+            <div class="pt-4 mt-4 border-t border-slate-100 flex items-center justify-between text-xs">
                 <span class="text-slate-500">1 heure = 1 crédit</span>
                 <a href="{{ route('bookings.create') }}" class="text-[#00897b] font-bold hover:underline flex items-center space-x-1">
                     <span>Réserver un créneau</span>
@@ -78,64 +74,36 @@
             </div>
         </div>
 
-        <!-- User Bookings Count Card -->
-        <div class="bg-white rounded-xl p-5 border border-slate-200 shadow-xs flex flex-col justify-between">
+        <!-- Rules & Quota Policy Card (Clean guidance, no machine counts or reservation totals) -->
+        <div class="bg-white rounded-xl p-6 border border-slate-200 shadow-xs flex flex-col justify-between">
             <div>
                 <div class="flex items-center justify-between">
-                    <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Vos Réservations</span>
-                    <span class="px-2 py-0.5 rounded text-[11px] font-mono font-bold bg-blue-100 text-blue-800">
-                        {{ isset($userReservations) ? count($userReservations) : 0 }} créneau{{ isset($userReservations) && count($userReservations) > 1 ? 'x' : '' }}
-                    </span>
+                    <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Règles & Utilisation des crédits</span>
+                    <span class="px-2.5 py-0.5 rounded text-[11px] font-mono font-bold bg-slate-100 text-slate-700">Campus ECC</span>
                 </div>
 
-                <div class="mt-4 flex items-baseline space-x-2">
-                    <span class="text-3xl font-extrabold text-slate-800 font-mono">
-                        {{ isset($userReservations) ? count($userReservations) : 0 }}
-                    </span>
-                    <span class="text-xs text-slate-500 font-medium">créneau{{ isset($userReservations) && count($userReservations) > 1 ? 'x' : '' }} enregistré{{ isset($userReservations) && count($userReservations) > 1 ? 's' : '' }}</span>
+                <div class="mt-4 space-y-2.5 text-xs text-slate-600">
+                    <div class="flex items-start space-x-2">
+                        <span class="w-1.5 h-1.5 rounded-full bg-[#00897b] mt-1.5 shrink-0"></span>
+                        <span><strong>Renouvellement hebdomadaire :</strong> Vos crédits se réinitialisent chaque lundi à 00h00.</span>
+                    </div>
+                    <div class="flex items-start space-x-2">
+                        <span class="w-1.5 h-1.5 rounded-full bg-[#00897b] mt-1.5 shrink-0"></span>
+                        <span><strong>Disponibilité 24h/24 :</strong> Choisissez librement n'importe quel créneau ouvert sur toute la journée.</span>
+                    </div>
+                    <div class="flex items-start space-x-2">
+                        <span class="w-1.5 h-1.5 rounded-full bg-[#00897b] mt-1.5 shrink-0"></span>
+                        <span><strong>Réservation multi-créneaux :</strong> Vous pouvez sélectionner plusieurs heures en une seule étape.</span>
+                    </div>
                 </div>
-
-                <p class="text-xs text-slate-500 mt-3 leading-relaxed">
-                    Toutes vos réservations sont consultables dans le tableau ci-dessous et synchronisées sur le calendrier 24h.
-                </p>
             </div>
 
-            <div class="pt-4 mt-4 border-t border-slate-100 flex items-center justify-between text-[11px]">
-                <span class="text-slate-500">Planning en temps réel</span>
+            <div class="pt-4 mt-4 border-t border-slate-100 flex items-center justify-between text-xs">
+                <span class="text-slate-400">Campus Centrale Casablanca</span>
                 <a href="{{ route('calendrier') }}" class="text-[#00897b] font-bold hover:underline flex items-center space-x-1">
                     <span>Ouvrir le calendrier</span>
                     <span>&rarr;</span>
                 </a>
-            </div>
-        </div>
-
-        <!-- Availability Info Card -->
-        <div class="bg-white rounded-xl p-5 border border-slate-200 shadow-xs flex flex-col justify-between">
-            <div>
-                <div class="flex items-center justify-between">
-                    <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Accès Buanderie</span>
-                    <span class="px-2 py-0.5 rounded text-[11px] font-mono font-bold bg-emerald-100 text-emerald-800">24h / 24</span>
-                </div>
-
-                <div class="mt-4 space-y-2 text-xs text-slate-600">
-                    <div class="flex items-center space-x-2">
-                        <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
-                        <span>Horaires complets : toutes les heures du jour</span>
-                    </div>
-                    <div class="flex items-center space-x-2">
-                        <span class="w-2 h-2 rounded-full bg-[#00897b]"></span>
-                        <span>13 machines (7 lave-linge, 6 sèche-linge)</span>
-                    </div>
-                    <div class="flex items-center space-x-2">
-                        <span class="w-2 h-2 rounded-full bg-indigo-500"></span>
-                        <span>Sélection multi-créneaux simultanés</span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="pt-4 mt-4 border-t border-slate-100 flex items-center justify-between text-[11px]">
-                <span class="text-slate-400">Campus Centrale Casablanca</span>
-                <span class="font-semibold text-slate-600">Bâtiments Omar & Petit</span>
             </div>
         </div>
     </div>
@@ -184,15 +152,9 @@
                             @endphp
                             <tr class="hover:bg-slate-50/70 transition-colors">
                                 <td class="py-3 px-4">
-                                    <div class="flex items-center space-x-2.5">
-                                        <span style="background-color: {{ $machineColor }};" class="px-2.5 py-1 rounded text-xs font-mono font-bold text-white shadow-xs shrink-0">
-                                            {{ $machine?->name ?? 'Machine' }}
-                                        </span>
-                                        <div>
-                                            <span class="font-bold text-slate-800 block text-xs">{{ $machine?->name }}</span>
-                                            <span class="text-[10px] text-slate-400 capitalize">{{ $machine?->type?->value ?? 'Lave-linge' }}</span>
-                                        </div>
-                                    </div>
+                                    <span style="background-color: {{ $machineColor }};" class="px-2.5 py-1 rounded text-xs font-mono font-bold text-white shadow-xs inline-block">
+                                        {{ $machine?->name ?? 'Machine' }}
+                                    </span>
                                 </td>
                                 <td class="py-3 px-4 text-slate-700 font-medium">
                                     {{ $res->start_time->format('d/m/Y') }}

@@ -28,7 +28,22 @@
                 <span class="text-xs text-slate-400 font-medium">laundry.fecc.ma</span>
             </div>
 
-            <div class="flex items-center space-x-6">
+            <div class="flex items-center space-x-5">
+                @auth
+                    @php
+                        $navIsAdmin = auth()->user()->isAdmin();
+                        $navLimit = auth()->user()->weeklyLimit();
+                        $navRemaining = auth()->user()->weeklyRemainingLimit();
+                        $navUsed = max(0, $navLimit - $navRemaining);
+                    @endphp
+                    <div class="flex items-center space-x-2 px-3 py-1 rounded-full {{ $navIsAdmin ? 'bg-amber-50 text-amber-900 border border-amber-200' : ($navRemaining > 0 ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-rose-50 text-rose-800 border border-rose-200') }} text-xs font-semibold">
+                        <span class="w-2 h-2 rounded-full {{ $navIsAdmin ? 'bg-amber-500' : ($navRemaining > 0 ? 'bg-emerald-500' : 'bg-rose-500') }}"></span>
+                        <span>
+                            {{ $navIsAdmin ? "Quota Admin : {$navUsed} / 100 crédits ({$navRemaining} restants)" : "Quota : {$navUsed} / 8 crédits ({$navRemaining} restants)" }}
+                        </span>
+                    </div>
+                @endauth
+
                 <!-- French Flag Badge (no emoji) -->
                 <div class="flex items-center space-x-1 cursor-pointer">
                     <span class="text-xs font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">FR</span>

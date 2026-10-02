@@ -98,11 +98,11 @@ function isSlotBooked(reservations, machineCode, date, slotTime) {
 const state = {
     isAuthenticated: true, // Auto-authenticated for instant development preview
     isAdmin: true, // Role switcher for testing
-    weeklyLimit: 8, // 8 hours per week quota
+    weeklyLimit: 100, // 100 credits for admin, 8 for normal user
     user: {
-        name: 'R. Omari',
+        name: 'El Omari',
         email: 'r.omari@fecc.ma',
-        weeklyUsed: 2, // 2 hours used out of 8 (6 hours remaining)
+        weeklyUsed: 2, // 2 credits used
     },
     machines: [
         { code: 'ML1-OM', name: 'Machine à laver 1 Omar', type: 'washer', bg: '#4338ca', text: 'text-white', status: 'available', cap: '9.0 kg', loc: 'Bâtiment Omar, RDC' },
@@ -151,6 +151,7 @@ const state = {
 
 function renderLayout(title, content, currentPath = '/', flash = '') {
     const { cssFile, jsFile } = getAssets();
+    state.weeklyLimit = state.isAdmin ? 100 : 8;
     const remaining = Math.max(0, state.weeklyLimit - state.user.weeklyUsed);
 
     return `<!DOCTYPE html>
@@ -237,7 +238,7 @@ function renderLayout(title, content, currentPath = '/', flash = '') {
                 <div class="flex items-center space-x-2 px-3 py-1 rounded-full ${state.isAdmin ? 'bg-amber-50 text-amber-900 border border-amber-200' : (remaining > 0 ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-rose-50 text-rose-800 border border-rose-200')} text-xs font-semibold">
                     <span class="w-2 h-2 rounded-full ${state.isAdmin ? 'bg-amber-500' : (remaining > 0 ? 'bg-emerald-500' : 'bg-rose-500')}"></span>
                     <span>
-                        ${state.isAdmin ? 'Quota : Illimité (Admin)' : `Quota : ${state.user.weeklyUsed}h / ${state.weeklyLimit}h cette semaine (${remaining}h restante${remaining > 1 ? 's' : ''})`}
+                        ${state.isAdmin ? `Quota Admin : ${state.user.weeklyUsed} / 100 crédits (${remaining} restants)` : `Quota : ${state.user.weeklyUsed} / 8 crédits (${remaining} restants)`}
                     </span>
                 </div>
 
@@ -249,7 +250,7 @@ function renderLayout(title, content, currentPath = '/', flash = '') {
                     <div class="w-8 h-8 rounded-full bg-slate-200 border border-slate-300 flex items-center justify-center overflow-hidden">
                         <svg class="w-5 h-5 text-slate-500" fill="currentColor" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
                     </div>
-                    <span class="text-xs font-semibold text-slate-700">${state.isAdmin ? 'R. Omari' : 'Alex Rivera'}</span>
+                    <span class="text-xs font-semibold text-slate-700">${state.isAdmin ? 'El Omari' : 'Alex Rivera'}</span>
                 </div>
             </div>
         </header>
@@ -492,7 +493,7 @@ function renderCalendarPage(selectedDateStr = '2026-09-30') {
                 <span class="text-xs text-slate-700">Cliquez sur une machine pour voir ses créneaux et réserver directement.</span>
             </div>
             <div class="text-xs font-semibold text-[#00897b]">
-                ${state.isAdmin ? 'Régime Administrateur (Illimité)' : `Quota restant : ${remaining}h sur ${state.weeklyLimit}h cette semaine (1h = 1 crédit)`}
+                ${state.isAdmin ? `Quota Admin restant : ${remaining}h sur ${state.weeklyLimit}h cette semaine (1h = 1 crédit)` : `Quota restant : ${remaining}h sur ${state.weeklyLimit}h cette semaine (1h = 1 crédit)`}
             </div>
         </div>
 
@@ -591,7 +592,7 @@ function renderCalendarPage(selectedDateStr = '2026-09-30') {
                 <div class="w-16 sm:w-20 p-2.5 text-center border-r border-slate-300 text-[11px] text-slate-500 font-semibold tracking-tight">Horaires</div>
                 <div class="flex-1 p-2.5 text-center font-bold text-slate-800 capitalize flex items-center justify-center space-x-2">
                     <span>${dayName} (${dateFormatted})</span>
-                    ${calendarBlocks.length > 0 ? `<span class="text-[10px] font-normal text-slate-500 bg-white/80 px-2 py-0.5 rounded border border-slate-200">${calendarBlocks.length} créneau${calendarBlocks.length > 1 ? 'x' : ''} continu${calendarBlocks.length > 1 ? 's' : ''}</span>` : ''}
+                    ${calendarBlocks.length > 0 ? `<span class="text-[10px] font-normal text-slate-500 bg-white/80 px-2 py-0.5 rounded border border-slate-200">${calendarBlocks.length} réservation${calendarBlocks.length > 1 ? 's' : ''}</span>` : ''}
                 </div>
             </div>
 
@@ -655,7 +656,7 @@ function renderCalendarPage(selectedDateStr = '2026-09-30') {
                                  onclick="pickMachine('${block.code}')"
                                  title="${block.code} • ${block.time} (${block.user || 'Occupé'}) - Cliquer pour sélectionner la machine">
                                 
-                                <div class="h-full p-2 flex flex-col justify-between">
+                                <div class="h-full p-2 flex flex-col justify-center">
                                     <div class="flex items-center justify-between text-xs leading-tight">
                                         <div class="flex items-center space-x-1.5 truncate">
                                             <span class="font-mono font-bold text-[11px] ${badgeBg} px-1.5 py-0.5 rounded">${block.time}</span>
@@ -667,12 +668,6 @@ function renderCalendarPage(selectedDateStr = '2026-09-30') {
                                             <span class="text-[11px] font-medium truncate max-w-[140px] ml-2 ${subText}">(${block.user})</span>
                                         ` : ''}
                                     </div>
-                                    ${block.height >= 70 ? `
-                                        <div class="flex items-center justify-between text-[10px] opacity-80 pt-1 border-t border-black/10">
-                                            <span class="font-medium">Créneau continu</span>
-                                            <span class="text-[9px] italic opacity-75">${block.durationFormatted}</span>
-                                        </div>
-                                    ` : ''}
                                 </div>
                             </div>`;
                         }).join('')}
@@ -775,7 +770,7 @@ function renderDedicatedReservationPage(selectedMachine = 'ML1-OM') {
                     <div class="flex items-center justify-between font-bold text-emerald-900 border-b border-emerald-200/60 pb-2">
                         <span class="flex items-center space-x-1.5">
                             <svg class="w-4 h-4 text-emerald-700 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
-                            <span>Surveillance du Quota Hebdomadaire (8h / semaine)</span>
+                            <span>Surveillance du Quota Hebdomadaire (${state.isAdmin ? '100 crédits / sem' : '8 crédits / sem'})</span>
                         </span>
                         <span class="text-xs font-mono bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded">
                             1h de créneau = 1 crédit
@@ -795,19 +790,19 @@ function renderDedicatedReservationPage(selectedMachine = 'ML1-OM') {
 
                         <div class="bg-white/80 p-2.5 rounded border border-emerald-100">
                             <span class="text-[10px] uppercase text-slate-400 font-bold block">Solde actuel</span>
-                            <span id="statCurrentBalance" class="font-bold text-slate-800 text-sm font-mono">${state.isAdmin ? 'Illimité (Admin)' : `${remaining}h / 8h`}</span>
+                            <span id="statCurrentBalance" class="font-bold text-slate-800 text-sm font-mono">${remaining} / ${state.weeklyLimit} crédits</span>
                         </div>
 
                         <div class="bg-white/80 p-2.5 rounded border border-emerald-100">
                             <span class="text-[10px] uppercase text-slate-400 font-bold block">Solde après</span>
-                            <span id="statBalanceAfter" class="font-bold text-emerald-700 text-sm font-mono">${state.isAdmin ? 'Illimité' : `${remaining}h / 8h`}</span>
+                            <span id="statBalanceAfter" class="font-bold text-emerald-700 text-sm font-mono">${remaining} / ${state.weeklyLimit} crédits</span>
                         </div>
                     </div>
 
                     <!-- Insufficient Quota Alert -->
                     <div id="quotaExceededAlert" class="hidden p-2.5 bg-rose-50 border border-rose-200 text-rose-800 rounded font-semibold text-[11px] flex items-center space-x-2">
                         <svg class="w-4 h-4 text-rose-600 shrink-0 inline-block mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
-                        <span>Dépassement de quota : vous avez sélectionné plus d'heures que votre solde hebdomadaire restant (<span id="alertRemainingSpan">${remaining}</span>h disponibles sur 8h).</span>
+                        <span>Dépassement de quota : vous avez sélectionné plus d'heures que votre solde hebdomadaire restant (<span id="alertRemainingSpan">${remaining}</span>h disponibles sur ${state.weeklyLimit}h).</span>
                     </div>
                 </div>
 
@@ -940,33 +935,17 @@ function renderDedicatedReservationPage(selectedMachine = 'ML1-OM') {
         const alertEl = document.getElementById('quotaExceededAlert');
         const btn = document.getElementById('submitBookingBtn');
 
-        if (IS_ADMIN) {
-            balanceAfterEl.innerText = 'Illimité (Admin)';
-            balanceAfterEl.className = 'font-bold text-emerald-700 text-sm font-mono';
-            alertEl.classList.add('hidden');
-            if (count > 0) {
-                btn.disabled = false;
-                btn.className = 'px-6 py-2.5 bg-[#00897b] hover:bg-[#00796b] text-white text-xs font-bold rounded transition-all shadow-xs cursor-pointer';
-                btn.innerText = 'Confirmer la réservation (' + count + 'h • ' + count + ' crédit' + (count > 1 ? 's' : '') + ')';
-            } else {
-                btn.disabled = true;
-                btn.className = 'px-6 py-2.5 opacity-50 cursor-not-allowed bg-slate-400 text-white text-xs font-bold rounded transition-all shadow-xs';
-                btn.innerText = 'Sélectionnez au moins 1 créneau';
-            }
-            return;
-        }
-
         const afterBalance = remaining - count;
         if (afterBalance < 0) {
-            balanceAfterEl.innerText = afterBalance + 'h / 8h (Dépassé)';
+            balanceAfterEl.innerText = afterBalance + 'h / ' + WEEKLY_LIMIT + 'h (Dépassé)';
             balanceAfterEl.className = 'font-bold text-rose-600 text-sm font-mono';
             alertEl.classList.remove('hidden');
             document.getElementById('alertRemainingSpan').innerText = remaining;
             btn.disabled = true;
             btn.className = 'px-6 py-2.5 opacity-50 cursor-not-allowed bg-rose-500 text-white text-xs font-bold rounded transition-all shadow-xs';
-            btn.innerText = 'Quota insuffisant (' + remaining + 'h restantes)';
+            btn.innerText = 'Quota insuffisant (' + remaining + 'h restantes sur ' + WEEKLY_LIMIT + 'h)';
         } else {
-            balanceAfterEl.innerText = afterBalance + 'h / 8h';
+            balanceAfterEl.innerText = afterBalance + 'h / ' + WEEKLY_LIMIT + 'h';
             balanceAfterEl.className = 'font-bold text-emerald-700 text-sm font-mono';
             alertEl.classList.add('hidden');
             if (count > 0) {
@@ -993,15 +972,16 @@ function renderDedicatedReservationPage(selectedMachine = 'ML1-OM') {
 
 // 2. Tableau de bord Page
 function renderDashboardPage() {
-    const remaining = Math.max(0, state.weeklyLimit - state.user.weeklyUsed);
-    const userName = state.isAdmin ? 'R. Omari' : 'Alex Rivera';
+    const limit = state.isAdmin ? 100 : 8;
+    const remaining = Math.max(0, limit - state.user.weeklyUsed);
+    const userName = state.isAdmin ? 'El Omari' : 'Alex Rivera';
 
     // Extract user reservations
     const userReservations = [];
     state.reservations.forEach(r => {
         if (r.multi) {
             r.multi.forEach(m => {
-                if (m.user === userName || (!state.isAdmin && m.user === 'Alex Rivera') || (state.isAdmin && m.user === 'R. Omari')) {
+                if (m.user === userName || (!state.isAdmin && m.user === 'Alex Rivera') || (state.isAdmin && (m.user === 'El Omari' || m.user === 'R. Omari'))) {
                     userReservations.push({
                         date: r.date || '2026-09-30',
                         time: m.time,
@@ -1014,7 +994,7 @@ function renderDashboardPage() {
                 }
             });
         } else {
-            if (r.user === userName || (!state.isAdmin && r.user === 'Alex Rivera') || (state.isAdmin && r.user === 'R. Omari')) {
+            if (r.user === userName || (!state.isAdmin && r.user === 'Alex Rivera') || (state.isAdmin && (r.user === 'El Omari' || r.user === 'R. Omari'))) {
                 userReservations.push({
                     date: r.date || '2026-09-30',
                     time: r.time,
@@ -1039,7 +1019,7 @@ function renderDashboardPage() {
                 </div>
                 <h1 class="text-2xl font-bold tracking-tight">Bonjour, ${userName} !</h1>
                 <p class="text-xs text-emerald-100/90 mt-1 max-w-xl leading-relaxed">
-                    Bienvenue sur votre espace buanderie. Consultez ci-dessous vos heures de réservation disponibles ainsi que l'historique complet de vos créneaux.
+                    Bienvenue sur votre espace buanderie. Consultez ci-dessous vos crédits disponibles ainsi que l'historique complet de vos créneaux.
                 </p>
             </div>
             <div class="flex items-center space-x-3 shrink-0">
@@ -1053,39 +1033,39 @@ function renderDashboardPage() {
             </div>
         </div>
 
-        <!-- 2. Quota & Status Cards Grid -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+        <!-- 2. Quota & Information Cards Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
             <!-- Quota Remaining Card (Highlight) -->
-            <div class="bg-white rounded-xl p-5 border border-slate-200 shadow-xs flex flex-col justify-between">
+            <div class="bg-white rounded-xl p-6 border border-slate-200 shadow-xs flex flex-col justify-between">
                 <div>
                     <div class="flex items-center justify-between">
                         <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Heures réservables</span>
-                        <span class="px-2 py-0.5 rounded text-[11px] font-mono font-bold ${state.isAdmin ? 'bg-amber-100 text-amber-800' : (remaining > 0 ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800')}">
-                            ${state.isAdmin ? 'Admin' : 'Quota 8h / sem'}
+                        <span class="px-2.5 py-0.5 rounded text-[11px] font-mono font-bold ${state.isAdmin ? 'bg-amber-100 text-amber-800' : (remaining > 0 ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800')}">
+                            ${state.isAdmin ? 'Admin (100 crédits / sem)' : 'Étudiant (8 crédits / sem)'}
                         </span>
                     </div>
 
                     <div class="mt-4 flex items-baseline space-x-2">
-                        <span class="text-3xl font-extrabold ${state.isAdmin ? 'text-emerald-700' : (remaining > 0 ? 'text-emerald-600' : 'text-rose-600')} font-mono">
-                            ${state.isAdmin ? 'Illimité' : `${remaining}h`}
+                        <span class="text-3xl font-extrabold ${remaining > 0 ? (state.isAdmin ? 'text-amber-700' : 'text-emerald-600') : 'text-rose-600'} font-mono">
+                            ${remaining}h
                         </span>
-                        ${!state.isAdmin ? `<span class="text-xs text-slate-500 font-medium">restantes cette semaine</span>` : `<span class="text-xs text-slate-500 font-medium">heures non plafonnées</span>`}
+                        <span class="text-xs text-slate-500 font-medium">restantes sur ${limit}h cette semaine</span>
                     </div>
 
                     <!-- Visual Progress Bar -->
                     <div class="mt-3.5">
                         <div class="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
-                            <div class="h-2.5 rounded-full transition-all duration-500 ${remaining === 0 ? 'bg-rose-500' : 'bg-[#00897b]'}"
-                                 style="width: ${state.isAdmin ? '100%' : `${Math.round((remaining / state.weeklyLimit) * 100)}%`}"></div>
+                            <div class="h-2.5 rounded-full transition-all duration-500 ${remaining === 0 ? 'bg-rose-500' : (state.isAdmin ? 'bg-amber-500' : 'bg-[#00897b]')}"
+                                 style="width: ${Math.round((remaining / limit) * 100)}%"></div>
                         </div>
                         <div class="flex justify-between items-center text-[10px] text-slate-400 mt-1.5 font-medium">
-                            <span>${state.isAdmin ? 'Régime Administrateur' : `${state.user.weeklyUsed}h utilisées sur ${state.weeklyLimit}h`}</span>
-                            <span>${state.isAdmin ? 'Sans limite' : `${remaining}h restantes`}</span>
+                            <span>${state.user.weeklyUsed}h utilisées sur ${limit}h</span>
+                            <span>${remaining}h disponibles</span>
                         </div>
                     </div>
                 </div>
 
-                <div class="pt-4 mt-4 border-t border-slate-100 flex items-center justify-between text-[11px]">
+                <div class="pt-4 mt-4 border-t border-slate-100 flex items-center justify-between text-xs">
                     <span class="text-slate-500">1 heure = 1 crédit</span>
                     <a href="/reserver" class="text-[#00897b] font-bold hover:underline flex items-center space-x-1">
                         <span>Réserver un créneau</span>
@@ -1094,64 +1074,36 @@ function renderDashboardPage() {
                 </div>
             </div>
 
-            <!-- Active Reservations Count Card -->
-            <div class="bg-white rounded-xl p-5 border border-slate-200 shadow-xs flex flex-col justify-between">
+            <!-- Rules & Quota Policy Card (No machine count, no total reservations count) -->
+            <div class="bg-white rounded-xl p-6 border border-slate-200 shadow-xs flex flex-col justify-between">
                 <div>
                     <div class="flex items-center justify-between">
-                        <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Vos Réservations</span>
-                        <span class="px-2 py-0.5 rounded text-[11px] font-mono font-bold bg-blue-100 text-blue-800">
-                            ${userReservations.length} créneau${userReservations.length > 1 ? 'x' : ''}
-                        </span>
+                        <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Règles & Utilisation des crédits</span>
+                        <span class="px-2.5 py-0.5 rounded text-[11px] font-mono font-bold bg-slate-100 text-slate-700">Campus ECC</span>
                     </div>
 
-                    <div class="mt-4 flex items-baseline space-x-2">
-                        <span class="text-3xl font-extrabold text-slate-800 font-mono">
-                            ${userReservations.length}
-                        </span>
-                        <span class="text-xs text-slate-500 font-medium">créneau${userReservations.length > 1 ? 'x' : ''} enregistré${userReservations.length > 1 ? 's' : ''}</span>
+                    <div class="mt-4 space-y-2.5 text-xs text-slate-600">
+                        <div class="flex items-start space-x-2">
+                            <span class="w-1.5 h-1.5 rounded-full bg-[#00897b] mt-1.5 shrink-0"></span>
+                            <span><strong>Renouvellement hebdomadaire :</strong> Vos crédits se réinitialisent chaque lundi à 00h00.</span>
+                        </div>
+                        <div class="flex items-start space-x-2">
+                            <span class="w-1.5 h-1.5 rounded-full bg-[#00897b] mt-1.5 shrink-0"></span>
+                            <span><strong>Disponibilité 24h/24 :</strong> Choisissez librement n'importe quel créneau ouvert sur toute la journée.</span>
+                        </div>
+                        <div class="flex items-start space-x-2">
+                            <span class="w-1.5 h-1.5 rounded-full bg-[#00897b] mt-1.5 shrink-0"></span>
+                            <span><strong>Réservation multi-créneaux :</strong> Vous pouvez sélectionner plusieurs heures en une seule étape.</span>
+                        </div>
                     </div>
-
-                    <p class="text-xs text-slate-500 mt-3 leading-relaxed">
-                        Toutes vos réservations sont consultables dans le tableau ci-dessous et synchronisées sur le calendrier 24h.
-                    </p>
                 </div>
 
-                <div class="pt-4 mt-4 border-t border-slate-100 flex items-center justify-between text-[11px]">
-                    <span class="text-slate-500">Planning en temps réel</span>
+                <div class="pt-4 mt-4 border-t border-slate-100 flex items-center justify-between text-xs">
+                    <span class="text-slate-400">Campus Centrale Casablanca</span>
                     <a href="/calendrier" class="text-[#00897b] font-bold hover:underline flex items-center space-x-1">
                         <span>Ouvrir le calendrier</span>
                         <span>&rarr;</span>
                     </a>
-                </div>
-            </div>
-
-            <!-- Availability & Hours Info Card -->
-            <div class="bg-white rounded-xl p-5 border border-slate-200 shadow-xs flex flex-col justify-between">
-                <div>
-                    <div class="flex items-center justify-between">
-                        <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Accès Buanderie</span>
-                        <span class="px-2 py-0.5 rounded text-[11px] font-mono font-bold bg-emerald-100 text-emerald-800">24h / 24</span>
-                    </div>
-
-                    <div class="mt-4 space-y-2 text-xs text-slate-600">
-                        <div class="flex items-center space-x-2">
-                            <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
-                            <span>Horaires complets : toutes les heures du jour</span>
-                        </div>
-                        <div class="flex items-center space-x-2">
-                            <span class="w-2 h-2 rounded-full bg-[#00897b]"></span>
-                            <span>13 machines modernes (7 lave-linge, 6 sèche-linge)</span>
-                        </div>
-                        <div class="flex items-center space-x-2">
-                            <span class="w-2 h-2 rounded-full bg-indigo-500"></span>
-                            <span>Sélection multiple de créneaux simultanés</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="pt-4 mt-4 border-t border-slate-100 flex items-center justify-between text-[11px]">
-                    <span class="text-slate-400">Campus Centrale Casablanca</span>
-                    <span class="font-semibold text-slate-600">Bâtiments Omar & Petit</span>
                 </div>
             </div>
         </div>
@@ -1192,22 +1144,12 @@ function renderDashboardPage() {
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-slate-100">
-                            ${userReservations.map(res => {
-                                const machineObj = state.machines.find(m => m.code === res.code);
-                                const machineName = machineObj ? machineObj.name : res.code;
-                                const machineType = (machineObj && machineObj.type === 'washer') ? 'Lave-linge' : 'Sèche-linge';
-                                return `
+                            ${userReservations.map(res => `
                                 <tr class="hover:bg-slate-50/70 transition-colors">
                                     <td class="py-3 px-4">
-                                        <div class="flex items-center space-x-2.5">
-                                            <span style="background-color: ${res.bg || '#4338ca'};" class="px-2.5 py-1 rounded text-xs font-mono font-bold ${res.textColor || 'text-white'} shadow-xs shrink-0">
-                                                ${res.code}
-                                            </span>
-                                            <div>
-                                                <span class="font-bold text-slate-800 block text-xs">${machineName}</span>
-                                                <span class="text-[10px] text-slate-400">${machineType}</span>
-                                            </div>
-                                        </div>
+                                        <span style="background-color: ${res.bg || '#4338ca'};" class="px-2.5 py-1 rounded text-xs font-mono font-bold ${res.textColor || 'text-white'} shadow-xs inline-block">
+                                            ${res.code}
+                                        </span>
                                     </td>
                                     <td class="py-3 px-4 text-slate-700 font-medium">
                                         ${res.date}
@@ -1230,8 +1172,7 @@ function renderDashboardPage() {
                                         </a>
                                     </td>
                                 </tr>
-                                `;
-                            }).join('')}
+                            `).join('')}
                         </tbody>
                     </table>
                 </div>
@@ -1396,7 +1337,7 @@ function renderUsersPage() {
                         <td class="p-3.5 text-slate-600">r.omari@fecc.ma</td>
                         <td class="p-3.5 text-slate-500 font-mono">ADM-001 (Direction Campus)</td>
                         <td class="p-3.5"><span class="px-2.5 py-0.5 rounded bg-amber-100 text-amber-800 font-bold text-[10px]">Administrateur</span></td>
-                        <td class="p-3.5 font-bold text-[#00897b]">Illimité</td>
+                        <td class="p-3.5 font-bold text-[#00897b]">100 crédits / sem</td>
                         <td class="p-3.5 text-right"><button class="text-slate-400 hover:text-slate-600 font-semibold">Modifier</button></td>
                     </tr>
                     <tr>
@@ -1538,7 +1479,8 @@ const server = http.createServer((req, res) => {
     // Role Toggle
     if (pathname === '/toggle-role') {
         state.isAdmin = !state.isAdmin;
-        res.writeHead(302, { 'Location': '/calendrier' });
+        state.weeklyLimit = state.isAdmin ? 100 : 8;
+        res.writeHead(302, { 'Location': '/dashboard' });
         return res.end();
     }
 
@@ -1600,14 +1542,13 @@ const server = http.createServer((req, res) => {
             const machine = state.machines.find(m => m.code === machineCode) || state.machines[0];
             const hoursCount = selectedHours.length;
 
-            // Check quota for non-admin
-            if (!state.isAdmin) {
-                const remaining = Math.max(0, state.weeklyLimit - state.user.weeklyUsed);
-                if (hoursCount > remaining) {
-                    const msg = encodeURIComponent(`Quota insuffisant : Vous avez sélectionné ${hoursCount}h mais il ne vous reste que ${remaining}h sur vos 8h cette semaine.`);
-                    res.writeHead(302, { 'Location': `/reserver?machine=${machineCode}&flash=${msg}` });
-                    return res.end();
-                }
+            // Check quota for both admin (100 credits) and user (8 credits)
+            const limit = state.isAdmin ? 100 : 8;
+            const remaining = Math.max(0, limit - state.user.weeklyUsed);
+            if (hoursCount > remaining) {
+                const msg = encodeURIComponent(`Quota insuffisant : Vous avez sélectionné ${hoursCount} créneau(x) mais il ne vous reste que ${remaining} crédit(s) sur vos ${limit} crédits cette semaine.`);
+                res.writeHead(302, { 'Location': `/reserver?machine=${machineCode}&flash=${msg}` });
+                return res.end();
             }
 
             // Create reservation for each selected slot on the same machine
@@ -1621,19 +1562,15 @@ const server = http.createServer((req, res) => {
                     code: machine.code,
                     bg: machine.bg,
                     textColor: machine.text,
-                    user: state.isAdmin ? 'R. Omari' : 'Alex Rivera',
+                    user: state.isAdmin ? 'El Omari' : 'Alex Rivera',
                     durationHours: parsed.durationMinutes / 60
                 });
             }
 
-            if (!state.isAdmin) {
-                state.user.weeklyUsed = Math.min(state.weeklyLimit, state.user.weeklyUsed + hoursCount);
-            }
+            state.user.weeklyUsed = Math.min(limit, state.user.weeklyUsed + hoursCount);
 
-            const remainingAfter = Math.max(0, state.weeklyLimit - state.user.weeklyUsed);
-            const quotaMsg = state.isAdmin 
-                ? '(Régime Administrateur - Quota Illimité)' 
-                : `(Quota restant : ${remainingAfter}h / ${state.weeklyLimit}h cette semaine)`;
+            const remainingAfter = Math.max(0, limit - state.user.weeklyUsed);
+            const quotaMsg = `(Quota restant : ${remainingAfter} / ${limit} crédits cette semaine)`;
             const slotSummary = selectedHours.join(', ');
             const msg = encodeURIComponent(`Réservation validée pour la machine ${machine.code} (${hoursCount} heure${hoursCount > 1 ? 's' : ''} : ${slotSummary}) le ${bookingDate} ! Décompte : ${hoursCount} heure${hoursCount > 1 ? 's' : ''}. ${quotaMsg}`);
 

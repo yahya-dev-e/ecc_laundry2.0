@@ -199,7 +199,7 @@
                 <span>{{ $dayName }} ({{ $dateFormatted }})</span>
                 @if(isset($calendarBlocks) && count($calendarBlocks) > 0)
                     <span class="text-[10px] font-normal text-slate-500 bg-white/80 px-2 py-0.5 rounded border border-slate-200">
-                        {{ count($calendarBlocks) }} créneau{{ count($calendarBlocks) > 1 ? 'x' : '' }} continu{{ count($calendarBlocks) > 1 ? 's' : '' }}
+                        {{ count($calendarBlocks) }} réservation{{ count($calendarBlocks) > 1 ? 's' : '' }}
                     </span>
                 @endif
             </div>
@@ -281,7 +281,7 @@
                              @click.stop="selectMachine('{{ $block['machine']->name }}', {{ $block['machine_id'] }})"
                              title="{{ $block['machine']->name }} • {{ $block['timeFormatted'] }} ({{ $block['user']?->name ?? 'Occupé' }}) - Cliquer pour sélectionner la machine">
                             
-                            <div class="h-full p-2 flex flex-col justify-between">
+                            <div class="h-full p-2 flex flex-col justify-center">
                                 <div class="flex items-center justify-between text-xs leading-tight">
                                     <div class="flex items-center space-x-1.5 truncate">
                                         <span class="font-mono font-bold text-[11px] bg-black/25 px-1.5 py-0.5 rounded">{{ $block['timeFormatted'] }}</span>
@@ -297,12 +297,6 @@
                                         </span>
                                     @endif
                                 </div>
-                                @if($block['height'] >= 70)
-                                    <div class="flex items-center justify-between text-[10px] opacity-80 pt-1 border-t border-white/20">
-                                        <span class="font-medium">Créneau continu</span>
-                                        <span class="text-[9px] italic opacity-75">{{ $block['durationFormatted'] }}</span>
-                                    </div>
-                                @endif
                             </div>
                         </div>
                     @empty
