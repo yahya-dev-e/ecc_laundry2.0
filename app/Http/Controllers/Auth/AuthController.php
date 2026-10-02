@@ -64,15 +64,18 @@ class AuthController extends Controller
             'password' => ['required', 'confirmed', Password::defaults()],
         ]);
 
-        $user = User::create([
+        $userData = [
             'name' => $validated['name'],
             'email' => $validated['email'],
             'student_id' => $validated['student_id'],
             'room_number' => $validated['room_number'],
             'password' => Hash::make($validated['password']),
-            'credits' => config('laundry.starting_user_credits', 10),
             'role' => 'student',
-        ]);
+        ];
+        if (User::hasCreditsColumn()) {
+            $userData['credits'] = config('laundry.starting_user_credits', 10);
+        }
+        $user = User::create($userData);
 
         Auth::login($user);
 

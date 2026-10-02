@@ -7,10 +7,14 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Schema;
 
 class User extends Authenticatable
 {
     use HasFactory, Notifiable;
+
+    protected static ?bool $hasCreditsColumn = null;
+    protected static ?bool $hasTransactionsTable = null;
 
     /**
      * The attributes that are mass assignable.
@@ -21,7 +25,6 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
-        'credits',
         'role',
         'student_id',
         'room_number',
@@ -47,8 +50,31 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
-            'credits' => 'integer',
         ];
+    }
+
+    public static function hasCreditsColumn(): bool
+    {
+        if (static::$hasCreditsColumn === null) {
+            try {
+                static::$hasCreditsColumn = Schema::hasColumn((new static)->getTable(), 'credits');
+            } catch (\Throwable $e) {
+                static::$hasCreditsColumn = false;
+            }
+        }
+        return static::$hasCreditsColumn;
+    }
+
+    public static function hasTransactionsTable(): bool
+    {
+        if (static::$hasTransactionsTable === null) {
+            try {
+                static::$hasTransactionsTable = Schema::hasTable('transactions');
+            } catch (\Throwable $e) {
+                static::$hasTransactionsTable = false;
+            }
+        }
+        return static::$hasTransactionsTable;
     }
 
     public function bookings(): HasMany
@@ -86,50 +112,68 @@ class User extends Authenticatable
 
     public function getCreditsAttribute($value): int
     {
-        $remaining = $this->weeklyRemainingLimit();
-        if ($value === null || (int) $value < $remaining) {
-            return $remaining;
-        }
-        return (int) $value;
+        return $this->weeklyRemainingLimit();
     }
 
     public function hasCredits(int $amount): bool
     {
-        return $this->weeklyRemainingLimit() >= $amount || (int) ($this->attributes['credits'] ?? 0) >= $amount;
+        return $this->weeklyRemainingLimit() >= $amount;
     }
 
-    public function deductCredits(int $amount, string $description, ?int $bookingId = null): Transaction
+    public function deductCredits(int $amount, string $description, ?int $bookingId = null): ?Transaction
     {
         if (!$this->hasCredits($amount)) {
             throw new \InvalidArgumentException('Crédits insuffisants.');
         }
 
-        $currentDbCredits = (int) ($this->attributes['credits'] ?? 0);
-        if ($currentDbCredits >= $amount) {
-            $this->decrement('credits', $amount);
-        } else {
-            $this->attributes['credits'] = max(0, $this->weeklyRemainingLimit() - $amount);
-            $this->save();
+        if (static::hasCreditsColumn()) {
+            try {
+                $this->decrement('credits', $amount);
+            } catch (\Throwable $e) {
+                // Ignore if column is missing from real DB
+            }
         }
 
-        return $this->transactions()->create([
-            'amount' => -$amount,
-            'type' => 'booking_charge',
-            'description' => $description,
-            'booking_id' => $bookingId,
-        ]);
+        if (static::hasTransactionsTable()) {
+            try {
+                return $this->transactions()->create([
+                    'amount' => -$amount,
+                    'type' => 'booking_charge',
+                    'description' => $description,
+                    'booking_id' => $bookingId,
+                ]);
+            } catch (\Throwable $e) {
+                // Ignore if transactions table schema differs or doesn't exist
+            }
+        }
+
+        return null;
     }
 
-    public function addCredits(int $amount, string $description, ?int $bookingId = null): Transaction
+    public function addCredits(int $amount, string $description, ?int $bookingId = null): ?Transaction
     {
-        $this->increment('credits', $amount);
+        if (static::hasCreditsColumn()) {
+            try {
+                $this->increment('credits', $amount);
+            } catch (\Throwable $e) {
+                // Ignore if column is missing from real DB
+            }
+        }
 
-        return $this->transactions()->create([
-            'amount' => $amount,
-            'type' => 'refund',
-            'description' => $description,
-            'booking_id' => $bookingId,
-        ]);
+        if (static::hasTransactionsTable()) {
+            try {
+                return $this->transactions()->create([
+                    'amount' => $amount,
+                    'type' => 'refund',
+                    'description' => $description,
+                    'booking_id' => $bookingId,
+                ]);
+            } catch (\Throwable $e) {
+                // Ignore
+            }
+        }
+
+        return null;
     }
 
     public function isAdmin(): bool
