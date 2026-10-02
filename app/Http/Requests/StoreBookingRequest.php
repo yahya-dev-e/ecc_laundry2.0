@@ -27,9 +27,13 @@ class StoreBookingRequest extends FormRequest
         return [
             'machine_id' => ['required', 'exists:machines,id'],
             'start_time' => [
-                'required',
+                'nullable',
                 'date',
-                'after_or_equal:now - 5 minutes',
+                'before_or_equal:' . $maxDate->toIso8601String(),
+            ],
+            'start_times' => ['nullable', 'array', 'min:1'],
+            'start_times.*' => [
+                'date',
                 'before_or_equal:' . $maxDate->toIso8601String(),
             ],
             'duration_minutes' => ['nullable', 'integer', 'min:20', 'max:120'],

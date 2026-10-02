@@ -32,13 +32,11 @@ Route::middleware('auth')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
     // Tableau de bord & Calendrier des réservations
-    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
-    Route::get('/calendrier', [DashboardController::class, 'index'])->name('calendrier');
-    Route::get('/admin/reservation/calendrier', [DashboardController::class, 'index']);
+    Route::get('/dashboard', [DashboardController::class, 'dashboard'])->name('dashboard');
+    Route::get('/calendrier', [DashboardController::class, 'calendar'])->name('calendrier');
+    Route::get('/admin/reservation/calendrier', [DashboardController::class, 'calendar']);
 
-    // Réservations
-    Route::get('/reservations', [BookingController::class, 'index'])->name('bookings.index');
-    Route::get('/bookings', [BookingController::class, 'index']);
+    // Réservations & Création
     Route::get('/bookings/create', [BookingController::class, 'create'])->name('bookings.create');
     Route::get('/reserver', [BookingController::class, 'create']);
     Route::post('/bookings', [BookingController::class, 'store'])->name('bookings.store');
@@ -46,26 +44,15 @@ Route::middleware('auth')->group(function () {
     Route::post('/bookings/{booking}/start', [BookingController::class, 'start'])->name('bookings.start');
     Route::post('/bookings/{booking}/cancel', [BookingController::class, 'cancel'])->name('bookings.cancel');
 
-    // Machines
-    Route::get('/machines', function () {
-        return view('machines.index');
-    })->name('machines.index');
-    Route::get('/machines/{machine}', [MachineController::class, 'show'])->name('machines.show');
-    Route::get('/machines/{machine}/slots', [MachineController::class, 'slots'])->name('machines.slots');
-    Route::patch('/machines/{machine}/status', [MachineController::class, 'updateStatus'])->name('machines.update-status');
-
-    // Réclamations (Available to both Admin and Students)
-    Route::get('/reclamations', function () {
-        return view('complaints.index');
-    })->name('complaints.index');
-
-    // Gestion des Utilisateurs
+    // Gestion des Utilisateurs (Admin)
     Route::get('/utilisateurs', function () {
         return view('admin.users');
     })->name('admin.users');
 
-    // Paramètres
-    Route::get('/parametres', function () {
-        return view('admin.settings');
-    })->name('admin.settings');
+    // Sections retirées (Réservations, Machines, Réclamations, Paramètres) -> Redirection vers Tableau de bord
+    Route::get('/reservations', fn() => redirect()->route('dashboard'))->name('bookings.index');
+    Route::get('/bookings', fn() => redirect()->route('dashboard'));
+    Route::get('/machines', fn() => redirect()->route('dashboard'))->name('machines.index');
+    Route::get('/reclamations', fn() => redirect()->route('dashboard'))->name('complaints.index');
+    Route::get('/parametres', fn() => redirect()->route('dashboard'))->name('admin.settings');
 });

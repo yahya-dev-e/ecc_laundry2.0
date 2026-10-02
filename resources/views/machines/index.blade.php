@@ -10,21 +10,21 @@
     // Fallback if database hasn't been seeded yet
     if ($allMachines->isEmpty()) {
         $washers = collect([
-            (object)['id' => 1, 'name' => 'ML1-OM', 'type' => 'washing-machine', 'status' => 'available', 'color' => '#e53935'],
-            (object)['id' => 2, 'name' => 'ML2-OM', 'type' => 'washing-machine', 'status' => 'in-use', 'color' => '#00e676'],
-            (object)['id' => 3, 'name' => 'ML1-PE', 'type' => 'washing-machine', 'status' => 'available', 'color' => '#2979ff'],
-            (object)['id' => 4, 'name' => 'ML2-PE', 'type' => 'washing-machine', 'status' => 'reserved', 'color' => '#ffd600'],
-            (object)['id' => 5, 'name' => 'ML3-PE', 'type' => 'washing-machine', 'status' => 'reserved', 'color' => '#ff007f'],
-            (object)['id' => 6, 'name' => 'ML4-PE', 'type' => 'washing-machine', 'status' => 'available', 'color' => '#ff9100'],
-            (object)['id' => 7, 'name' => 'ML3-OM', 'type' => 'washing-machine', 'status' => 'available', 'color' => '#004d40'],
+            (object)['id' => 1, 'name' => 'ML1-OM', 'type' => 'washing-machine', 'status' => 'available', 'color' => '#4338ca'],
+            (object)['id' => 2, 'name' => 'ML2-OM', 'type' => 'washing-machine', 'status' => 'in-use', 'color' => '#0d9488'],
+            (object)['id' => 3, 'name' => 'ML1-PE', 'type' => 'washing-machine', 'status' => 'available', 'color' => '#2563eb'],
+            (object)['id' => 4, 'name' => 'ML2-PE', 'type' => 'washing-machine', 'status' => 'reserved', 'color' => '#d97706'],
+            (object)['id' => 5, 'name' => 'ML3-PE', 'type' => 'washing-machine', 'status' => 'reserved', 'color' => '#db2777'],
+            (object)['id' => 6, 'name' => 'ML4-PE', 'type' => 'washing-machine', 'status' => 'available', 'color' => '#ea580c'],
+            (object)['id' => 7, 'name' => 'ML3-OM', 'type' => 'washing-machine', 'status' => 'available', 'color' => '#059669'],
         ]);
         $dryers = collect([
-            (object)['id' => 8, 'name' => 'SL1-OM', 'type' => 'dryer', 'status' => 'available', 'color' => '#4e342e'],
-            (object)['id' => 9, 'name' => 'SL2-OM', 'type' => 'dryer', 'status' => 'available', 'color' => '#4caf50'],
-            (object)['id' => 10, 'name' => 'SL1-PE', 'type' => 'dryer', 'status' => 'in-use', 'color' => '#1a237e'],
-            (object)['id' => 11, 'name' => 'SL2-PE', 'type' => 'dryer', 'status' => 'available', 'color' => '#827717'],
-            (object)['id' => 12, 'name' => 'SL3-PE', 'type' => 'dryer', 'status' => 'available', 'color' => '#8e24aa'],
-            (object)['id' => 13, 'name' => 'SL3-OM', 'type' => 'dryer', 'status' => 'available', 'color' => '#212121'],
+            (object)['id' => 8, 'name' => 'SL1-OM', 'type' => 'dryer', 'status' => 'available', 'color' => '#b45309'],
+            (object)['id' => 9, 'name' => 'SL2-OM', 'type' => 'dryer', 'status' => 'available', 'color' => '#16a34a'],
+            (object)['id' => 10, 'name' => 'SL1-PE', 'type' => 'dryer', 'status' => 'in-use', 'color' => '#475569'],
+            (object)['id' => 11, 'name' => 'SL2-PE', 'type' => 'dryer', 'status' => 'available', 'color' => '#65a30d'],
+            (object)['id' => 12, 'name' => 'SL3-PE', 'type' => 'dryer', 'status' => 'available', 'color' => '#9333ea'],
+            (object)['id' => 13, 'name' => 'SL3-OM', 'type' => 'dryer', 'status' => 'available', 'color' => '#52525b'],
         ]);
     }
 @endphp

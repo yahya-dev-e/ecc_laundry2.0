@@ -29,9 +29,9 @@
             </div>
 
             <div class="flex items-center space-x-6">
-                <!-- French Flag -->
+                <!-- French Flag Badge (no emoji) -->
                 <div class="flex items-center space-x-1 cursor-pointer">
-                    <span class="text-base" title="Français">🇫🇷</span>
+                    <span class="text-xs font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">FR</span>
                 </div>
 
                 <!-- User Profile -->

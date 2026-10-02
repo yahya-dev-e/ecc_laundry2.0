@@ -2,322 +2,224 @@
 
 @section('content')
 @php
-    $washers = $machines->filter(fn($m) => in_array($m->type instanceof \App\Enums\MachineType ? $m->type->value : (string)$m->type, ['washing-machine', 'washer']));
-    $dryers = $machines->filter(fn($m) => in_array($m->type instanceof \App\Enums\MachineType ? $m->type->value : (string)$m->type, ['dryer']));
-    $firstMachine = $machines->first();
-    $currentSelectedMachineId = request('machine_id', $firstMachine?->id ?? 1);
-    $currentMachine = $machines->firstWhere('id', $currentSelectedMachineId) ?? $firstMachine;
+    $isAdmin = auth()->check() ? auth()->user()->isAdmin() : false;
+    $remainingHours = auth()->check() ? auth()->user()->weeklyRemainingLimit() : 8;
+    $weeklyLimit = config('laundry.weekly_limit_hours', 8);
+    $usedHours = $weeklyLimit - $remainingHours;
+    $userName = auth()->check() ? auth()->user()->name : 'Étudiant';
 @endphp
 
-<div class="space-y-6 max-w-6xl mx-auto" x-data="{
-    search: '',
-    selectedMachineName: '{{ $currentMachine?->name ?? 'ML1-OM' }}',
-    selectedMachineId: {{ $currentMachine?->id ?? 1 }},
-    selectedDate: '{{ $selectedDate }}',
-    selectMachine(name, id) {
-        this.selectedMachineName = name;
-        this.selectedMachineId = id;
-    }
-}">
-
-    <!-- Info Notice Banner -->
-    <div class="bg-white border-l-4 border-[#00897b] p-3.5 rounded shadow-xs flex items-center justify-between">
-        <div class="flex items-center space-x-3">
-            <div class="w-5 h-5 rounded-full bg-[#00897b]/10 text-[#00897b] flex items-center justify-center font-bold text-xs shrink-0">
-                i
-            </div>
-            <span class="text-xs text-slate-700">
-                Sélectionnez une machine pour consulter son planning ou réserver un créneau.
-            </span>
-        </div>
-
-        @if(!auth()->check() || !auth()->user()->isAdmin())
-            <div class="hidden sm:flex items-center space-x-2 text-xs font-semibold px-2.5 py-1 rounded bg-emerald-50 text-emerald-800 border border-emerald-200">
-                <span>Quota restant :</span>
-                <span class="font-bold">{{ auth()->check() ? auth()->user()->weeklyRemainingLimit() : 8 }} / 8 heures</span>
-            </div>
-        @else
-            <div class="hidden sm:flex items-center space-x-2 text-xs font-semibold px-2.5 py-1 rounded bg-amber-50 text-amber-800 border border-amber-200">
-                <span>Régime :</span>
-                <span class="font-bold">Admin (Illimité)</span>
-            </div>
-        @endif
-    </div>
-
-    <!-- Active cycles bar if any -->
-    @if(isset($activeCycles) && $activeCycles->isNotEmpty())
-        <div class="bg-white border border-slate-200 p-4 rounded-xl shadow-xs">
-            <h3 class="text-xs font-bold uppercase tracking-wider text-[#00897b] mb-2 flex items-center gap-2">
-                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
-                <span>Vos cycles en cours</span>
-            </h3>
-            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                @foreach($activeCycles as $cycle)
-                    <div class="bg-slate-50 p-3 rounded-lg border border-slate-200 flex items-center justify-between">
-                        <div>
-                            <span class="font-bold text-slate-800 text-sm">{{ $cycle->machine->name }}</span>
-                            <span class="text-xs text-slate-500 block">Fin prévue: {{ $cycle->end_time->format('H:i') }}</span>
-                        </div>
-                        <x-status-badge :status="$cycle->status" />
-                    </div>
-                @endforeach
-            </div>
-        </div>
-    @endif
-
-    <!-- Search Input -->
-    <div class="max-w-md mx-auto">
-        <input type="text" x-model="search" placeholder="Rechercher une machine..." 
-               class="w-full px-4 py-2 bg-white border border-slate-300 rounded text-xs placeholder-slate-400 focus:outline-none focus:border-[#00897b] shadow-xs">
-    </div>
-
-    <!-- Machine Selection Table Card -->
-    <div class="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden max-w-2xl mx-auto">
-        <!-- Dual Column Header -->
-        <div class="grid grid-cols-2 bg-[#00897b] text-white text-xs font-bold text-center py-2.5">
-            <div>Machines à laver ({{ $washers->count() }})</div>
-            <div>Sèche-linge ({{ $dryers->count() }})</div>
-        </div>
-
-        <!-- Matrix Content -->
-        <div class="grid grid-cols-2 divide-x divide-slate-200 p-4">
-            
-            <!-- Column 1: Machine à laver (Washers) -->
-            <div class="grid grid-cols-3 gap-2 pr-3">
-                @forelse($washers as $machine)
-                    <button type="button" @click="selectMachine('{{ $machine->name }}', {{ $machine->id }})" 
-                            :class="{'ring-3 ring-slate-900 scale-105 shadow-md': selectedMachineId === {{ $machine->id }}}"
-                            style="background-color: {{ $machine->color ?? '#00897b' }};"
-                            class="badge-machine text-white hover:opacity-90">
-                        <span class="truncate">{{ $machine->name }}</span>
-                    </button>
-                @empty
-                    <p class="text-xs text-slate-400 col-span-3 text-center py-2">Aucun lave-linge</p>
-                @endforelse
-            </div>
-
-            <!-- Column 2: Sèche-linge (Dryers) -->
-            <div class="grid grid-cols-2 gap-2 pl-3">
-                @forelse($dryers as $machine)
-                    <button type="button" @click="selectMachine('{{ $machine->name }}', {{ $machine->id }})"
-                            :class="{'ring-3 ring-slate-900 scale-105 shadow-md': selectedMachineId === {{ $machine->id }}}"
-                            style="background-color: {{ $machine->color ?? '#263238' }};"
-                            class="badge-machine text-white hover:opacity-90">
-                        <span class="truncate">{{ $machine->name }}</span>
-                    </button>
-                @empty
-                    <p class="text-xs text-slate-400 col-span-2 text-center py-2">Aucun sèche-linge</p>
-                @endforelse
-            </div>
-
-        </div>
-    </div>
-
-    <!-- Action Button Réserver (Direct Link to Dedicated Page) -->
-    <div class="flex flex-col sm:flex-row justify-between items-center gap-3 max-w-2xl mx-auto bg-slate-50 p-3.5 rounded-lg border border-slate-200 shadow-xs">
-        <div class="text-xs text-slate-600">
-            Machine sélectionnée : <span class="font-bold text-[#00897b] bg-[#00897b]/10 px-2.5 py-1 rounded text-sm" x-text="selectedMachineName"></span>
-        </div>
+<div class="space-y-6 max-w-6xl mx-auto">
+    <!-- 1. Welcome Message Banner -->
+    <div class="bg-gradient-to-r from-[#004d40] via-[#00695c] to-[#00796b] rounded-xl p-6 text-white shadow-sm flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-            <a :href="'{{ route('bookings.create') }}?machine_id=' + selectedMachineId" 
-               class="px-6 py-2.5 rounded bg-[#00897b] hover:bg-[#00796b] text-white text-xs font-bold transition-all shadow-md flex items-center space-x-2 cursor-pointer active:scale-95">
-                <span>Réserver cette machine</span>
-                <span>&rarr;</span>
+            <div class="flex items-center space-x-2 mb-1.5">
+                <span class="px-2 py-0.5 rounded bg-white/20 text-[10px] font-bold tracking-wider uppercase">Tableau de bord</span>
+                <span class="text-emerald-200 text-xs font-medium">Buanderie Centrale Casablanca</span>
+            </div>
+            <h1 class="text-2xl font-bold tracking-tight">Bonjour, {{ $userName }} !</h1>
+            <p class="text-xs text-emerald-100/90 mt-1 max-w-xl leading-relaxed">
+                Bienvenue sur votre espace buanderie. Consultez ci-dessous vos heures de réservation disponibles ainsi que l'historique complet de vos créneaux.
+            </p>
+        </div>
+        <div class="flex items-center space-x-3 shrink-0">
+            <a href="{{ route('bookings.create') }}" class="px-4 py-2.5 bg-white hover:bg-emerald-50 text-[#00695c] rounded-lg text-xs font-bold transition-all shadow-sm flex items-center space-x-1.5">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                <span>Réserver une machine</span>
+            </a>
+            <a href="{{ route('calendrier') }}" class="px-4 py-2.5 bg-white/10 hover:bg-white/20 border border-white/30 text-white rounded-lg text-xs font-bold transition-all">
+                <span>Voir le calendrier</span>
             </a>
         </div>
     </div>
 
-    <!-- Date Title & Working Navigation Controls (Aujourd'hui, Précédent, Suivant, All Days) -->
-    <div class="space-y-3 pt-4 border-t border-slate-200">
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div class="flex items-center space-x-3">
-                <h2 class="text-xl font-normal text-slate-700 capitalize">
-                    {{ $dayName }}, {{ $dateFormatted }}
-                </h2>
+    <!-- 2. Quota & Information Cards Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+        <!-- Quota Remaining Card (Highlight) -->
+        <div class="bg-white rounded-xl p-5 border border-slate-200 shadow-xs flex flex-col justify-between">
+            <div>
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Heures réservables</span>
+                    <span class="px-2 py-0.5 rounded text-[11px] font-mono font-bold {{ $isAdmin ? 'bg-amber-100 text-amber-800' : ($remainingHours > 0 ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800') }}">
+                        {{ $isAdmin ? 'Admin' : 'Quota 8h / sem' }}
+                    </span>
+                </div>
 
-                <!-- Direct Date Picker (Select Any Day) -->
-                <div class="relative">
-                    <input type="date" value="{{ $selectedDate }}" 
-                           @change="window.location.href = '{{ route('calendrier') }}?date=' + $event.target.value + '&machine_id=' + selectedMachineId" 
-                           class="px-2.5 py-1 text-xs border border-slate-300 rounded bg-white text-slate-700 hover:border-[#00897b] focus:outline-none focus:border-[#00897b] cursor-pointer shadow-xs font-medium"
-                           title="Choisir une date quelconque">
+                <div class="mt-4 flex items-baseline space-x-2">
+                    <span class="text-3xl font-extrabold {{ $isAdmin ? 'text-emerald-700' : ($remainingHours > 0 ? 'text-emerald-600' : 'text-rose-600') }} font-mono">
+                        {{ $isAdmin ? 'Illimité' : "{$remainingHours}h" }}
+                    </span>
+                    @if(!$isAdmin)
+                        <span class="text-xs text-slate-500 font-medium">restantes cette semaine</span>
+                    @else
+                        <span class="text-xs text-slate-500 font-medium">heures non plafonnées</span>
+                    @endif
+                </div>
+
+                <!-- Visual Progress Bar -->
+                <div class="mt-3.5">
+                    <div class="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
+                        <div class="h-2.5 rounded-full transition-all duration-500 {{ $remainingHours === 0 ? 'bg-rose-500' : 'bg-[#00897b]' }}"
+                             style="width: {{ $isAdmin ? '100%' : (round(($remainingHours / $weeklyLimit) * 100) . '%') }}"></div>
+                    </div>
+                    <div class="flex justify-between items-center text-[10px] text-slate-400 mt-1.5 font-medium">
+                        <span>{{ $isAdmin ? 'Régime Administrateur' : "{$usedHours}h utilisées sur {$weeklyLimit}h" }}</span>
+                        <span>{{ $isAdmin ? 'Sans limite' : "{$remainingHours}h disponibles" }}</span>
+                    </div>
                 </div>
             </div>
 
-            <!-- Navigation Buttons: Aujourd'hui, Précédent (Hier), Suivant (Demain) -->
-            <div class="inline-flex rounded shadow-xs text-xs">
-                <a :href="'{{ route('calendrier') }}?date={{ $todayDate }}&machine_id=' + selectedMachineId" 
-                   class="px-3.5 py-1.5 {{ $selectedDate === $todayDate ? 'bg-[#00897b] text-white font-bold' : 'bg-[#546e7a] hover:bg-[#455a64] text-white font-medium' }} rounded-l transition-colors flex items-center">
-                    Aujourd'hui
-                </a>
-                <a :href="'{{ route('calendrier') }}?date={{ $prevDate }}&machine_id=' + selectedMachineId" 
-                   class="px-3.5 py-1.5 bg-[#37474f] hover:bg-[#263238] text-white font-medium transition-colors flex items-center space-x-1"
-                   title="Jour précédent ({{ $prevDate }})">
-                    <span>&larr;</span>
-                    <span>Précédent</span>
-                </a>
-                <a :href="'{{ route('calendrier') }}?date={{ $nextDate }}&machine_id=' + selectedMachineId" 
-                   class="px-3.5 py-1.5 bg-[#263238] hover:bg-black text-white font-medium rounded-r transition-colors flex items-center space-x-1"
-                   title="Jour suivant ({{ $nextDate }})">
-                    <span>Suivant</span>
+            <div class="pt-4 mt-4 border-t border-slate-100 flex items-center justify-between text-[11px]">
+                <span class="text-slate-500">1 heure = 1 crédit</span>
+                <a href="{{ route('bookings.create') }}" class="text-[#00897b] font-bold hover:underline flex items-center space-x-1">
+                    <span>Réserver un créneau</span>
                     <span>&rarr;</span>
                 </a>
             </div>
         </div>
 
-        <!-- 7-Day Week Selector (All Days Quick-Jump Strip) -->
-        @if(isset($weekDays) && count($weekDays) > 0)
-            <div class="grid grid-cols-7 gap-1 sm:gap-2 p-1.5 bg-white rounded-lg border border-slate-200 shadow-xs">
-                @foreach($weekDays as $wDay)
-                    <a :href="'{{ route('calendrier') }}?date={{ $wDay['date'] }}&machine_id=' + selectedMachineId"
-                       class="py-2 px-1 text-center rounded transition-all flex flex-col items-center justify-center {{ $wDay['isSelected'] ? 'bg-[#00897b] text-white font-bold shadow-xs scale-102' : 'hover:bg-slate-100 text-slate-700' }}">
-                        <span class="text-[10px] uppercase font-semibold {{ $wDay['isSelected'] ? 'text-emerald-100' : 'text-slate-400' }}">
-                            {{ $wDay['shortName'] }}
-                        </span>
-                        <span class="text-sm font-bold {{ $wDay['isSelected'] ? 'text-white' : ($wDay['isToday'] ? 'text-[#00897b]' : 'text-slate-800') }}">
-                            {{ $wDay['dayNumber'] }}
-                        </span>
-                        @if($wDay['isToday'])
-                            <span class="w-1.5 h-1.5 rounded-full {{ $wDay['isSelected'] ? 'bg-white' : 'bg-[#00897b]' }} mt-0.5"></span>
-                        @else
-                            <span class="w-1.5 h-1.5 mt-0.5"></span>
-                        @endif
-                    </a>
-                @endforeach
+        <!-- User Bookings Count Card -->
+        <div class="bg-white rounded-xl p-5 border border-slate-200 shadow-xs flex flex-col justify-between">
+            <div>
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Vos Réservations</span>
+                    <span class="px-2 py-0.5 rounded text-[11px] font-mono font-bold bg-blue-100 text-blue-800">
+                        {{ isset($userReservations) ? count($userReservations) : 0 }} créneau{{ isset($userReservations) && count($userReservations) > 1 ? 'x' : '' }}
+                    </span>
+                </div>
+
+                <div class="mt-4 flex items-baseline space-x-2">
+                    <span class="text-3xl font-extrabold text-slate-800 font-mono">
+                        {{ isset($userReservations) ? count($userReservations) : 0 }}
+                    </span>
+                    <span class="text-xs text-slate-500 font-medium">créneau{{ isset($userReservations) && count($userReservations) > 1 ? 'x' : '' }} enregistré{{ isset($userReservations) && count($userReservations) > 1 ? 's' : '' }}</span>
+                </div>
+
+                <p class="text-xs text-slate-500 mt-3 leading-relaxed">
+                    Toutes vos réservations sont consultables dans le tableau ci-dessous et synchronisées sur le calendrier 24h.
+                </p>
+            </div>
+
+            <div class="pt-4 mt-4 border-t border-slate-100 flex items-center justify-between text-[11px]">
+                <span class="text-slate-500">Planning en temps réel</span>
+                <a href="{{ route('calendrier') }}" class="text-[#00897b] font-bold hover:underline flex items-center space-x-1">
+                    <span>Ouvrir le calendrier</span>
+                    <span>&rarr;</span>
+                </a>
+            </div>
+        </div>
+
+        <!-- Availability Info Card -->
+        <div class="bg-white rounded-xl p-5 border border-slate-200 shadow-xs flex flex-col justify-between">
+            <div>
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Accès Buanderie</span>
+                    <span class="px-2 py-0.5 rounded text-[11px] font-mono font-bold bg-emerald-100 text-emerald-800">24h / 24</span>
+                </div>
+
+                <div class="mt-4 space-y-2 text-xs text-slate-600">
+                    <div class="flex items-center space-x-2">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                        <span>Horaires complets : toutes les heures du jour</span>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <span class="w-2 h-2 rounded-full bg-[#00897b]"></span>
+                        <span>13 machines (7 lave-linge, 6 sèche-linge)</span>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <span class="w-2 h-2 rounded-full bg-indigo-500"></span>
+                        <span>Sélection multi-créneaux simultanés</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="pt-4 mt-4 border-t border-slate-100 flex items-center justify-between text-[11px]">
+                <span class="text-slate-400">Campus Centrale Casablanca</span>
+                <span class="font-semibold text-slate-600">Bâtiments Omar & Petit</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. Reservation History Table -->
+    <div class="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
+        <div class="px-6 py-4 bg-slate-50/80 border-b border-slate-200 flex items-center justify-between">
+            <div>
+                <h2 class="text-sm font-bold text-slate-800">Historique de vos réservations</h2>
+                <p class="text-[11px] text-slate-500">Liste complète de vos créneaux réservés et validés</p>
+            </div>
+            <a href="{{ route('bookings.create') }}" class="px-3.5 py-1.5 bg-[#00897b] hover:bg-[#00796b] text-white rounded text-xs font-bold shadow-xs flex items-center space-x-1">
+                <span>+</span>
+                <span>Nouveau créneau</span>
+            </a>
+        </div>
+
+        @if(!isset($userReservations) || $userReservations->isEmpty())
+            <div class="p-8 text-center">
+                <svg class="w-10 h-10 mx-auto text-slate-300 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                <p class="text-xs font-bold text-slate-600">Aucune réservation pour le moment</p>
+                <p class="text-[11px] text-slate-400 mt-1">Vous n'avez pas encore réservé de créneau cette semaine.</p>
+                <a href="{{ route('bookings.create') }}" class="inline-block mt-3 px-4 py-2 bg-[#00897b] text-white text-xs font-bold rounded">
+                    Réserver votre premier créneau
+                </a>
+            </div>
+        @else
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-xs">
+                    <thead class="bg-slate-100/75 text-slate-700 font-bold border-b border-slate-200">
+                        <tr>
+                            <th class="py-3 px-4">Machine</th>
+                            <th class="py-3 px-4">Date</th>
+                            <th class="py-3 px-4">Créneau horaire</th>
+                            <th class="py-3 px-4">Durée & Crédits</th>
+                            <th class="py-3 px-4">Statut</th>
+                            <th class="py-3 px-4 text-right">Calendrier</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                        @foreach($userReservations as $res)
+                            @php
+                                $machine = $res->machine;
+                                $durationHours = max(1, round(($res->end_time->diffInMinutes($res->start_time)) / 60));
+                                $machineColor = $machine?->color ?? '#4338ca';
+                            @endphp
+                            <tr class="hover:bg-slate-50/70 transition-colors">
+                                <td class="py-3 px-4">
+                                    <div class="flex items-center space-x-2.5">
+                                        <span style="background-color: {{ $machineColor }};" class="px-2.5 py-1 rounded text-xs font-mono font-bold text-white shadow-xs shrink-0">
+                                            {{ $machine?->name ?? 'Machine' }}
+                                        </span>
+                                        <div>
+                                            <span class="font-bold text-slate-800 block text-xs">{{ $machine?->name }}</span>
+                                            <span class="text-[10px] text-slate-400 capitalize">{{ $machine?->type?->value ?? 'Lave-linge' }}</span>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="py-3 px-4 text-slate-700 font-medium">
+                                    {{ $res->start_time->format('d/m/Y') }}
+                                </td>
+                                <td class="py-3 px-4 font-mono font-bold text-slate-800">
+                                    {{ $res->start_time->format('H:i') }} - {{ $res->end_time->format('H:i') }}
+                                </td>
+                                <td class="py-3 px-4 text-slate-600 font-semibold">
+                                    {{ $durationHours }} h ({{ $durationHours }} crédit{{ $durationHours > 1 ? 's' : '' }})
+                                </td>
+                                <td class="py-3 px-4">
+                                    <span class="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 font-bold text-[10px] inline-flex items-center space-x-1">
+                                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
+                                        <span>Confirmé</span>
+                                    </span>
+                                </td>
+                                <td class="py-3 px-4 text-right">
+                                    <a href="{{ route('calendrier') }}?date={{ $res->start_time->toDateString() }}&machine_id={{ $res->machine_id }}" class="px-2.5 py-1 text-[11px] font-semibold text-[#00897b] hover:bg-emerald-50 rounded border border-emerald-200 transition-colors inline-block">
+                                        Voir au calendrier &rarr;
+                                    </a>
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
             </div>
         @endif
     </div>
-
-    <!-- Timetable / Calendar Timeline Grid with Continuous Blocks & Limitor Lines -->
-    <div class="bg-white rounded-lg border border-slate-300 shadow-xs overflow-hidden">
-        
-        <div class="flex border-b border-slate-300 bg-[#f9f9e8] text-xs font-semibold text-slate-700">
-            <div class="w-16 sm:w-20 p-2.5 text-center border-r border-slate-300 text-[11px] text-slate-500 font-semibold tracking-tight">
-                Horaires
-            </div>
-            <div class="flex-1 p-2.5 text-center font-bold text-slate-800 capitalize flex items-center justify-center space-x-2">
-                <span>{{ $dayName }} ({{ $dateFormatted }})</span>
-                @if(isset($calendarBlocks) && count($calendarBlocks) > 0)
-                    <span class="text-[10px] font-normal text-slate-500 bg-white/80 px-2 py-0.5 rounded border border-slate-200">
-                        {{ count($calendarBlocks) }} créneau{{ count($calendarBlocks) > 1 ? 'x' : '' }} continu{{ count($calendarBlocks) > 1 ? 's' : '' }}
-                    </span>
-                @endif
-            </div>
-        </div>
-
-        <div class="relative overflow-x-auto">
-            <div class="flex min-w-[620px] relative select-none">
-                
-                <!-- Left Axis: Hours of the Day directly ON the line as limitor indicators -->
-                <div class="w-16 sm:w-20 shrink-0 border-r border-slate-300 bg-slate-50/70 relative select-none" style="height: {{ 24 * 52 }}px;">
-                    @for ($h = 0; $h <= 24; $h++)
-                        @php
-                            $top = $h * 52;
-                            $hourLabel = sprintf('%02d:00', $h === 24 ? 24 : $h);
-                        @endphp
-                        <div class="absolute right-0 pr-3 flex items-center -translate-y-1/2 pointer-events-none" style="top: {{ $top }}px;">
-                            <span class="text-[11px] font-bold text-slate-500 font-mono tracking-tight">{{ $hourLabel }}</span>
-                        </div>
-                    @endfor
-                </div>
-
-                <!-- Schedule Area: Horizontal Limitor Lines & Continuous Blocks -->
-                <div class="flex-1 relative bg-white" style="height: {{ 24 * 52 }}px;">
-                    
-                    <!-- Background: 24 hour rows with click-to-book and horizontal divider lines -->
-                    @for ($h = 0; $h < 24; $h++)
-                        @php
-                            $top = $h * 52;
-                            $hourStr = sprintf('%02d:00', $h);
-                        @endphp
-                        <!-- Limitor boundary line at top of hour -->
-                        <div class="absolute left-0 right-0 border-t border-slate-200 pointer-events-none" style="top: {{ $top }}px;"></div>
-                        
-                        <!-- Mid-hour subtle 30m dashed guide line -->
-                        <div class="absolute left-0 right-0 border-t border-dashed border-slate-100 pointer-events-none" style="top: {{ $top + 26 }}px;"></div>
-
-                        <!-- Clickable / Hoverable hour row slot -->
-                        <a :href="'{{ route('bookings.create') }}?machine_id=' + selectedMachineId + '&start_time={{ $selectedDate }}T{{ sprintf('%02d', $h) }}:00:00'" 
-                           class="absolute left-0 right-0 h-[52px] hover:bg-slate-50/60 transition-colors group cursor-pointer"
-                           style="top: {{ $top }}px;"
-                           title="Cliquer pour réserver le créneau {{ $hourStr }}">
-                            <div class="w-full h-full flex items-center px-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <span class="text-[10px] text-slate-400 font-medium">+ Réserver à {{ $hourStr }}</span>
-                            </div>
-                        </a>
-                    @endfor
-                    <!-- Final boundary line at bottom (24:00) -->
-                    <div class="absolute left-0 right-0 border-t border-slate-300 pointer-events-none" style="top: {{ 24 * 52 }}px;"></div>
-
-                    <!-- Current Time Indicator (if viewing today) -->
-                    @if($selectedDate === $todayDate)
-                        @php
-                            $now = \Carbon\Carbon::now();
-                            $nowMinutes = ($now->hour * 60) + $now->minute;
-                            $nowTop = ($nowMinutes / 60) * 52;
-                        @endphp
-                        @if($nowMinutes >= 0 && $nowMinutes <= 1440)
-                            <div class="absolute left-0 right-0 z-30 pointer-events-none flex items-center" style="top: {{ $nowTop }}px;">
-                                <div class="w-2.5 h-2.5 rounded-full bg-rose-500 shadow -ml-1.5 shrink-0 ring-2 ring-white"></div>
-                                <div class="flex-1 border-t-2 border-rose-500 shadow-xs"></div>
-                                <span class="bg-rose-500 text-white font-mono text-[9px] font-bold px-1.5 py-0.5 rounded shadow -mr-1">
-                                    {{ $now->format('H:i') }}
-                                </span>
-                            </div>
-                        @endif
-                    @endif
-
-                    <!-- Render Continuous Blocks -->
-                    @forelse($calendarBlocks ?? [] as $block)
-                        @php
-                            $isMultiHour = $block['durationMinutes'] > 60;
-                            $machineColor = $block['machine']->color ?? '#00897b';
-                        @endphp
-                        <div style="background-color: {{ $machineColor }}; top: {{ $block['top'] + 1 }}px; height: {{ $block['height'] - 2 }}px; left: calc({{ $block['leftPct'] }}% + 4px); width: calc({{ $block['widthPct'] }}% - 8px);"
-                             :class="{'ring-3 ring-slate-900 shadow-xl scale-[1.01] z-30': selectedMachineId === {{ $block['machine_id'] }}, 'shadow-sm hover:shadow-md hover:brightness-105 z-20': selectedMachineId !== {{ $block['machine_id'] }}}"
-                             class="absolute rounded-md text-white overflow-hidden transition-all cursor-pointer border border-white/20 select-none"
-                             @click.stop="selectMachine('{{ $block['machine']->name }}', {{ $block['machine_id'] }})"
-                             title="{{ $block['machine']->name }} • {{ $block['timeFormatted'] }} ({{ $block['user']?->name ?? 'Occupé' }}) - Cliquer pour sélectionner la machine">
-                            
-                            <div class="h-full p-2 flex flex-col justify-between">
-                                <div class="flex items-center justify-between text-xs leading-tight">
-                                    <div class="flex items-center space-x-1.5 truncate">
-                                        <span class="font-mono font-bold text-[11px] bg-black/25 px-1.5 py-0.5 rounded">{{ $block['timeFormatted'] }}</span>
-                                        <span class="opacity-60">•</span>
-                                        <span class="font-bold text-[12px] truncate">{{ $block['machine']->name }}</span>
-                                        @if($isMultiHour)
-                                            <span class="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-black/25 uppercase tracking-wider">{{ $block['durationFormatted'] }}</span>
-                                        @endif
-                                    </div>
-                                    @if($block['user'])
-                                        <span class="opacity-90 text-[11px] font-medium truncate max-w-[140px] ml-2">
-                                            ({{ $block['user']->name }})
-                                        </span>
-                                    @endif
-                                </div>
-                                @if($block['height'] >= 70)
-                                    <div class="flex items-center justify-between text-[10px] opacity-80 pt-1 border-t border-white/20">
-                                        <span>Machine : <strong class="font-bold">{{ $block['machine']->name }}</strong></span>
-                                        <span class="text-[9px] italic">Créneau continu</span>
-                                    </div>
-                                @endif
-                            </div>
-                        </div>
-                    @empty
-                        <!-- Empty Day State Overlay -->
-                        <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
-                            <div class="bg-white/90 border border-slate-200 shadow-sm rounded-lg p-4 text-center max-w-sm">
-                                <svg class="w-8 h-8 mx-auto mb-1 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-                                <span class="text-xs font-bold text-slate-700 block">Aucune réservation pour cette journée</span>
-                                <span class="text-[11px] text-slate-500 block mt-1">Cliquez sur un créneau horaire ou sélectionnez une machine ci-dessus pour réserver.</span>
-                            </div>
-                        </div>
-                    @endforelse
-
-                </div>
-            </div>
-        </div>
-    </div>
-
 </div>
 @endsection

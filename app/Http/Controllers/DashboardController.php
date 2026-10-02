@@ -17,7 +17,40 @@ class DashboardController extends Controller
     ) {}
 
     /**
-     * Display the main ECC Laundry real-time dashboard / calendar.
+     * Display the Tableau de bord (Welcome message, remaining quota, user's reservation history).
+     */
+    public function dashboard(Request $request): View
+    {
+        $user = $request->user();
+        $userReservations = $user ? $user->reservations()
+            ->with('machine')
+            ->latest('start_time')
+            ->get() : collect();
+
+        $activeCycles = $user ? $user->reservations()
+            ->with('machine')
+            ->where('start_time', '<=', Carbon::now())
+            ->where('end_time', '>=', Carbon::now())
+            ->latest('start_time')
+            ->get() : collect();
+
+        return view('dashboard', [
+            'user' => $user,
+            'userReservations' => $userReservations,
+            'activeCycles' => $activeCycles,
+        ]);
+    }
+
+    /**
+     * Display the main ECC Laundry real-time calendar.
+     */
+    public function calendar(Request $request): View
+    {
+        return $this->index($request);
+    }
+
+    /**
+     * Display the main ECC Laundry real-time calendar.
      */
     public function index(Request $request): View
     {
@@ -264,7 +297,7 @@ class DashboardController extends Controller
         $machines = $machinesQuery->get();
         $metrics = $this->scheduler->getMachineMetrics();
 
-        return view('dashboard', [
+        return view('calendar', [
             'user' => $user,
             'activeCycles' => $activeCycles,
             'nextBooking' => $nextBooking,

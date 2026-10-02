@@ -32,10 +32,10 @@ return [
     // Maximum days in advance a student can book a slot
     'max_advance_booking_days' => 7,
 
-    // Operating hours (24h format)
+    // Operating hours (Full 24h day - no artificial limiters)
     'operating_hours' => [
-        'start' => '06:00',
-        'end'   => '23:30',
+        'start' => '00:00',
+        'end'   => '24:00',
     ],
 
     // Quota reset day (every Monday)

@@ -35,14 +35,8 @@ class MachineSchedulerService
     public function getAvailableSlots(Machine $machine, Carbon $date): array
     {
         $duration = $machine->default_duration_minutes;
-        $operatingStart = config('laundry.operating_hours.start', '06:00');
-        $operatingEnd = config('laundry.operating_hours.end', '23:30');
-
-        [$startHour, $startMinute] = explode(':', $operatingStart);
-        [$endHour, $endMinute] = explode(':', $operatingEnd);
-
-        $cursor = (clone $date)->setTime((int) $startHour, (int) $startMinute, 0);
-        $closingTime = (clone $date)->setTime((int) $endHour, (int) $endMinute, 0);
+        $cursor = (clone $date)->startOfDay();
+        $closingTime = (clone $date)->startOfDay()->addDay();
 
         $slots = [];
 

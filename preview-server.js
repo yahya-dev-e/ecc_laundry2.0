@@ -105,47 +105,47 @@ const state = {
         weeklyUsed: 2, // 2 hours used out of 8 (6 hours remaining)
     },
     machines: [
-        { code: 'ML1-OM', name: 'Machine à laver 1 Omar', type: 'washer', bg: '#e53935', text: 'text-white', status: 'available', cap: '9.0 kg', loc: 'Bâtiment Omar, RDC' },
-        { code: 'ML2-OM', name: 'Machine à laver 2 Omar', type: 'washer', bg: '#00e676', text: 'text-slate-900', status: 'in_use', cap: '9.0 kg', loc: 'Bâtiment Omar, RDC' },
-        { code: 'ML1-PE', name: 'Machine à laver 1 Petit', type: 'washer', bg: '#2979ff', text: 'text-white', status: 'available', cap: '8.0 kg', loc: 'Bâtiment Petit, Étage 1' },
-        { code: 'ML2-PE', name: 'Machine à laver 2 Petit', type: 'washer', bg: '#ffd600', text: 'text-slate-900', status: 'reserved', cap: '8.0 kg', loc: 'Bâtiment Petit, Étage 1' },
-        { code: 'ML3-PE', name: 'Machine à laver 3 Petit', type: 'washer', bg: '#ff007f', text: 'text-white', status: 'reserved', cap: '8.5 kg', loc: 'Bâtiment Petit, Étage 1' },
-        { code: 'ML4-PE', name: 'Machine à laver 4 Petit', type: 'washer', bg: '#ff9100', text: 'text-white', status: 'available', cap: '8.5 kg', loc: 'Bâtiment Petit, Étage 2' },
-        { code: 'ML3-OM', name: 'Machine à laver 3 Omar', type: 'washer', bg: '#004d40', text: 'text-white', status: 'available', cap: '10.0 kg', loc: 'Bâtiment Omar, RDC' },
+        { code: 'ML1-OM', name: 'Machine à laver 1 Omar', type: 'washer', bg: '#4338ca', text: 'text-white', status: 'available', cap: '9.0 kg', loc: 'Bâtiment Omar, RDC' },
+        { code: 'ML2-OM', name: 'Machine à laver 2 Omar', type: 'washer', bg: '#0d9488', text: 'text-white', status: 'in_use', cap: '9.0 kg', loc: 'Bâtiment Omar, RDC' },
+        { code: 'ML1-PE', name: 'Machine à laver 1 Petit', type: 'washer', bg: '#2563eb', text: 'text-white', status: 'available', cap: '8.0 kg', loc: 'Bâtiment Petit, Étage 1' },
+        { code: 'ML2-PE', name: 'Machine à laver 2 Petit', type: 'washer', bg: '#d97706', text: 'text-white', status: 'reserved', cap: '8.0 kg', loc: 'Bâtiment Petit, Étage 1' },
+        { code: 'ML3-PE', name: 'Machine à laver 3 Petit', type: 'washer', bg: '#db2777', text: 'text-white', status: 'reserved', cap: '8.5 kg', loc: 'Bâtiment Petit, Étage 1' },
+        { code: 'ML4-PE', name: 'Machine à laver 4 Petit', type: 'washer', bg: '#ea580c', text: 'text-white', status: 'available', cap: '8.5 kg', loc: 'Bâtiment Petit, Étage 2' },
+        { code: 'ML3-OM', name: 'Machine à laver 3 Omar', type: 'washer', bg: '#059669', text: 'text-white', status: 'available', cap: '10.0 kg', loc: 'Bâtiment Omar, RDC' },
         
-        { code: 'SL1-OM', name: 'Sèche-linge 1 Omar', type: 'dryer', bg: '#4e342e', text: 'text-white', status: 'available', cap: '9.5 kg', loc: 'Bâtiment Omar, RDC' },
-        { code: 'SL2-OM', name: 'Sèche-linge 2 Omar', type: 'dryer', bg: '#4caf50', text: 'text-white', status: 'available', cap: '9.5 kg', loc: 'Bâtiment Omar, RDC' },
-        { code: 'SL1-PE', name: 'Sèche-linge 1 Petit', type: 'dryer', bg: '#1a237e', text: 'text-white', status: 'in_use', cap: '8.0 kg', loc: 'Bâtiment Petit, Étage 1' },
-        { code: 'SL2-PE', name: 'Sèche-linge 2 Petit', type: 'dryer', bg: '#827717', text: 'text-white', status: 'available', cap: '8.0 kg', loc: 'Bâtiment Petit, Étage 1' },
-        { code: 'SL3-PE', name: 'Sèche-linge 3 Petit', type: 'dryer', bg: '#8e24aa', text: 'text-white', status: 'available', cap: '8.5 kg', loc: 'Bâtiment Petit, Étage 2' },
-        { code: 'SL3-OM', name: 'Sèche-linge 3 Omar', type: 'dryer', bg: '#212121', text: 'text-white', status: 'available', cap: '9.5 kg', loc: 'Bâtiment Omar, RDC' },
+        { code: 'SL1-OM', name: 'Sèche-linge 1 Omar', type: 'dryer', bg: '#b45309', text: 'text-white', status: 'available', cap: '9.5 kg', loc: 'Bâtiment Omar, RDC' },
+        { code: 'SL2-OM', name: 'Sèche-linge 2 Omar', type: 'dryer', bg: '#16a34a', text: 'text-white', status: 'available', cap: '9.5 kg', loc: 'Bâtiment Omar, RDC' },
+        { code: 'SL1-PE', name: 'Sèche-linge 1 Petit', type: 'dryer', bg: '#475569', text: 'text-white', status: 'in_use', cap: '8.0 kg', loc: 'Bâtiment Petit, Étage 1' },
+        { code: 'SL2-PE', name: 'Sèche-linge 2 Petit', type: 'dryer', bg: '#65a30d', text: 'text-white', status: 'available', cap: '8.0 kg', loc: 'Bâtiment Petit, Étage 1' },
+        { code: 'SL3-PE', name: 'Sèche-linge 3 Petit', type: 'dryer', bg: '#9333ea', text: 'text-white', status: 'available', cap: '8.5 kg', loc: 'Bâtiment Petit, Étage 2' },
+        { code: 'SL3-OM', name: 'Sèche-linge 3 Omar', type: 'dryer', bg: '#52525b', text: 'text-white', status: 'available', cap: '9.5 kg', loc: 'Bâtiment Omar, RDC' },
     ],
     reservations: [
         // ML2-OM on Mercredi 30 Septembre extended to 2am (00:00 - 02:00, 2h)
-        { date: '2026-09-30', hour: '00 h', time: '00:00 - 02:00', code: 'ML2-OM', bg: '#00e676', textColor: 'text-slate-900', user: 'Alex Rivera', durationHours: 2 },
-        { date: '2026-09-30', hour: '06 h', time: '06:00 - 07:00', code: 'SL1-PE', bg: '#1a237e', textColor: 'text-white', user: 'Youssef Alami', durationHours: 1 },
+        { date: '2026-09-30', hour: '00 h', time: '00:00 - 02:00', code: 'ML2-OM', bg: '#0d9488', textColor: 'text-white', user: 'Alex Rivera', durationHours: 2 },
+        { date: '2026-09-30', hour: '06 h', time: '06:00 - 07:00', code: 'SL1-PE', bg: '#475569', textColor: 'text-white', user: 'Youssef Alami', durationHours: 1 },
         { 
             date: '2026-09-30',
             hour: '07 h', 
             multi: [
-                { time: '07:00 - 09:00', code: 'ML2-PE', bg: '#ffd600', textColor: 'text-slate-900', user: 'Sara Bennani' },
-                { time: '07:00 - 09:00', code: 'ML3-PE', bg: '#ff007f', textColor: 'text-white', user: 'Mehdi Tazi' },
-                { time: '07:00 - 09:00', code: 'ML2-OM', bg: '#00e676', textColor: 'text-slate-900', user: 'Sara Bennani' }
+                { time: '07:00 - 09:00', code: 'ML2-PE', bg: '#d97706', textColor: 'text-white', user: 'Sara Bennani' },
+                { time: '07:00 - 09:00', code: 'ML3-PE', bg: '#db2777', textColor: 'text-white', user: 'Mehdi Tazi' },
+                { time: '07:00 - 09:00', code: 'ML2-OM', bg: '#0d9488', textColor: 'text-white', user: 'Sara Bennani' }
             ]
         },
-        { date: '2026-09-30', hour: '09 h', time: '09:00 - 11:00', code: 'ML1-OM', bg: '#e53935', textColor: 'text-white', user: 'Hamza Idrissi', durationHours: 2 },
-        { date: '2026-09-30', hour: '11 h', time: '11:00 - 12:00', code: 'SL1-OM', bg: '#4e342e', textColor: 'text-white', user: 'Amine Chraibi', durationHours: 1 },
-        { date: '2026-09-30', hour: '12 h', time: '12:00 - 14:00', code: 'ML4-PE', bg: '#ff9100', textColor: 'text-white', user: 'Leila Benjelloun', durationHours: 2 },
-        { date: '2026-09-30', hour: '14 h', time: '14:00 - 15:00', code: 'ML1-PE', bg: '#2979ff', textColor: 'text-white', user: 'Mehdi Tazi', durationHours: 1 },
-        { date: '2026-09-30', hour: '15 h', time: '15:00 - 17:00', code: 'SL3-PE', bg: '#8e24aa', textColor: 'text-white', user: 'Khadija Mansour', durationHours: 2 },
-        { date: '2026-09-30', hour: '17 h', time: '17:00 - 18:00', code: 'ML3-OM', bg: '#004d40', textColor: 'text-white', user: 'Omar Fassi', durationHours: 1 },
-        { date: '2026-09-30', hour: '18 h', time: '18:00 - 20:00', code: 'ML2-OM', bg: '#00e676', textColor: 'text-slate-900', user: 'Sara Bennani', durationHours: 2 },
-        { date: '2026-09-30', hour: '20 h', time: '20:00 - 21:00', code: 'SL2-PE', bg: '#827717', textColor: 'text-white', user: 'Alex Rivera', durationHours: 1 },
-        { date: '2026-09-30', hour: '21 h', time: '21:00 - 23:00', code: 'ML1-PE', bg: '#2979ff', textColor: 'text-white', user: 'Youssef Alami', durationHours: 2 },
+        { date: '2026-09-30', hour: '09 h', time: '09:00 - 11:00', code: 'ML1-OM', bg: '#4338ca', textColor: 'text-white', user: 'R. Omari', durationHours: 2 },
+        { date: '2026-09-30', hour: '11 h', time: '11:00 - 12:00', code: 'SL1-OM', bg: '#b45309', textColor: 'text-white', user: 'Amine Chraibi', durationHours: 1 },
+        { date: '2026-09-30', hour: '12 h', time: '12:00 - 14:00', code: 'ML4-PE', bg: '#ea580c', textColor: 'text-white', user: 'Leila Benjelloun', durationHours: 2 },
+        { date: '2026-09-30', hour: '14 h', time: '14:00 - 15:00', code: 'ML1-PE', bg: '#2563eb', textColor: 'text-white', user: 'Mehdi Tazi', durationHours: 1 },
+        { date: '2026-09-30', hour: '15 h', time: '15:00 - 17:00', code: 'SL3-PE', bg: '#9333ea', textColor: 'text-white', user: 'Khadija Mansour', durationHours: 2 },
+        { date: '2026-09-30', hour: '17 h', time: '17:00 - 18:00', code: 'ML3-OM', bg: '#059669', textColor: 'text-white', user: 'Omar Fassi', durationHours: 1 },
+        { date: '2026-09-30', hour: '18 h', time: '18:00 - 20:00', code: 'ML2-OM', bg: '#0d9488', textColor: 'text-white', user: 'Sara Bennani', durationHours: 2 },
+        { date: '2026-09-30', hour: '20 h', time: '20:00 - 21:00', code: 'SL2-PE', bg: '#65a30d', textColor: 'text-white', user: 'Alex Rivera', durationHours: 1 },
+        { date: '2026-09-30', hour: '21 h', time: '21:00 - 23:00', code: 'ML1-PE', bg: '#2563eb', textColor: 'text-white', user: 'Youssef Alami', durationHours: 2 },
         // Pre-seeded reservations for 2026-10-01 (Jeudi, 1 Octobre 2026)
-        { date: '2026-10-01', hour: '00 h', time: '00:00 - 01:00', code: 'SL3-PE', bg: '#8e24aa', textColor: 'text-white', user: 'Coulibaly', durationHours: 1 },
-        { date: '2026-10-01', hour: '00 h', time: '00:00 - 02:00', code: 'ML1-PE', bg: '#2979ff', textColor: 'text-white', user: 'ghadi', durationHours: 2 },
-        { date: '2026-10-01', hour: '02 h', time: '02:00 - 04:00', code: 'SL2-PE', bg: '#827717', textColor: 'text-white', user: 'ghadi', durationHours: 2 }
+        { date: '2026-10-01', hour: '00 h', time: '00:00 - 01:00', code: 'SL3-PE', bg: '#9333ea', textColor: 'text-white', user: 'Coulibaly', durationHours: 1 },
+        { date: '2026-10-01', hour: '00 h', time: '00:00 - 02:00', code: 'ML1-PE', bg: '#2563eb', textColor: 'text-white', user: 'ghadi', durationHours: 2 },
+        { date: '2026-10-01', hour: '02 h', time: '02:00 - 04:00', code: 'SL2-PE', bg: '#65a30d', textColor: 'text-white', user: 'ghadi', durationHours: 2 }
     ]
 };
 
@@ -192,11 +192,6 @@ function renderLayout(title, content, currentPath = '/', flash = '') {
                     <span>Tableau de bord</span>
                 </a>
 
-                <a href="/reservations" class="sidebar-link ${currentPath === '/reservations' ? 'active' : ''}">
-                    <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
-                    <span>Réservations</span>
-                </a>
-
                 <a href="/calendrier" class="sidebar-link ${currentPath === '/calendrier' ? 'active' : ''}">
                     <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
                     <span>Calendrier des réservations</span>
@@ -204,33 +199,13 @@ function renderLayout(title, content, currentPath = '/', flash = '') {
 
                 <a href="/reserver" class="sidebar-link ${currentPath === '/reserver' ? 'active' : ''}">
                     <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-                    <span>Nouvelle réservation</span>
-                </a>
-
-                <a href="/machines" class="sidebar-link ${currentPath === '/machines' ? 'active' : ''}">
-                    <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="3" stroke-width="2"/><circle cx="12" cy="13" r="4" stroke-width="2"/></svg>
-                    <span>Machines</span>
+                    <span>Réserver une machine</span>
                 </a>
 
                 ${state.isAdmin ? `
                     <a href="/utilisateurs" class="sidebar-link ${currentPath === '/utilisateurs' ? 'active' : ''}">
                         <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
                         <span>Gestion des utilisateurs</span>
-                    </a>
-                ` : ''}
-
-                <a href="/reclamations" class="sidebar-link ${currentPath === '/reclamations' ? 'active' : ''}">
-                    <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/></svg>
-                    <span>Réclamations</span>
-                </a>
-
-                ${state.isAdmin ? `
-                    <a href="/parametres" class="sidebar-link flex items-center justify-between ${currentPath === '/parametres' ? 'active' : ''}">
-                        <div class="flex items-center space-x-3">
-                            <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/></svg>
-                            <span>Paramètres</span>
-                        </div>
-                        <span class="text-xs text-emerald-200/60">&rsaquo;</span>
                     </a>
                 ` : ''}
             </nav>
@@ -656,9 +631,9 @@ function renderCalendarPage(selectedDateStr = '2026-09-30') {
                         }).join('')}
                         <div class="absolute left-0 right-0 border-t border-slate-300 pointer-events-none" style="top: ${24 * 52}px;"></div>
 
-                        <!-- Current Time Indicator -->
+                        <!-- Current Time Indicator delayed by 1 hour (position 1h earlier, time text unchanged) -->
                         ${(selectedDateStr === todayStr || selectedDateStr === '2026-10-01') ? `
-                            <div class="absolute left-0 right-0 z-30 pointer-events-none flex items-center" style="top: ${((1 * 60 + 34) / 60) * 52}px;">
+                            <div class="absolute left-0 right-0 z-30 pointer-events-none flex items-center" style="top: ${Math.max(0, ((1 * 60 + 34 - 60) / 60) * 52)}px;">
                                 <div class="w-2.5 h-2.5 rounded-full bg-rose-500 shadow -ml-1.5 shrink-0 ring-2 ring-white"></div>
                                 <div class="flex-1 border-t-2 border-rose-500 shadow-xs"></div>
                                 <span class="bg-rose-500 text-white font-mono text-[9px] font-bold px-1.5 py-0.5 rounded shadow -mr-1">
@@ -670,7 +645,7 @@ function renderCalendarPage(selectedDateStr = '2026-09-30') {
                         <!-- Continuous Blocks -->
                         ${calendarBlocks.map(block => {
                             const isMultiHour = block.durationMinutes > 60;
-                            const machineColor = block.bg || '#00897b';
+                            const machineColor = block.bg || '#4338ca';
                             const isDarkText = block.textColor === 'text-slate-900';
                             const badgeBg = isDarkText ? 'bg-black/15 text-slate-900' : 'bg-black/25 text-white';
                             const subText = isDarkText ? 'text-slate-800' : 'text-white/90';
@@ -694,8 +669,8 @@ function renderCalendarPage(selectedDateStr = '2026-09-30') {
                                     </div>
                                     ${block.height >= 70 ? `
                                         <div class="flex items-center justify-between text-[10px] opacity-80 pt-1 border-t border-black/10">
-                                            <span>Machine : <strong class="font-bold">${block.code}</strong></span>
-                                            <span class="text-[9px] italic">Créneau continu</span>
+                                            <span class="font-medium">Créneau continu</span>
+                                            <span class="text-[9px] italic opacity-75">${block.durationFormatted}</span>
                                         </div>
                                     ` : ''}
                                 </div>
@@ -1019,43 +994,248 @@ function renderDedicatedReservationPage(selectedMachine = 'ML1-OM') {
 // 2. Tableau de bord Page
 function renderDashboardPage() {
     const remaining = Math.max(0, state.weeklyLimit - state.user.weeklyUsed);
+    const userName = state.isAdmin ? 'R. Omari' : 'Alex Rivera';
+
+    // Extract user reservations
+    const userReservations = [];
+    state.reservations.forEach(r => {
+        if (r.multi) {
+            r.multi.forEach(m => {
+                if (m.user === userName || (!state.isAdmin && m.user === 'Alex Rivera') || (state.isAdmin && m.user === 'R. Omari')) {
+                    userReservations.push({
+                        date: r.date || '2026-09-30',
+                        time: m.time,
+                        code: m.code,
+                        bg: m.bg,
+                        textColor: m.textColor || 'text-white',
+                        user: m.user,
+                        durationHours: 1
+                    });
+                }
+            });
+        } else {
+            if (r.user === userName || (!state.isAdmin && r.user === 'Alex Rivera') || (state.isAdmin && r.user === 'R. Omari')) {
+                userReservations.push({
+                    date: r.date || '2026-09-30',
+                    time: r.time,
+                    code: r.code,
+                    bg: r.bg,
+                    textColor: r.textColor || 'text-white',
+                    user: r.user,
+                    durationHours: r.durationHours || 1
+                });
+            }
+        }
+    });
 
     return `
     <div class="space-y-6 max-w-6xl mx-auto">
-        <h1 class="text-xl font-bold text-slate-800">Vue d'ensemble Buanderie</h1>
-        
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div class="bg-white p-5 rounded-lg border border-slate-200 shadow-xs">
-                <span class="text-xs font-semibold text-slate-500 uppercase">Machines Disponibles</span>
-                <p class="text-2xl font-bold text-[#00897b] mt-2">10 / 13</p>
-                <span class="text-[11px] text-emerald-600 font-medium">Prêtes à l'emploi</span>
-            </div>
-            <div class="bg-white p-5 rounded-lg border border-slate-200 shadow-xs">
-                <span class="text-xs font-semibold text-slate-500 uppercase">Quota Hebdomadaire</span>
-                <p class="text-2xl font-bold ${remaining > 0 ? 'text-emerald-600' : 'text-rose-600'} mt-2">
-                    ${state.isAdmin ? 'Illimité' : `${remaining}h / ${state.weeklyLimit}h`}
+        <!-- 1. Welcome Message Banner -->
+        <div class="bg-gradient-to-r from-[#004d40] via-[#00695c] to-[#00796b] rounded-xl p-6 text-white shadow-sm flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div>
+                <div class="flex items-center space-x-2 mb-1.5">
+                    <span class="px-2 py-0.5 rounded bg-white/20 text-[10px] font-bold tracking-wider uppercase">Tableau de bord</span>
+                    <span class="text-emerald-200 text-xs font-medium">Buanderie Centrale Casablanca</span>
+                </div>
+                <h1 class="text-2xl font-bold tracking-tight">Bonjour, ${userName} !</h1>
+                <p class="text-xs text-emerald-100/90 mt-1 max-w-xl leading-relaxed">
+                    Bienvenue sur votre espace buanderie. Consultez ci-dessous vos heures de réservation disponibles ainsi que l'historique complet de vos créneaux.
                 </p>
-                <span class="text-[11px] text-slate-500">${state.isAdmin ? 'Admin' : 'Heures restantes cette semaine'}</span>
             </div>
-            <div class="bg-white p-5 rounded-lg border border-slate-200 shadow-xs">
-                <span class="text-xs font-semibold text-slate-500 uppercase">Réservations Aujourd'hui</span>
-                <p class="text-2xl font-bold text-blue-600 mt-2">${state.reservations.length + 5}</p>
-                <span class="text-[11px] text-slate-500">30 septembre 2026</span>
-            </div>
-            <div class="bg-white p-5 rounded-lg border border-slate-200 shadow-xs">
-                <span class="text-xs font-semibold text-slate-500 uppercase">Taux d'utilisation</span>
-                <p class="text-2xl font-bold text-slate-800 mt-2">78%</p>
-                <span class="text-[11px] text-slate-500">Heures de pointe 18h-22h</span>
+            <div class="flex items-center space-x-3 shrink-0">
+                <a href="/reserver" class="px-4 py-2.5 bg-white hover:bg-emerald-50 text-[#00695c] rounded-lg text-xs font-bold transition-all shadow-sm flex items-center space-x-1.5">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                    <span>Réserver une machine</span>
+                </a>
+                <a href="/calendrier" class="px-4 py-2.5 bg-white/10 hover:bg-white/20 border border-white/30 text-white rounded-lg text-xs font-bold transition-all">
+                    <span>Voir le calendrier</span>
+                </a>
             </div>
         </div>
 
-        <div class="bg-white p-6 rounded-lg border border-slate-200 shadow-xs">
-            <h2 class="text-sm font-bold text-slate-800 mb-4">Accès rapide</h2>
-            <div class="flex flex-wrap gap-3">
-                <a href="/calendrier" class="px-4 py-2 bg-[#00897b] text-white rounded text-xs font-bold shadow-xs">Consulter le Calendrier</a>
-                <a href="/machines" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded text-xs font-bold">État des machines</a>
-                <a href="/reservations" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded text-xs font-bold">Toutes les réservations</a>
+        <!-- 2. Quota & Status Cards Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+            <!-- Quota Remaining Card (Highlight) -->
+            <div class="bg-white rounded-xl p-5 border border-slate-200 shadow-xs flex flex-col justify-between">
+                <div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Heures réservables</span>
+                        <span class="px-2 py-0.5 rounded text-[11px] font-mono font-bold ${state.isAdmin ? 'bg-amber-100 text-amber-800' : (remaining > 0 ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800')}">
+                            ${state.isAdmin ? 'Admin' : 'Quota 8h / sem'}
+                        </span>
+                    </div>
+
+                    <div class="mt-4 flex items-baseline space-x-2">
+                        <span class="text-3xl font-extrabold ${state.isAdmin ? 'text-emerald-700' : (remaining > 0 ? 'text-emerald-600' : 'text-rose-600')} font-mono">
+                            ${state.isAdmin ? 'Illimité' : `${remaining}h`}
+                        </span>
+                        ${!state.isAdmin ? `<span class="text-xs text-slate-500 font-medium">restantes cette semaine</span>` : `<span class="text-xs text-slate-500 font-medium">heures non plafonnées</span>`}
+                    </div>
+
+                    <!-- Visual Progress Bar -->
+                    <div class="mt-3.5">
+                        <div class="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
+                            <div class="h-2.5 rounded-full transition-all duration-500 ${remaining === 0 ? 'bg-rose-500' : 'bg-[#00897b]'}"
+                                 style="width: ${state.isAdmin ? '100%' : `${Math.round((remaining / state.weeklyLimit) * 100)}%`}"></div>
+                        </div>
+                        <div class="flex justify-between items-center text-[10px] text-slate-400 mt-1.5 font-medium">
+                            <span>${state.isAdmin ? 'Régime Administrateur' : `${state.user.weeklyUsed}h utilisées sur ${state.weeklyLimit}h`}</span>
+                            <span>${state.isAdmin ? 'Sans limite' : `${remaining}h restantes`}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="pt-4 mt-4 border-t border-slate-100 flex items-center justify-between text-[11px]">
+                    <span class="text-slate-500">1 heure = 1 crédit</span>
+                    <a href="/reserver" class="text-[#00897b] font-bold hover:underline flex items-center space-x-1">
+                        <span>Réserver un créneau</span>
+                        <span>&rarr;</span>
+                    </a>
+                </div>
             </div>
+
+            <!-- Active Reservations Count Card -->
+            <div class="bg-white rounded-xl p-5 border border-slate-200 shadow-xs flex flex-col justify-between">
+                <div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Vos Réservations</span>
+                        <span class="px-2 py-0.5 rounded text-[11px] font-mono font-bold bg-blue-100 text-blue-800">
+                            ${userReservations.length} créneau${userReservations.length > 1 ? 'x' : ''}
+                        </span>
+                    </div>
+
+                    <div class="mt-4 flex items-baseline space-x-2">
+                        <span class="text-3xl font-extrabold text-slate-800 font-mono">
+                            ${userReservations.length}
+                        </span>
+                        <span class="text-xs text-slate-500 font-medium">créneau${userReservations.length > 1 ? 'x' : ''} enregistré${userReservations.length > 1 ? 's' : ''}</span>
+                    </div>
+
+                    <p class="text-xs text-slate-500 mt-3 leading-relaxed">
+                        Toutes vos réservations sont consultables dans le tableau ci-dessous et synchronisées sur le calendrier 24h.
+                    </p>
+                </div>
+
+                <div class="pt-4 mt-4 border-t border-slate-100 flex items-center justify-between text-[11px]">
+                    <span class="text-slate-500">Planning en temps réel</span>
+                    <a href="/calendrier" class="text-[#00897b] font-bold hover:underline flex items-center space-x-1">
+                        <span>Ouvrir le calendrier</span>
+                        <span>&rarr;</span>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Availability & Hours Info Card -->
+            <div class="bg-white rounded-xl p-5 border border-slate-200 shadow-xs flex flex-col justify-between">
+                <div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Accès Buanderie</span>
+                        <span class="px-2 py-0.5 rounded text-[11px] font-mono font-bold bg-emerald-100 text-emerald-800">24h / 24</span>
+                    </div>
+
+                    <div class="mt-4 space-y-2 text-xs text-slate-600">
+                        <div class="flex items-center space-x-2">
+                            <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                            <span>Horaires complets : toutes les heures du jour</span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <span class="w-2 h-2 rounded-full bg-[#00897b]"></span>
+                            <span>13 machines modernes (7 lave-linge, 6 sèche-linge)</span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <span class="w-2 h-2 rounded-full bg-indigo-500"></span>
+                            <span>Sélection multiple de créneaux simultanés</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="pt-4 mt-4 border-t border-slate-100 flex items-center justify-between text-[11px]">
+                    <span class="text-slate-400">Campus Centrale Casablanca</span>
+                    <span class="font-semibold text-slate-600">Bâtiments Omar & Petit</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. Reservation History Table -->
+        <div class="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
+            <div class="px-6 py-4 bg-slate-50/80 border-b border-slate-200 flex items-center justify-between">
+                <div>
+                    <h2 class="text-sm font-bold text-slate-800">Historique de vos réservations</h2>
+                    <p class="text-[11px] text-slate-500">Liste complète de vos créneaux réservés et validés</p>
+                </div>
+                <a href="/reserver" class="px-3.5 py-1.5 bg-[#00897b] hover:bg-[#00796b] text-white rounded text-xs font-bold shadow-xs flex items-center space-x-1">
+                    <span>+</span>
+                    <span>Nouveau créneau</span>
+                </a>
+            </div>
+
+            ${userReservations.length === 0 ? `
+                <div class="p-8 text-center">
+                    <svg class="w-10 h-10 mx-auto text-slate-300 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                    <p class="text-xs font-bold text-slate-600">Aucune réservation pour le moment</p>
+                    <p class="text-[11px] text-slate-400 mt-1">Vous n'avez pas encore réservé de créneau cette semaine.</p>
+                    <a href="/reserver" class="inline-block mt-3 px-4 py-2 bg-[#00897b] text-white text-xs font-bold rounded">
+                        Réserver votre premier créneau
+                    </a>
+                </div>
+            ` : `
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs">
+                        <thead class="bg-slate-100/75 text-slate-700 font-bold border-b border-slate-200">
+                            <tr>
+                                <th class="py-3 px-4">Machine</th>
+                                <th class="py-3 px-4">Date</th>
+                                <th class="py-3 px-4">Créneau horaire</th>
+                                <th class="py-3 px-4">Durée & Crédits</th>
+                                <th class="py-3 px-4">Statut</th>
+                                <th class="py-3 px-4 text-right">Calendrier</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100">
+                            ${userReservations.map(res => {
+                                const machineObj = state.machines.find(m => m.code === res.code);
+                                const machineName = machineObj ? machineObj.name : res.code;
+                                const machineType = (machineObj && machineObj.type === 'washer') ? 'Lave-linge' : 'Sèche-linge';
+                                return `
+                                <tr class="hover:bg-slate-50/70 transition-colors">
+                                    <td class="py-3 px-4">
+                                        <div class="flex items-center space-x-2.5">
+                                            <span style="background-color: ${res.bg || '#4338ca'};" class="px-2.5 py-1 rounded text-xs font-mono font-bold ${res.textColor || 'text-white'} shadow-xs shrink-0">
+                                                ${res.code}
+                                            </span>
+                                            <div>
+                                                <span class="font-bold text-slate-800 block text-xs">${machineName}</span>
+                                                <span class="text-[10px] text-slate-400">${machineType}</span>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="py-3 px-4 text-slate-700 font-medium">
+                                        ${res.date}
+                                    </td>
+                                    <td class="py-3 px-4 font-mono font-bold text-slate-800">
+                                        ${res.time}
+                                    </td>
+                                    <td class="py-3 px-4 text-slate-600 font-semibold">
+                                        ${res.durationHours} h (${res.durationHours} crédit${res.durationHours > 1 ? 's' : ''})
+                                    </td>
+                                    <td class="py-3 px-4">
+                                        <span class="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 font-bold text-[10px] inline-flex items-center space-x-1">
+                                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
+                                            <span>Confirmé</span>
+                                        </span>
+                                    </td>
+                                    <td class="py-3 px-4 text-right">
+                                        <a href="/calendrier?date=${res.date}" class="px-2.5 py-1 text-[11px] font-semibold text-[#00897b] hover:bg-emerald-50 rounded border border-emerald-200 transition-colors inline-block">
+                                            Voir au calendrier &rarr;
+                                        </a>
+                                    </td>
+                                </tr>
+                                `;
+                            }).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `}
         </div>
     </div>`;
 }
@@ -1483,29 +1663,15 @@ const server = http.createServer((req, res) => {
         return res.end(renderLayout('Tableau de bord', renderDashboardPage(), '/dashboard'));
     }
 
-    if (pathname === '/reservations') {
-        res.writeHead(200, { 'Content-Type': 'text/html' });
-        return res.end(renderLayout('Réservations', renderReservationsPage(), '/reservations'));
-    }
-
-    if (pathname === '/machines') {
-        res.writeHead(200, { 'Content-Type': 'text/html' });
-        return res.end(renderLayout('Machines', renderMachinesPage(), '/machines'));
-    }
-
     if (pathname === '/utilisateurs') {
         res.writeHead(200, { 'Content-Type': 'text/html' });
         return res.end(renderLayout('Gestion des utilisateurs', renderUsersPage(), '/utilisateurs'));
     }
 
-    if (pathname === '/reclamations') {
-        res.writeHead(200, { 'Content-Type': 'text/html' });
-        return res.end(renderLayout('Réclamations', renderComplaintsPage(), '/reclamations'));
-    }
-
-    if (pathname === '/parametres') {
-        res.writeHead(200, { 'Content-Type': 'text/html' });
-        return res.end(renderLayout('Paramètres', renderSettingsPage(), '/parametres'));
+    // Removed sections: redirect to dashboard
+    if (pathname === '/reservations' || pathname === '/machines' || pathname === '/reclamations' || pathname === '/parametres') {
+        res.writeHead(302, { 'Location': '/dashboard' });
+        return res.end();
     }
 
     // Fallback redirect to /calendrier

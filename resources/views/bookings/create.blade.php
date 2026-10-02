@@ -12,9 +12,9 @@
     <div class="flex items-center justify-between">
         <div>
             <h1 class="text-xl font-bold text-slate-800 tracking-tight">Réserver une machine</h1>
-            <p class="text-xs text-slate-500">Planification des créneaux horaires disponibles par machine</p>
+            <p class="text-xs text-slate-500">Planification des créneaux horaires disponibles par machine (24h/24)</p>
         </div>
-        <a href="{{ route('dashboard') }}" class="text-xs text-[#00897b] hover:underline font-semibold flex items-center space-x-1">
+        <a href="{{ route('calendrier') }}" class="text-xs text-[#00897b] hover:underline font-semibold flex items-center space-x-1">
             <span>&larr;</span>
             <span>Retour au calendrier</span>
         </a>
@@ -72,23 +72,28 @@
                 </div>
             </div>
 
-            <!-- Multi-Slot Interactive Selection Grid -->
+            <!-- Multi-Slot Interactive Selection Grid (Only Open Slots Shown) -->
             <div>
                 <div class="flex items-center justify-between mb-2">
                     <label class="block font-bold text-slate-700 uppercase tracking-wider">
-                        Créneaux horaires disponibles
+                        Créneaux horaires disponibles (Sélection multiple possible)
                     </label>
-                    <span class="text-[11px] text-slate-500 font-semibold" x-text="availableSlots.length + ' créneaux disponibles'"></span>
+                    <span class="text-[11px] text-slate-500 font-semibold font-mono" x-text="availableSlots.length + ' créneaux disponibles'"></span>
                 </div>
                 <p class="text-[11px] text-slate-500 mb-3">
-                    Sélectionnez un créneau horaire d'1 heure. Les heures déjà réservées sont automatiquement filtrées pour éviter tout conflit.
+                    Sélectionnez un ou plusieurs créneaux d'1 heure. Les heures déjà réservées sont automatiquement masquées pour n'afficher que les créneaux ouverts en ce moment.
                 </p>
 
-                <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5 max-h-72 overflow-y-auto p-1 border border-slate-200 rounded-lg bg-slate-50/50">
+                <!-- Hidden inputs for form submission -->
+                <template x-for="slot in selectedSlots" :key="slot">
+                    <input type="hidden" name="start_times[]" :value="slotToDateTime(slot)">
+                </template>
+
+                <div x-show="availableSlots.length > 0" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5 max-h-72 overflow-y-auto p-2 border border-slate-200 rounded-lg bg-slate-50/50">
                     <template x-for="slot in availableSlots" :key="slot">
                         <label :class="{'border-[#00897b] bg-[#e0f2f1] text-[#00695c] font-bold shadow-xs': isSelected(slot), 'border-slate-200 bg-white text-slate-700 hover:border-[#00897b]': !isSelected(slot)}"
-                               class="flex items-center justify-between p-2.5 rounded border transition-all cursor-pointer select-none text-xs">
-                            <input type="radio" name="start_time" :value="slotToDateTime(slot)" @change="selectSlot(slot)" :checked="isSelected(slot)" class="hidden">
+                               class="flex items-center justify-between p-2.5 rounded border transition-all cursor-pointer select-none text-xs"
+                               @click.prevent="toggleSlot(slot)">
                             <span class="font-mono" x-text="slot"></span>
                             <span class="w-4 h-4 rounded-full border flex items-center justify-center text-[10px]"
                                   :class="{'bg-[#00897b] border-[#00897b] text-white': isSelected(slot), 'border-slate-300': !isSelected(slot)}">
@@ -96,6 +101,11 @@
                             </span>
                         </label>
                     </template>
+                </div>
+
+                <div x-show="availableSlots.length === 0" class="p-8 text-center bg-slate-50 border border-slate-200 rounded-lg">
+                    <p class="text-xs font-bold text-slate-600">Aucun créneau disponible</p>
+                    <p class="text-[11px] text-slate-400 mt-1">Tous les créneaux de cette machine sont déjà réservés pour la date sélectionnée.</p>
                 </div>
             </div>
 
@@ -113,40 +123,49 @@
 
                 <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-slate-700 pt-1">
                     <div class="bg-white/80 p-2.5 rounded border border-emerald-100">
-                        <span class="text-[10px] uppercase text-slate-400 font-bold block">Créneau choisi</span>
-                        <span class="font-bold text-slate-800 text-sm font-mono" x-text="selectedSlot ? '1 heure' : '0 heure'"></span>
+                        <span class="text-[10px] uppercase text-slate-400 font-bold block">Créneaux choisis</span>
+                        <span class="font-bold text-slate-800 text-sm font-mono" x-text="selectedSlots.length + ' heure' + (selectedSlots.length > 1 ? 's' : '')"></span>
                     </div>
 
                     <div class="bg-white/80 p-2.5 rounded border border-emerald-100">
-                        <span class="text-[10px] uppercase text-slate-400 font-bold block">Coût</span>
-                        <span class="font-bold text-[#00897b] text-sm font-mono" x-text="selectedSlot ? '1 crédit' : '0 crédit'"></span>
+                        <span class="text-[10px] uppercase text-slate-400 font-bold block">Coût total</span>
+                        <span class="font-bold text-[#00897b] text-sm font-mono" x-text="selectedSlots.length + ' crédit' + (selectedSlots.length > 1 ? 's' : '')"></span>
                     </div>
 
                     <div class="bg-white/80 p-2.5 rounded border border-emerald-100">
                         <span class="text-[10px] uppercase text-slate-400 font-bold block">Solde actuel</span>
-                        <span class="font-bold text-slate-800 text-sm font-mono" x-text="remainingHours + 'h / 8h'"></span>
+                        <span class="font-bold text-slate-800 text-sm font-mono" x-text="isAdmin ? 'Illimité (Admin)' : (remainingHours + 'h / 8h')"></span>
                     </div>
 
                     <div class="bg-white/80 p-2.5 rounded border border-emerald-100">
                         <span class="text-[10px] uppercase text-slate-400 font-bold block">Solde après</span>
-                        <span class="font-bold text-sm font-mono text-emerald-700"
-                              x-text="(remainingHours - (selectedSlot ? 1 : 0)) + 'h / 8h'"></span>
+                        <span class="font-bold text-sm font-mono"
+                              :class="!isAdmin && (remainingHours - selectedSlots.length < 0) ? 'text-rose-600' : 'text-emerald-700'"
+                              x-text="isAdmin ? 'Illimité' : ((remainingHours - selectedSlots.length) + 'h / 8h')"></span>
                     </div>
+                </div>
+
+                <!-- Over quota alert -->
+                <div x-show="!isAdmin && selectedSlots.length > remainingHours" class="p-2.5 bg-rose-50 border border-rose-200 text-rose-800 rounded font-semibold text-[11px] flex items-center space-x-2">
+                    <svg class="w-4 h-4 text-rose-600 shrink-0 inline-block mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                    <span>Dépassement de quota : vous avez sélectionné <span x-text="selectedSlots.length"></span>h alors qu'il ne vous reste que <span x-text="remainingHours"></span>h sur vos 8h cette semaine.</span>
                 </div>
             </div>
 
             <!-- Form Actions -->
             <div class="pt-3 flex items-center justify-end space-x-3 border-t border-slate-200">
-                <a href="{{ route('dashboard') }}" 
+                <a href="{{ route('calendrier') }}" 
                    class="px-4 py-2 border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-bold rounded">
                     Annuler
                 </a>
                 <button type="submit" 
-                        :disabled="!selectedSlot"
-                        :class="!selectedSlot ? 'opacity-50 cursor-not-allowed bg-slate-400' : 'bg-[#00897b] hover:bg-[#00796b] cursor-pointer shadow-xs'"
+                        :disabled="selectedSlots.length === 0 || (!isAdmin && selectedSlots.length > remainingHours)"
+                        :class="(selectedSlots.length === 0 || (!isAdmin && selectedSlots.length > remainingHours)) ? 'opacity-50 cursor-not-allowed bg-slate-400' : 'bg-[#00897b] hover:bg-[#00796b] cursor-pointer shadow-xs'"
                         class="px-6 py-2.5 text-white text-xs font-bold rounded transition-all">
-                    <span x-show="!selectedSlot">Sélectionnez un créneau</span>
-                    <span x-show="selectedSlot">Confirmer la réservation (1h • 1 crédit)</span>
+                    <span x-show="selectedSlots.length === 0">Sélectionnez au moins 1 créneau</span>
+                    <span x-show="selectedSlots.length > 0 && (!isAdmin && selectedSlots.length > remainingHours)">Quota insuffisant</span>
+                    <span x-show="selectedSlots.length > 0 && (isAdmin || selectedSlots.length <= remainingHours)"
+                          x-text="'Confirmer la réservation (' + selectedSlots.length + 'h • ' + selectedSlots.length + ' crédit' + (selectedSlots.length > 1 ? 's' : '') + ')'"></span>
                 </button>
             </div>
         </form>
@@ -163,37 +182,72 @@ function bookingApp(initialMachineId) {
         @endforeach
     };
 
+    const reservationsList = @json($reservations ?? []);
+    const isAdminUser = {{ (auth()->check() && auth()->user()->isAdmin()) ? 'true' : 'false' }};
+
+    // Full 24-hour slots without limiters
+    const all24Slots = [];
+    for (let h = 0; h < 24; h++) {
+        const sH = String(h).padStart(2, '0') + ':00';
+        const eH = String(h + 1 === 24 ? 24 : h + 1).padStart(2, '0') + ':00';
+        all24Slots.push(sH + ' - ' + eH);
+    }
+
     return {
         selectedMachineId: initialMachineId,
         selectedDate: '{{ now()->toDateString() }}',
         remainingHours: {{ auth()->check() ? auth()->user()->weeklyRemainingLimit() : 8 }},
-        selectedSlot: null,
-        allDaySlots: [
-            '06:00 - 07:00', '07:00 - 08:00', '08:00 - 09:00', '09:00 - 10:00', '10:00 - 11:00', '11:00 - 12:00',
-            '12:00 - 13:00', '13:00 - 14:00', '14:00 - 15:00', '15:00 - 16:00', '16:00 - 17:00', '17:00 - 18:00',
-            '18:00 - 19:00', '19:00 - 20:00', '20:00 - 21:00', '21:00 - 22:00', '22:00 - 23:00'
-        ],
+        isAdmin: isAdminUser,
+        selectedSlots: [],
+        allDaySlots: all24Slots,
         get selectedMachineName() {
             return machinesMap[this.selectedMachineId] || 'Machine';
         },
         get availableSlots() {
-            return this.allDaySlots;
+            // Filter to show ONLY open slots
+            return this.allDaySlots.filter(slot => {
+                const [startStr, endStr] = slot.split(' - ');
+                const slotStartMinutes = parseInt(startStr.split(':')[0], 10) * 60;
+                let slotEndMinutes = parseInt(endStr.split(':')[0], 10) * 60;
+                if (slotEndMinutes === 0) slotEndMinutes = 1440;
+
+                // Check against reservations for this machine and date
+                for (const r of reservationsList) {
+                    if (r.machine_id === this.selectedMachineId && r.date === this.selectedDate) {
+                        const rStartTime = r.start.split(' ')[1] || '00:00';
+                        const rEndTime = r.end.split(' ')[1] || '00:00';
+                        const rStartMin = parseInt(rStartTime.split(':')[0], 10) * 60 + parseInt(rStartTime.split(':')[1] || '0', 10);
+                        let rEndMin = parseInt(rEndTime.split(':')[0], 10) * 60 + parseInt(rEndTime.split(':')[1] || '0', 10);
+                        if (rEndMin === 0) rEndMin = 1440;
+
+                        if (slotStartMinutes < rEndMin && slotEndMinutes > rStartMin) {
+                            return false; // Slot is booked, filter it out!
+                        }
+                    }
+                }
+                return true; // Slot is open!
+            });
         },
         slotToDateTime(slot) {
             const startHour = slot.split(' - ')[0];
             return this.selectedDate + ' ' + startHour + ':00';
         },
         isSelected(slot) {
-            return this.selectedSlot === slot;
+            return this.selectedSlots.includes(slot);
         },
-        selectSlot(slot) {
-            this.selectedSlot = slot;
+        toggleSlot(slot) {
+            const idx = this.selectedSlots.indexOf(slot);
+            if (idx > -1) {
+                this.selectedSlots.splice(idx, 1);
+            } else {
+                this.selectedSlots.push(slot);
+            }
         },
         onMachineChange() {
-            this.selectedSlot = null;
+            this.selectedSlots = [];
         },
         onDateChange() {
-            this.selectedSlot = null;
+            this.selectedSlots = [];
         }
     };
 }
