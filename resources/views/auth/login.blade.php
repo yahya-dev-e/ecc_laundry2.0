@@ -21,7 +21,7 @@
             <div class="flex flex-col items-center mb-8">
                 <div class="w-14 h-10 relative flex items-center justify-center">
                     <!-- Stylized C loop wave logo -->
-                    <svg viewBox="0 0 100 70" class="w-14 h-10 text-[#00897b]" fill="currentColor">
+                    <svg aria-hidden="true" viewBox="0 0 100 70" class="w-14 h-10 text-[#00897b]" fill="currentColor">
                         <path d="M 50 10 C 25 10 15 25 15 40 C 15 55 30 65 60 65 C 75 65 85 58 85 58 L 80 50 C 80 50 72 55 60 55 C 38 55 27 47 27 38 C 27 28 35 20 50 20 C 65 20 78 27 82 32 L 88 24 C 82 17 68 10 50 10 Z"/>
                         <path d="M 45 4 C 65 4 80 14 85 20 L 78 26 C 74 21 62 13 45 13 Z" fill="#2e7d32"/>
                     </svg>
@@ -42,15 +42,15 @@
                 @csrf
 
                 <div>
-                    <input type="email" name="email" value="{{ old('email', 'admin@fecc.ma') }}" placeholder="Email" required autofocus
-                           class="w-full px-4 py-3 rounded-md bg-[#f1f3f4] text-slate-800 placeholder-slate-400 text-xs border border-transparent focus:border-[#00b4a7] focus:bg-white focus:outline-none transition-all">
+                    <input type="email" id="email" name="email" value="{{ old('email', 'admin@fecc.ma') }}" placeholder="Email" autocomplete="email" aria-label="Adresse email" required autofocus
+                           class="w-full px-4 py-3 rounded-md bg-[#f1f3f4] text-slate-800 placeholder-slate-400 text-xs border border-transparent focus:border-[#00b4a7] focus:bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00b4a7]/40 transition-all">
                 </div>
 
                 <div class="relative" x-data="{ show: false }">
-                    <input :type="show ? 'text' : 'password'" name="password" value="admin123" placeholder="Mot de passe" required
-                           class="w-full px-4 py-3 rounded-md bg-[#f1f3f4] text-slate-800 placeholder-slate-400 text-xs border border-transparent focus:border-[#00b4a7] focus:bg-white focus:outline-none transition-all pr-10">
-                    <button type="button" @click="show = !show" class="absolute right-3 top-3.5 text-slate-400 hover:text-slate-600">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <input :type="show ? 'text' : 'password'" id="password" name="password" value="admin123" placeholder="Mot de passe" autocomplete="current-password" aria-label="Mot de passe" required
+                           class="w-full px-4 py-3 rounded-md bg-[#f1f3f4] text-slate-800 placeholder-slate-400 text-xs border border-transparent focus:border-[#00b4a7] focus:bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00b4a7]/40 transition-all pr-10">
+                    <button type="button" @click="show = !show" aria-label="Afficher ou masquer le mot de passe" class="absolute right-3 top-3.5 text-slate-400 hover:text-slate-600 focus-visible:ring-2 focus-visible:ring-[#00b4a7]/40 focus-visible:outline-none rounded">
+                        <svg aria-hidden="true" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
                         </svg>
@@ -63,7 +63,7 @@
                     </a>
                 </div>
 
-                <button type="submit" class="w-full py-2.5 rounded-full bg-[#00b4a7] hover:bg-[#009b8f] text-white font-bold text-xs uppercase tracking-wider shadow-md hover:shadow-lg transition-all active:scale-[0.98]">
+                <button type="submit" class="w-full py-2.5 rounded-full bg-[#00b4a7] hover:bg-[#009b8f] text-white font-bold text-xs uppercase tracking-wider shadow-md hover:shadow-lg transition-all active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-[#00b4a7]/50 focus-visible:outline-none">
                     Se connecter
                 </button>
             </form>

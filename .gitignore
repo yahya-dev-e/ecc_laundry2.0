@@ -9,3 +9,5 @@
 .env.production
 .phpunit.result.cache
 docker-compose.override.yml
+# Playwright CLI output (may contain credentials)
+.playwright-cli/

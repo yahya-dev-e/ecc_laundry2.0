@@ -11,23 +11,23 @@
 
 <div class="space-y-6 max-w-6xl mx-auto">
     <!-- 1. Welcome Message Banner -->
-    <div class="bg-gradient-to-r from-[#004d40] via-[#00695c] to-[#00796b] rounded-xl p-6 text-white shadow-sm flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+    <div style="background: linear-gradient(135deg, #004d40 0%, #00695c 50%, #00796b 100%);" class="rounded-xl p-6 text-white shadow-md flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
             <div class="flex items-center space-x-2 mb-1.5">
                 <span class="px-2 py-0.5 rounded bg-white/20 text-[10px] font-bold tracking-wider uppercase">Tableau de bord</span>
                 <span class="text-emerald-200 text-xs font-medium">Buanderie Centrale Casablanca</span>
             </div>
-            <h1 class="text-2xl font-bold tracking-tight">Bonjour, {{ $userName }} !</h1>
-            <p class="text-xs text-emerald-100/90 mt-1 max-w-xl leading-relaxed">
+            <h1 class="text-2xl font-bold tracking-tight" style="text-wrap: balance;">Bonjour, {{ $userName }} !</h1>
+            <p class="text-xs text-emerald-100/90 mt-1 max-w-xl leading-relaxed" style="text-wrap: pretty;">
                 Bienvenue sur votre espace buanderie. Consultez ci-dessous vos crédits disponibles ainsi que l'historique complet de vos créneaux.
             </p>
         </div>
         <div class="flex items-center space-x-3 shrink-0">
-            <a href="{{ route('bookings.create') }}" class="px-4 py-2.5 bg-white hover:bg-emerald-50 text-[#00695c] rounded-lg text-xs font-bold transition-all shadow-sm flex items-center space-x-1.5">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            <a href="{{ route('bookings.create') }}" class="px-4 py-2.5 bg-white hover:bg-emerald-50 text-[#00695c] rounded-lg text-xs font-bold transition-all shadow-sm flex items-center space-x-1.5 focus-visible:ring-2 focus-visible:ring-white focus-visible:outline-none">
+                <svg aria-hidden="true" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
                 <span>Réserver une machine</span>
             </a>
-            <a href="{{ route('calendrier') }}" class="px-4 py-2.5 bg-white/10 hover:bg-white/20 border border-white/30 text-white rounded-lg text-xs font-bold transition-all">
+            <a href="{{ route('calendrier') }}" class="px-4 py-2.5 bg-white/10 hover:bg-white/20 border border-white/30 text-white rounded-lg text-xs font-bold transition-all focus-visible:ring-2 focus-visible:ring-white focus-visible:outline-none">
                 <span>Voir le calendrier</span>
             </a>
         </div>
@@ -123,10 +123,10 @@
 
         @if(!isset($userReservations) || $userReservations->isEmpty())
             <div class="p-8 text-center">
-                <svg class="w-10 h-10 mx-auto text-slate-300 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                <svg aria-hidden="true" class="w-10 h-10 mx-auto text-slate-300 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
                 <p class="text-xs font-bold text-slate-600">Aucune réservation pour le moment</p>
                 <p class="text-[11px] text-slate-400 mt-1">Vous n'avez pas encore réservé de créneau cette semaine.</p>
-                <a href="{{ route('bookings.create') }}" class="inline-block mt-3 px-4 py-2 bg-[#00897b] text-white text-xs font-bold rounded">
+                <a href="{{ route('bookings.create') }}" class="inline-block mt-3 px-4 py-2 bg-[#00897b] hover:bg-[#00796b] text-white text-xs font-bold rounded focus-visible:ring-2 focus-visible:ring-[#00897b]/40 focus-visible:outline-none">
                     Réserver votre premier créneau
                 </a>
             </div>

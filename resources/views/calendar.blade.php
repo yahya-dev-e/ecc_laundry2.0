@@ -67,8 +67,8 @@
 
     <!-- Search Input -->
     <div class="max-w-md mx-auto">
-        <input type="text" x-model="search" placeholder="Rechercher une machine..." 
-               class="w-full px-4 py-2 bg-white border border-slate-300 rounded text-xs placeholder-slate-400 focus:outline-none focus:border-[#00897b] shadow-xs">
+        <input type="text" x-model="search" placeholder="Rechercher une machine…" aria-label="Rechercher une machine" autocomplete="off"
+               class="w-full px-4 py-2 bg-white border border-slate-300 rounded text-xs placeholder-slate-400 focus:outline-none focus:border-[#00897b] focus-visible:ring-2 focus-visible:ring-[#00897b]/40 shadow-xs">
     </div>
 
     <!-- Machine Selection Table Card -->
@@ -137,9 +137,9 @@
 
                 <!-- Direct Date Picker (Select Any Day) -->
                 <div class="relative">
-                    <input type="date" value="{{ $selectedDate }}" 
+                    <input type="date" value="{{ $selectedDate }}" aria-label="Sélectionner une date"
                            @change="window.location.href = '{{ route('calendrier') }}?date=' + $event.target.value + '&machine_id=' + selectedMachineId" 
-                           class="px-2.5 py-1 text-xs border border-slate-300 rounded bg-white text-slate-700 hover:border-[#00897b] focus:outline-none focus:border-[#00897b] cursor-pointer shadow-xs font-medium"
+                           class="px-2.5 py-1 text-xs border border-slate-300 rounded bg-white text-slate-700 hover:border-[#00897b] focus:outline-none focus:border-[#00897b] focus-visible:ring-2 focus-visible:ring-[#00897b]/40 cursor-pointer shadow-xs font-medium"
                            title="Choisir une date quelconque">
                 </div>
             </div>
@@ -303,7 +303,7 @@
                         <!-- Empty Day State Overlay -->
                         <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
                             <div class="bg-white/90 border border-slate-200 shadow-sm rounded-lg p-4 text-center max-w-sm">
-                                <svg class="w-8 h-8 mx-auto mb-1 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                                <svg aria-hidden="true" class="w-8 h-8 mx-auto mb-1 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
                                 <span class="text-xs font-bold text-slate-700 block">Aucune réservation pour cette journée</span>
                                 <span class="text-[11px] text-slate-500 block mt-1">Cliquez sur un créneau horaire ou sélectionnez une machine ci-dessus pour réserver.</span>
                             </div>

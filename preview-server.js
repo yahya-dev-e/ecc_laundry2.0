@@ -1011,23 +1011,23 @@ function renderDashboardPage() {
     return `
     <div class="space-y-6 max-w-6xl mx-auto">
         <!-- 1. Welcome Message Banner -->
-        <div class="bg-gradient-to-r from-[#004d40] via-[#00695c] to-[#00796b] rounded-xl p-6 text-white shadow-sm flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div style="background: linear-gradient(135deg, #004d40 0%, #00695c 50%, #00796b 100%);" class="rounded-xl p-6 text-white shadow-md flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
                 <div class="flex items-center space-x-2 mb-1.5">
                     <span class="px-2 py-0.5 rounded bg-white/20 text-[10px] font-bold tracking-wider uppercase">Tableau de bord</span>
                     <span class="text-emerald-200 text-xs font-medium">Buanderie Centrale Casablanca</span>
                 </div>
-                <h1 class="text-2xl font-bold tracking-tight">Bonjour, ${userName} !</h1>
-                <p class="text-xs text-emerald-100/90 mt-1 max-w-xl leading-relaxed">
+                <h1 class="text-2xl font-bold tracking-tight" style="text-wrap: balance;">Bonjour, ${userName} !</h1>
+                <p class="text-xs text-emerald-100/90 mt-1 max-w-xl leading-relaxed" style="text-wrap: pretty;">
                     Bienvenue sur votre espace buanderie. Consultez ci-dessous vos crédits disponibles ainsi que l'historique complet de vos créneaux.
                 </p>
             </div>
             <div class="flex items-center space-x-3 shrink-0">
-                <a href="/reserver" class="px-4 py-2.5 bg-white hover:bg-emerald-50 text-[#00695c] rounded-lg text-xs font-bold transition-all shadow-sm flex items-center space-x-1.5">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                <a href="/reserver" class="px-4 py-2.5 bg-white hover:bg-emerald-50 text-[#00695c] rounded-lg text-xs font-bold transition-all shadow-sm flex items-center space-x-1.5 focus-visible:ring-2 focus-visible:ring-white focus-visible:outline-none">
+                    <svg aria-hidden="true" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
                     <span>Réserver une machine</span>
                 </a>
-                <a href="/calendrier" class="px-4 py-2.5 bg-white/10 hover:bg-white/20 border border-white/30 text-white rounded-lg text-xs font-bold transition-all">
+                <a href="/calendrier" class="px-4 py-2.5 bg-white/10 hover:bg-white/20 border border-white/30 text-white rounded-lg text-xs font-bold transition-all focus-visible:ring-2 focus-visible:ring-white focus-visible:outline-none">
                     <span>Voir le calendrier</span>
                 </a>
             </div>

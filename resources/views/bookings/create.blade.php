@@ -34,17 +34,16 @@
             @if(session('error'))
                 <div class="p-3 bg-rose-50 border border-rose-200 text-rose-700 rounded text-xs font-semibold">
                     {{ session('error') }}
-                </div>
             @endif
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <!-- Machine Selector -->
                 <div>
-                    <label class="block font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                    <label for="machineSelect" class="block font-bold text-slate-700 uppercase tracking-wider mb-1.5">
                         Machine
                     </label>
-                    <select name="machine_id" x-model.number="selectedMachineId" @change="onMachineChange()"
-                            class="w-full px-3.5 py-2.5 border border-slate-300 rounded text-xs focus:border-[#00897b] focus:outline-none bg-slate-50 font-bold text-slate-800">
+                    <select id="machineSelect" name="machine_id" x-model.number="selectedMachineId" @change="onMachineChange()"
+                            class="w-full px-3.5 py-2.5 border border-slate-300 rounded text-xs focus:border-[#00897b] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00897b]/30 bg-slate-50 font-bold text-slate-800">
                         @if($washers->isNotEmpty())
                             <optgroup label="Machines à laver">
                                 @foreach($washers as $machine)
@@ -64,11 +63,11 @@
 
                 <!-- Date -->
                 <div>
-                    <label class="block font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                    <label for="bookingDate" class="block font-bold text-slate-700 uppercase tracking-wider mb-1.5">
                         Date de réservation
                     </label>
-                    <input type="date" name="date" x-model="selectedDate" @change="onDateChange()" min="{{ now()->toDateString() }}" max="{{ now()->addDays(7)->toDateString() }}"
-                           class="w-full px-3.5 py-2.5 border border-slate-300 rounded text-xs focus:border-[#00897b] focus:outline-none bg-white">
+                    <input id="bookingDate" type="date" name="date" x-model="selectedDate" @change="onDateChange()" min="{{ now()->toDateString() }}" max="{{ now()->addDays(7)->toDateString() }}"
+                           class="w-full px-3.5 py-2.5 border border-slate-300 rounded text-xs focus:border-[#00897b] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00897b]/30 bg-white">
                 </div>
             </div>
 
@@ -97,7 +96,7 @@
                             <span class="font-mono" x-text="slot"></span>
                             <span class="w-4 h-4 rounded-full border flex items-center justify-center text-[10px]"
                                   :class="{'bg-[#00897b] border-[#00897b] text-white': isSelected(slot), 'border-slate-300': !isSelected(slot)}">
-                                <svg x-show="isSelected(slot)" class="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+                                <svg aria-hidden="true" x-show="isSelected(slot)" class="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
                             </span>
                         </label>
                     </template>
@@ -113,7 +112,7 @@
             <div class="p-4 rounded-lg bg-emerald-50/80 border border-emerald-200 text-xs space-y-2.5">
                 <div class="flex items-center justify-between font-bold text-emerald-900 border-b border-emerald-200/60 pb-2">
                     <span class="flex items-center space-x-1.5">
-                        <svg class="w-4 h-4 text-emerald-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+                        <svg aria-hidden="true" class="w-4 h-4 text-emerald-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
                         <span>Surveillance du Quota Hebdomadaire (<span x-text="weeklyLimit"></span> crédits / semaine)</span>
                     </span>
                     <span class="text-xs font-mono bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded">
@@ -147,7 +146,7 @@
 
                 <!-- Over quota alert -->
                 <div x-show="selectedSlots.length > remainingHours" class="p-2.5 bg-rose-50 border border-rose-200 text-rose-800 rounded font-semibold text-[11px] flex items-center space-x-2">
-                    <svg class="w-4 h-4 text-rose-600 shrink-0 inline-block mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                    <svg aria-hidden="true" class="w-4 h-4 text-rose-600 shrink-0 inline-block mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
                     <span>Dépassement de quota : vous avez sélectionné <span x-text="selectedSlots.length"></span>h alors qu'il ne vous reste que <span x-text="remainingHours"></span>h sur vos <span x-text="weeklyLimit"></span>h cette semaine.</span>
                 </div>
             </div>

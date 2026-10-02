@@ -31,11 +31,11 @@
         </div>
 
         <!-- Navigation Links -->
-        <nav class="mt-4 space-y-0.5">
+        <nav class="mt-4 space-y-0.5" aria-label="Navigation principale">
             <!-- Tableau de bord -->
             <a href="{{ route('dashboard') }}" 
-               class="sidebar-link {{ request()->is('dashboard') && !request()->is('calendrier*') ? 'active' : '' }}">
-                <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+               class="sidebar-link focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none {{ request()->is('dashboard') && !request()->is('calendrier*') ? 'active' : '' }}">
+                <svg aria-hidden="true" class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
                 </svg>
                 <span>Tableau de bord</span>
@@ -43,8 +43,8 @@
 
             <!-- Calendrier des réservations -->
             <a href="{{ route('calendrier') }}" 
-               class="sidebar-link {{ request()->is('calendrier*') ? 'active' : '' }}">
-                <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+               class="sidebar-link focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none {{ request()->is('calendrier*') ? 'active' : '' }}">
+                <svg aria-hidden="true" class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
                 </svg>
                 <span>Calendrier des réservations</span>
@@ -52,8 +52,8 @@
 
             <!-- Réserver une machine -->
             <a href="{{ route('bookings.create') }}" 
-               class="sidebar-link {{ request()->is('bookings/create') || request()->is('reserver*') ? 'active' : '' }}">
-                <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+               class="sidebar-link focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none {{ request()->is('bookings/create') || request()->is('reserver*') ? 'active' : '' }}">
+                <svg aria-hidden="true" class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
                 </svg>
                 <span>Réserver une machine</span>
@@ -62,8 +62,8 @@
             @if ($isAdmin)
                 <!-- Gestion des utilisateurs (Admin only) -->
                 <a href="{{ route('admin.users') }}" 
-                   class="sidebar-link {{ request()->is('utilisateurs*') ? 'active' : '' }}">
-                    <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                   class="sidebar-link focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none {{ request()->is('utilisateurs*') ? 'active' : '' }}">
+                    <svg aria-hidden="true" class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
                     </svg>
                     <span>Gestion des utilisateurs</span>
@@ -74,8 +74,8 @@
 
     <!-- Collapse / Bottom indicator -->
     <div class="p-4 border-t border-[#00695c] flex items-center justify-between">
-        <button class="w-8 h-8 rounded-full bg-[#00695c] hover:bg-[#004d40] flex items-center justify-center text-white text-xs transition-colors">
-            <span>&lsaquo;</span>
+        <button type="button" aria-label="Réduire la barre latérale" class="w-8 h-8 rounded-full bg-[#00695c] hover:bg-[#004d40] focus-visible:ring-2 focus-visible:ring-white focus-visible:outline-none flex items-center justify-center text-white text-xs transition-colors">
+            <span aria-hidden="true">&lsaquo;</span>
         </button>
         <span class="text-[10px] text-emerald-200/50">v2.0 FECC</span>
     </div>

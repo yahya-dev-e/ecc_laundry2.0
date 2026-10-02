@@ -4,6 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    <meta name="description" content="Plateforme de gestion et réservation de la buanderie étudiante de l'École Centrale Casablanca.">
 
     <title>PanneauAdmin - Centrale Casablanca Laundry</title>
 
@@ -52,7 +53,7 @@
                 <!-- User Profile -->
                 <div class="flex items-center space-x-2.5">
                     <div class="w-8 h-8 rounded-full bg-slate-200 border border-slate-300 flex items-center justify-center overflow-hidden">
-                        <svg class="w-5 h-5 text-slate-500" fill="currentColor" viewBox="0 0 24 24">
+                        <svg aria-hidden="true" class="w-5 h-5 text-slate-500" fill="currentColor" viewBox="0 0 24 24">
                             <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
                         </svg>
                     </div>
@@ -65,9 +66,9 @@
 
         <!-- Alerts -->
         @if (session('success'))
-            <div class="mx-6 mt-4 p-3.5 rounded bg-emerald-50 border-l-4 border-emerald-500 text-emerald-800 text-xs flex justify-between shadow-xs">
+            <div role="status" aria-live="polite" class="mx-6 mt-4 p-3.5 rounded bg-emerald-50 border-l-4 border-emerald-500 text-emerald-800 text-xs flex justify-between items-center shadow-xs">
                 <span>{{ session('success') }}</span>
-                <button onclick="this.parentElement.remove()" class="text-emerald-600 font-bold">&times;</button>
+                <button type="button" aria-label="Fermer la notification" onclick="this.parentElement.remove()" class="text-emerald-600 hover:text-emerald-800 font-bold focus-visible:ring-2 focus-visible:ring-emerald-500 rounded p-1">&times;</button>
             </div>
         @endif
 
