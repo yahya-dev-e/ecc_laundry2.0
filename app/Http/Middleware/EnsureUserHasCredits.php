@@ -13,7 +13,7 @@ class EnsureUserHasCredits
      *
      * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
      */
-    public function handle(Request $request, Closure $next, int $minCredits = 2): Response
+    public function handle(Request $request, Closure $next, int $minCredits = 1): Response
     {
         $user = $request->user();
 
@@ -22,16 +22,19 @@ class EnsureUserHasCredits
         }
 
         if (!$user->hasCredits($minCredits)) {
+            $limit = $user->weeklyLimit();
+            $remaining = $user->weeklyRemainingLimit();
+
             if ($request->expectsJson()) {
                 return response()->json([
                     'message' => 'Insufficient credits to perform this laundry operation.',
                     'credits_needed' => $minCredits,
-                    'current_credits' => $user->credits,
+                    'current_credits' => $remaining,
                 ], 403);
             }
 
             return redirect()->route('dashboard')
-                ->with('error', "Insufficient credits ({$user->credits} available, {$minCredits} required). Please top up your laundry card at the front desk.");
+                ->with('error', "Quota hebdomadaire insuffisant ({$remaining} crédit(s) disponible(s) sur vos {$limit} crédits cette semaine).");
         }
 
         return $next($request);

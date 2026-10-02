@@ -84,18 +84,33 @@ class User extends Authenticatable
         return $this->hasMany(Transaction::class);
     }
 
+    public function getCreditsAttribute($value): int
+    {
+        $remaining = $this->weeklyRemainingLimit();
+        if ($value === null || (int) $value < $remaining) {
+            return $remaining;
+        }
+        return (int) $value;
+    }
+
     public function hasCredits(int $amount): bool
     {
-        return $this->credits >= $amount;
+        return $this->weeklyRemainingLimit() >= $amount || (int) ($this->attributes['credits'] ?? 0) >= $amount;
     }
 
     public function deductCredits(int $amount, string $description, ?int $bookingId = null): Transaction
     {
         if (!$this->hasCredits($amount)) {
-            throw new \InvalidArgumentException('Insufficient credits.');
+            throw new \InvalidArgumentException('Crédits insuffisants.');
         }
 
-        $this->decrement('credits', $amount);
+        $currentDbCredits = (int) ($this->attributes['credits'] ?? 0);
+        if ($currentDbCredits >= $amount) {
+            $this->decrement('credits', $amount);
+        } else {
+            $this->attributes['credits'] = max(0, $this->weeklyRemainingLimit() - $amount);
+            $this->save();
+        }
 
         return $this->transactions()->create([
             'amount' => -$amount,

@@ -37,7 +37,9 @@ class BookingService
 
         $cost = max(1, (int) round($duration / 60));
         if (!$user->hasCredits($cost)) {
-            throw new InvalidArgumentException("Insufficient credits. You need {$cost} credits to reserve this machine.");
+            $limit = $user->weeklyLimit();
+            $remaining = $user->weeklyRemainingLimit();
+            throw new InvalidArgumentException("Crédits insuffisants. Vous avez besoin de {$cost} crédit(s) pour réserver cette machine ({$remaining} crédit(s) restant(s) sur vos {$limit} crédits cette semaine).");
         }
 
         return DB::transaction(function () use ($user, $machine, $startTime, $endTime, $cost) {

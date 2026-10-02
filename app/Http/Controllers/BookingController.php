@@ -116,6 +116,14 @@ class BookingController extends Controller
             return back()->withInput()->with('error', 'Veuillez sélectionner au moins un créneau horaire.');
         }
 
+        $totalSlots = count($startTimes);
+        $user = $request->user();
+        if ($user && !$user->hasCredits($totalSlots)) {
+            $remaining = $user->weeklyRemainingLimit();
+            $limit = $user->weeklyLimit();
+            return back()->withInput()->with('error', "Quota hebdomadaire insuffisant : Vous avez sélectionné {$totalSlots} créneau(x) mais il ne vous reste que {$remaining} crédit(s) sur vos {$limit} crédits cette semaine.");
+        }
+
         try {
             $createdCount = 0;
             foreach ($startTimes as $startTime) {
