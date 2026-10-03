@@ -1476,13 +1476,63 @@ function renderSettingsPage() {
 }
 
 // Login Page (Image 1)
-function renderLoginPage() {
-    return fs.readFileSync(path.join(__dirname, 'resources/views/auth/login.blade.php'), 'utf8')
+function renderLoginPage(flashMessage = '') {
+    let html = fs.readFileSync(path.join(__dirname, 'resources/views/auth/login.blade.php'), 'utf8')
         .replace("@vite(['resources/css/app.css', 'resources/js/app.js'])", `<link rel="stylesheet" href="/build/${getAssets().cssFile}"><script defer src="/build/${getAssets().jsFile}"></script>`)
         .replace("{{ route('login') }}", "/login")
         .replace("{{ route('register') }}", "/login")
+        .replace("{{ route('password.request') }}", "/forgot-password")
         .replace("{{ old('email', 'admin@fecc.ma') }}", "admin@fecc.ma")
         .replace("@csrf", "");
+
+    if (flashMessage) {
+        html = html
+            .replace("@if (session('status'))", '')
+            .replace("{{ session('status') }}", flashMessage)
+            .replace("@endif", '')
+            .replace("@if (session('success'))", '<!--')
+            .replace("{{ session('success') }}", '')
+            .replace("@endif", '-->');
+    } else {
+        html = html.replace(/@if \(session\('(?:status|success)'\)\)[\s\S]*?@endif/g, '');
+    }
+    return html;
+}
+
+// Forgot Password Page
+function renderForgotPasswordPage(statusMessage = '') {
+    let html = fs.readFileSync(path.join(__dirname, 'resources/views/auth/forgot-password.blade.php'), 'utf8')
+        .replace("@vite(['resources/css/app.css', 'resources/js/app.js'])", `<link rel="stylesheet" href="/build/${getAssets().cssFile}"><script defer src="/build/${getAssets().jsFile}"></script>`)
+        .replace("{{ route('password.email') }}", "/forgot-password")
+        .replace("{{ route('login') }}", "/login")
+        .replace("{{ old('email') }}", "")
+        .replace("@csrf", "");
+
+    if (statusMessage) {
+        html = html
+            .replace("@if (session('status'))", '')
+            .replace("{{ session('status') }}", statusMessage)
+            .replace("@endif", '');
+    } else {
+        html = html.replace(/@if \(session\('status'\)\)[\s\S]*?@endif/g, '');
+    }
+
+    html = html.replace(/@if \(\$errors->any\(\)\)[\s\S]*?@endif/g, '');
+    return html;
+}
+
+// Reset Password Page
+function renderResetPasswordPage(token = 'demo-token', email = '') {
+    let html = fs.readFileSync(path.join(__dirname, 'resources/views/auth/reset-password.blade.php'), 'utf8')
+        .replace("@vite(['resources/css/app.css', 'resources/js/app.js'])", `<link rel="stylesheet" href="/build/${getAssets().cssFile}"><script defer src="/build/${getAssets().jsFile}"></script>`)
+        .replace("{{ route('password.update') }}", "/reset-password")
+        .replace("{{ route('login') }}", "/login")
+        .replace("{{ $token }}", token)
+        .replace("{{ old('email', $email) }}", email)
+        .replace("@csrf", "");
+
+    html = html.replace(/@if \(\$errors->any\(\)\)[\s\S]*?@endif/g, '');
+    return html;
 }
 
 const server = http.createServer((req, res) => {
@@ -1522,8 +1572,55 @@ const server = http.createServer((req, res) => {
             res.writeHead(302, { 'Location': '/calendrier' });
             return res.end();
         }
+        const flash = urlObj.searchParams.get('flash') || '';
         res.writeHead(200, { 'Content-Type': 'text/html' });
-        return res.end(renderLoginPage());
+        return res.end(renderLoginPage(flash));
+    }
+
+    // Forgot Password Flow (Sends simulated email with token)
+    if (pathname === '/forgot-password') {
+        if (req.method === 'POST') {
+            let body = '';
+            req.on('data', chunk => body += chunk);
+            req.on('end', () => {
+                const params = new URLSearchParams(body);
+                const email = params.get('email') || 'etudiant@fecc.ma';
+                console.log(`\n📧 [EMAIL ENVOYÉ]`);
+                console.log(`De: no-reply@ecclaundry.edu`);
+                console.log(`À: ${email}`);
+                console.log(`Objet: Réinitialisation de votre mot de passe - Buanderie Centrale Casablanca`);
+                console.log(`Lien sécurisé: http://localhost:${PORT}/reset-password/demo-token?email=${encodeURIComponent(email)}\n`);
+                
+                const msg = encodeURIComponent(`Un e-mail de réinitialisation vous a été envoyé à ${email}. (Lien démo : /reset-password/demo-token?email=${encodeURIComponent(email)})`);
+                res.writeHead(302, { 'Location': `/forgot-password?status=${msg}` });
+                return res.end();
+            });
+            return;
+        }
+        const status = urlObj.searchParams.get('status') || '';
+        res.writeHead(200, { 'Content-Type': 'text/html' });
+        return res.end(renderForgotPasswordPage(status));
+    }
+
+    // Reset Password Submission & Form
+    if (pathname.startsWith('/reset-password')) {
+        if (req.method === 'POST') {
+            let body = '';
+            req.on('data', chunk => body += chunk);
+            req.on('end', () => {
+                const params = new URLSearchParams(body);
+                const email = params.get('email') || '';
+                console.log(`🔑 [MOT DE PASSE MIS À JOUR] Compte: ${email}`);
+                const msg = encodeURIComponent('Votre mot de passe a été réinitialisé avec succès. Vous pouvez maintenant vous connecter.');
+                res.writeHead(302, { 'Location': `/login?flash=${msg}` });
+                return res.end();
+            });
+            return;
+        }
+        const email = urlObj.searchParams.get('email') || '';
+        const token = pathname.split('/')[2] || 'demo-token';
+        res.writeHead(200, { 'Content-Type': 'text/html' });
+        return res.end(renderResetPasswordPage(token, email));
     }
 
     // Logout

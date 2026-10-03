@@ -37,6 +37,20 @@
                 Se connecter
             </h1>
 
+            @if (session('status'))
+                <div class="w-full max-w-xs p-3 mb-4 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-start space-x-2">
+                    <svg class="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                    <span>{{ session('status') }}</span>
+                </div>
+            @endif
+
+            @if (session('success'))
+                <div class="w-full max-w-xs p-3 mb-4 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-start space-x-2">
+                    <svg class="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                    <span>{{ session('success') }}</span>
+                </div>
+            @endif
+
             <!-- Form -->
             <form method="POST" action="{{ route('login') }}" class="w-full max-w-xs space-y-4">
                 @csrf
@@ -58,7 +72,7 @@
                 </div>
 
                 <div class="text-center pt-1">
-                    <a href="#" class="text-[11px] text-slate-500 hover:text-[#00897b] transition-colors">
+                    <a href="{{ route('password.request') }}" class="text-[11px] text-slate-500 hover:text-[#00897b] transition-colors">
                         Mot de passe oublié ?
                     </a>
                 </div>

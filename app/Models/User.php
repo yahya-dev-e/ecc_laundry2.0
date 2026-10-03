@@ -53,6 +53,14 @@ class User extends Authenticatable
         ];
     }
 
+    /**
+     * Send the password reset notification.
+     */
+    public function sendPasswordResetNotification($token): void
+    {
+        $this->notify(new \App\Notifications\ResetPasswordNotification($token));
+    }
+
     public static function hasCreditsColumn(): bool
     {
         if (static::$hasCreditsColumn === null) {
