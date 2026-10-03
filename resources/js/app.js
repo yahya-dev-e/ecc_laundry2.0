@@ -65,4 +65,94 @@ Alpine.data('slotPicker', (initialMachineId = null) => ({
     }
 }));
 
+// Live Server Time Clock Alpine component
+export function serverClock(serverIsoString, timeZone = 'UTC') {
+    return {
+        serverBaseTime: serverIsoString ? new Date(serverIsoString).getTime() : Date.now(),
+        clientBaseTime: Date.now(),
+        timeFormatted: '',
+        timer: null,
+        formatter: null,
+
+        init() {
+            try {
+                this.formatter = new Intl.DateTimeFormat('fr-FR', {
+                    timeZone: timeZone,
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit',
+                    hour12: false
+                });
+            } catch (e) {
+                this.formatter = null;
+            }
+            this.update();
+            this.timer = setInterval(() => this.update(), 1000);
+        },
+
+        update() {
+            const elapsed = Date.now() - this.clientBaseTime;
+            const currentServerDate = new Date(this.serverBaseTime + elapsed);
+            if (this.formatter) {
+                this.timeFormatted = this.formatter.format(currentServerDate);
+            } else {
+                const h = String(currentServerDate.getUTCHours()).padStart(2, '0');
+                const m = String(currentServerDate.getUTCMinutes()).padStart(2, '0');
+                const s = String(currentServerDate.getUTCSeconds()).padStart(2, '0');
+                this.timeFormatted = `${h}:${m}:${s}`;
+            }
+        },
+
+        destroy() {
+            if (this.timer) clearInterval(this.timer);
+        }
+    };
+}
+
+// Local System Hour Pointer component for Calendar timeline
+export function systemTimePointer(selectedDateStr, serverTodayStr = '') {
+    return {
+        isVisible: false,
+        topPx: 0,
+        timeFormatted: '',
+        timer: null,
+
+        init() {
+            this.update();
+            this.timer = setInterval(() => this.update(), 1000);
+        },
+
+        update() {
+            const now = new Date();
+            const y = now.getFullYear();
+            const m = String(now.getMonth() + 1).padStart(2, '0');
+            const d = String(now.getDate()).padStart(2, '0');
+            const localDateStr = `${y}-${m}-${d}`;
+
+            // Show pointer when viewing today's schedule (either matching local system date or server today)
+            this.isVisible = (selectedDateStr === localDateStr || (serverTodayStr && selectedDateStr === serverTodayStr));
+            if (!this.isVisible) return;
+
+            const hours = now.getHours();
+            const minutes = now.getMinutes();
+            const seconds = now.getSeconds();
+            const totalMinutes = (hours * 60) + minutes + (seconds / 60);
+
+            // 52px height per hour in calendar timeline
+            this.topPx = Math.min(24 * 52, Math.max(0, (totalMinutes / 60) * 52));
+            this.timeFormatted = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+        },
+
+        destroy() {
+            if (this.timer) clearInterval(this.timer);
+        }
+    };
+}
+
+window.serverClock = serverClock;
+window.systemTimePointer = systemTimePointer;
+
+Alpine.data('serverClock', serverClock);
+Alpine.data('systemTimePointer', systemTimePointer);
+
 Alpine.start();

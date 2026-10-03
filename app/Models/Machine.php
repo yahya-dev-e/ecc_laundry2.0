@@ -104,6 +104,60 @@ class Machine extends Model
     */
 
     /**
+     * Curated, accessible color palette for machines (neither too bright/neon nor too dull/dark).
+     * Automatically maps machine names and converts legacy overly bright database colors.
+     */
+    public function getColorAttribute(?string $value): string
+    {
+        $palette = [
+            'ML1-OM' => '#4338ca', // Indigo
+            'ML2-OM' => '#0d9488', // Teal
+            'ML1-PE' => '#2563eb', // Blue
+            'ML2-PE' => '#d97706', // Warm Amber (replaces unreadable neon yellow)
+            'ML3-PE' => '#db2777', // Rose/Pink (replaces neon magenta)
+            'ML4-PE' => '#ea580c', // Orange
+            'ML3-OM' => '#059669', // Emerald (replaces dull dark teal)
+            'SL1-OM' => '#b45309', // Amber Brown
+            'SL2-OM' => '#16a34a', // Green
+            'SL1-PE' => '#475569', // Slate
+            'SL2-PE' => '#65a30d', // Lime
+            'SL3-PE' => '#9333ea', // Purple
+            'SL3-OM' => '#52525b', // Zinc
+        ];
+
+        if (!empty($this->name) && isset($palette[$this->name])) {
+            return $palette[$this->name];
+        }
+
+        // Map legacy overly bright hex colors to balanced modern tones
+        $legacyMap = [
+            '#e53935' => '#4338ca',
+            '#00e676' => '#0d9488',
+            '#2979ff' => '#2563eb',
+            '#ffd600' => '#d97706',
+            '#ff007f' => '#db2777',
+            '#ff9100' => '#ea580c',
+            '#004d40' => '#059669',
+            '#4e342e' => '#b45309',
+            '#4caf50' => '#16a34a',
+            '#1a237e' => '#475569',
+            '#827717' => '#65a30d',
+            '#8e24aa' => '#9333ea',
+            '#212121' => '#52525b',
+            '#ff0000' => '#4338ca',
+            '#00ff00' => '#0d9488',
+            '#0000ff' => '#2563eb',
+            '#ffff00' => '#d97706',
+        ];
+
+        if ($value && isset($legacyMap[strtolower($value)])) {
+            return $legacyMap[strtolower($value)];
+        }
+
+        return $value ?: '#4338ca';
+    }
+
+    /**
      * Alias code to name so any legacy call to $machine->code safely returns name.
      */
     public function getCodeAttribute(): string

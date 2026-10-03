@@ -22,7 +22,7 @@ class MachineFactory extends Factory
             'name' => sprintf('%s%d-%s', $prefix, $number, $location),
             'type' => $type,
             'status' => MachineStatus::AVAILABLE,
-            'color' => fake()->randomElement(['#e53935', '#00e676', '#2979ff', '#ffd600', '#ff007f', '#ff9100', '#004d40', '#4e342e', '#4caf50', '#1a237e', '#827717', '#8e24aa', '#212121']),
+            'color' => fake()->randomElement(['#4338ca', '#0d9488', '#2563eb', '#d97706', '#db2777', '#ea580c', '#059669', '#b45309', '#16a34a', '#475569', '#65a30d', '#9333ea', '#52525b']),
         ];
     }
 

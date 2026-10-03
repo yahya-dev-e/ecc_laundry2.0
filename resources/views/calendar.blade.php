@@ -7,6 +7,23 @@
     $firstMachine = $machines->first();
     $currentSelectedMachineId = request('machine_id', $firstMachine?->id ?? 1);
     $currentMachine = $machines->firstWhere('id', $currentSelectedMachineId) ?? $firstMachine;
+
+    // Harmonious, accessible color palette (neither harsh neon nor dull/dark)
+    $machineColorPalette = [
+        'ML1-OM' => '#4338ca', // Refined Indigo
+        'ML2-OM' => '#0d9488', // Teal
+        'ML1-PE' => '#2563eb', // Royal Blue
+        'ML2-PE' => '#d97706', // Warm Amber (replaces unreadable neon yellow)
+        'ML3-PE' => '#db2777', // Rose / Pink (replaces harsh magenta)
+        'ML4-PE' => '#ea580c', // Orange
+        'ML3-OM' => '#059669', // Emerald (replaces dull dark teal)
+        'SL1-OM' => '#b45309', // Amber Brown
+        'SL2-OM' => '#16a34a', // Green
+        'SL1-PE' => '#475569', // Slate
+        'SL2-PE' => '#65a30d', // Lime
+        'SL3-PE' => '#9333ea', // Purple
+        'SL3-OM' => '#52525b', // Zinc
+    ];
 @endphp
 
 <div class="space-y-6 max-w-6xl mx-auto" x-data="{
@@ -85,9 +102,12 @@
             <!-- Column 1: Machine à laver (Washers) -->
             <div class="grid grid-cols-3 gap-2 pr-3">
                 @forelse($washers as $machine)
+                    @php
+                        $mColor = $machineColorPalette[$machine->name ?? ''] ?? $machine->color ?? '#4338ca';
+                    @endphp
                     <button type="button" @click="selectMachine('{{ $machine->name }}', {{ $machine->id }})" 
                             :class="{'ring-3 ring-slate-900 scale-105 shadow-md': selectedMachineId === {{ $machine->id }}}"
-                            style="background-color: {{ $machine->color ?? '#4338ca' }};"
+                            style="background-color: {{ $mColor }};"
                             class="badge-machine text-white hover:opacity-90">
                         <span class="truncate">{{ $machine->name }}</span>
                     </button>
@@ -99,9 +119,12 @@
             <!-- Column 2: Sèche-linge (Dryers) -->
             <div class="grid grid-cols-2 gap-2 pl-3">
                 @forelse($dryers as $machine)
+                    @php
+                        $mColor = $machineColorPalette[$machine->name ?? ''] ?? $machine->color ?? '#b45309';
+                    @endphp
                     <button type="button" @click="selectMachine('{{ $machine->name }}', {{ $machine->id }})"
                             :class="{'ring-3 ring-slate-900 scale-105 shadow-md': selectedMachineId === {{ $machine->id }}}"
-                            style="background-color: {{ $machine->color ?? '#b45309' }};"
+                            style="background-color: {{ $mColor }};"
                             class="badge-machine text-white hover:opacity-90">
                         <span class="truncate">{{ $machine->name }}</span>
                     </button>
@@ -249,31 +272,32 @@
                     <!-- Final boundary line at bottom (24:00) -->
                     <div class="absolute left-0 right-0 border-t border-slate-300 pointer-events-none" style="top: {{ 24 * 52 }}px;"></div>
 
-                    <!-- Current Time Indicator delayed by 1 hour (position 1h earlier, time text unchanged) -->
-                    @if($selectedDate === $todayDate)
-                        @php
-                            $now = \Carbon\Carbon::now();
-                            $nowMinutes = ($now->hour * 60) + $now->minute;
-                            // Delayed by 1 hour (marker position shifted 1 hour before current time)
-                            $markerMinutes = max(0, $nowMinutes - 60);
-                            $nowTop = ($markerMinutes / 60) * 52;
-                        @endphp
-                        @if($nowMinutes >= 0 && $nowMinutes <= 1440)
-                            <div class="absolute left-0 right-0 z-30 pointer-events-none flex items-center" style="top: {{ $nowTop }}px;">
-                                <div class="w-2.5 h-2.5 rounded-full bg-rose-500 shadow -ml-1.5 shrink-0 ring-2 ring-white"></div>
-                                <div class="flex-1 border-t-2 border-rose-500 shadow-xs"></div>
-                                <span class="bg-rose-500 text-white font-mono text-[9px] font-bold px-1.5 py-0.5 rounded shadow -mr-1">
-                                    {{ $now->format('H:i') }}
-                                </span>
-                            </div>
-                        @endif
-                    @endif
+                    <!-- Current System Time Indicator (Points to the hour of the system) -->
+                    @php
+                        $now = \Carbon\Carbon::now();
+                        $nowMinutes = ($now->hour * 60) + $now->minute;
+                        $nowTop = ($nowMinutes / 60) * 52;
+                    @endphp
+                    <div id="system-time-pointer"
+                         x-data="systemTimePointer('{{ $selectedDate }}', '{{ $todayDate }}')"
+                         x-show="isVisible"
+                         class="absolute left-0 right-0 z-30 pointer-events-none flex items-center transition-all duration-300"
+                         :style="'top: ' + topPx + 'px;'"
+                         @if($selectedDate === $todayDate) style="top: {{ $nowTop }}px;" @else style="display: none;" @endif
+                         title="Heure actuelle du système">
+                        <div class="w-2.5 h-2.5 rounded-full bg-rose-500 shadow -ml-1.5 shrink-0 ring-2 ring-white"></div>
+                        <div class="flex-1 border-t-2 border-rose-500 shadow-xs"></div>
+                        <span class="bg-rose-500 text-white font-mono text-[9px] font-bold px-1.5 py-0.5 rounded shadow -mr-1 flex items-center space-x-1"
+                              x-text="timeFormatted">
+                            {{ $now->format('H:i') }}
+                        </span>
+                    </div>
 
                     <!-- Render Continuous Blocks -->
                     @forelse($calendarBlocks ?? [] as $block)
                         @php
                             $isMultiHour = $block['durationMinutes'] > 60;
-                            $machineColor = $block['machine']->color ?? '#4338ca';
+                            $machineColor = $machineColorPalette[$block['machine']->name ?? ''] ?? $block['machine']->color ?? '#4338ca';
                         @endphp
                         <div style="background-color: {{ $machineColor }}; top: {{ $block['top'] + 1 }}px; height: {{ $block['height'] - 2 }}px; left: calc({{ $block['leftPct'] }}% + 4px); width: calc({{ $block['widthPct'] }}% - 8px);"
                              :class="{'ring-3 ring-slate-900 shadow-xl scale-[1.01] z-30': selectedMachineId === {{ $block['machine_id'] }}, 'shadow-sm hover:shadow-md hover:brightness-105 z-20': selectedMachineId !== {{ $block['machine_id'] }}}"

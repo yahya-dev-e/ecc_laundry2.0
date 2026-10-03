@@ -53,6 +53,11 @@ async function runAudit() {
     const has100Credits = quotaText.includes('100 crédits') || quotaText.includes('100h');
     console.log(`   Admin quota displays 100 credits: ${has100Credits ? '✅ PASS' : '❌ FAIL'}`);
 
+    // Verify Server Time Indicator is always visible on top of the website
+    const hasServerTimeTop = await page.locator('#server-time-indicator').isVisible();
+    const serverTimeText = await page.textContent('#server-time-indicator');
+    console.log(`   Server time visible on top of website: ${hasServerTimeTop ? '✅ PASS' : '❌ FAIL'} ("${serverTimeText.replace(/\s+/g, ' ').trim()}")`);
+
     // Verify History table machine badges (clean code, no duplicated type)
     const hasVerboseMachineSubtitle = /Machine à laver 1 Omar/i.test(content);
     console.log(`   Clean history table badges (no duplicated subtitles): ${!hasVerboseMachineSubtitle ? '✅ PASS' : '❌ FAIL'}`);
@@ -67,6 +72,10 @@ async function runAudit() {
     await page.goto('http://localhost:3000/calendrier');
     await page.waitForLoadState('networkidle');
 
+    // Check Server Time on Calendar page too
+    const calServerTimeVisible = await page.locator('#server-time-indicator').isVisible();
+    console.log(`   Server time indicator on /calendrier: ${calServerTimeVisible ? '✅ PASS' : '❌ FAIL'}`);
+
     const calContent = await page.content();
     const hasCreneauContinu = /créneau continu/i.test(calContent);
     console.log(`   "Créneau continu" completely removed from blocks: ${!hasCreneauContinu ? '✅ PASS' : '❌ FAIL'}`);
@@ -76,9 +85,11 @@ async function runAudit() {
     const has24Axis = calContent.includes('24:00');
     console.log(`   24-hour axis with line limiters present: ${has00Axis && has24Axis ? '✅ PASS' : '❌ FAIL'}`);
 
-    // Check time marker
-    const hasTimeMarker = calContent.includes('01:34');
-    console.log(`   Current time indicator (delayed by 1h) present: ${hasTimeMarker ? '✅ PASS' : '❌ FAIL'}`);
+    // Check System Hour Pointer
+    const systemPointerCount = await page.locator('#system-time-pointer').count();
+    const systemPointerVisible = await page.locator('#system-time-pointer').isVisible();
+    const systemPointerText = await page.textContent('#system-time-pointer');
+    console.log(`   System hour pointer present and active: ${systemPointerCount > 0 ? '✅ PASS' : '❌ FAIL'} (${systemPointerText.trim()})`);
 
     // Check zero emojis
     const emojiRegex = /[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/u;

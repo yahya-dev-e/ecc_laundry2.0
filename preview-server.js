@@ -225,9 +225,28 @@ function renderLayout(title, content, currentPath = '/', flash = '') {
     <div class="flex-1 flex flex-col min-w-0 overflow-y-auto">
         
         <!-- Top Navbar -->
-        <header class="h-14 bg-white border-b border-slate-200 px-6 flex items-center justify-between shrink-0 sticky top-0 z-30 shadow-xs">
-            <div class="flex items-center space-x-3">
-                <span class="text-xs text-slate-400 font-medium">laundry.fecc.ma${currentPath}</span>
+        <header class="h-14 bg-white border-b border-slate-200 px-4 sm:px-6 flex items-center justify-between shrink-0 sticky top-0 z-30 shadow-xs">
+            <div class="flex items-center space-x-3 sm:space-x-4">
+                <span class="text-xs text-slate-400 font-medium hidden md:inline">laundry.fecc.ma${currentPath}</span>
+                <span class="text-slate-300 text-xs hidden md:inline">•</span>
+
+                <!-- Server Time Indicator (Always visible on top of website) -->
+                <div id="server-time-indicator"
+                     x-data="serverClock('${new Date().toISOString()}', 'UTC')" 
+                     class="flex items-center space-x-2 px-3 py-1 rounded-full bg-slate-100 border border-slate-200 text-xs font-medium text-slate-700 shadow-2xs select-none shrink-0 whitespace-nowrap"
+                     title="Heure actuelle du serveur (UTC)">
+                    <span class="relative flex h-2 w-2 shrink-0">
+                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                        <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                    </span>
+                    <span class="text-[11px] font-semibold text-slate-500 whitespace-nowrap">Serveur :</span>
+                    <span class="font-mono font-bold text-slate-800 tracking-tight whitespace-nowrap" x-text="timeFormatted">
+                        ${new Date().toISOString().substring(11, 19)}
+                    </span>
+                    <span class="text-[9px] font-bold text-slate-500 bg-white px-1.5 py-0.5 rounded border border-slate-200">
+                        UTC
+                    </span>
+                </div>
                 
                 <a href="/toggle-role" class="px-2.5 py-1 rounded-full text-[11px] font-bold border transition-all ${state.isAdmin ? 'bg-amber-50 text-amber-800 border-amber-300' : 'bg-blue-50 text-blue-800 border-blue-300'}" title="Cliquez pour basculer entre vue Administrateur et vue Étudiant">
                     ${state.isAdmin ? 'Mode: ADMIN (Cliquez pour tester vue Étudiant)' : 'Mode: ÉTUDIANT (Cliquez pour tester vue Admin)'}
@@ -505,8 +524,8 @@ function renderCalendarPage(selectedDateStr = '2026-09-30') {
         <!-- Machine Selection Matrix matching Image 2 -->
         <div class="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden max-w-2xl mx-auto">
             <div class="grid grid-cols-2 bg-[#00897b] text-white text-xs font-bold text-center py-2.5">
-                <div>Machine à laver</div>
-                <div>Sèche-linge</div>
+                <div>Machines à laver (${washers.length})</div>
+                <div>Sèche-linge (${dryers.length})</div>
             </div>
 
             <div class="grid grid-cols-2 divide-x divide-slate-200 p-4">
@@ -632,16 +651,21 @@ function renderCalendarPage(selectedDateStr = '2026-09-30') {
                         }).join('')}
                         <div class="absolute left-0 right-0 border-t border-slate-300 pointer-events-none" style="top: ${24 * 52}px;"></div>
 
-                        <!-- Current Time Indicator delayed by 1 hour (position 1h earlier, time text unchanged) -->
-                        ${(selectedDateStr === todayStr || selectedDateStr === '2026-10-01') ? `
-                            <div class="absolute left-0 right-0 z-30 pointer-events-none flex items-center" style="top: ${Math.max(0, ((1 * 60 + 34 - 60) / 60) * 52)}px;">
-                                <div class="w-2.5 h-2.5 rounded-full bg-rose-500 shadow -ml-1.5 shrink-0 ring-2 ring-white"></div>
-                                <div class="flex-1 border-t-2 border-rose-500 shadow-xs"></div>
-                                <span class="bg-rose-500 text-white font-mono text-[9px] font-bold px-1.5 py-0.5 rounded shadow -mr-1">
-                                    01:34
-                                </span>
-                            </div>
-                        ` : ''}
+                        <!-- Current System Time Indicator (Points to the local system hour) -->
+                        <div id="system-time-pointer"
+                             x-data="systemTimePointer('${selectedDateStr}', '${todayStr}')"
+                             x-show="isVisible"
+                             class="absolute left-0 right-0 z-30 pointer-events-none flex items-center transition-all duration-300"
+                             :style="'top: ' + topPx + 'px;'"
+                             style="top: ${((new Date().getHours() * 60 + new Date().getMinutes()) / 60) * 52}px;"
+                             title="Heure actuelle du système">
+                            <div class="w-2.5 h-2.5 rounded-full bg-rose-500 shadow -ml-1.5 shrink-0 ring-2 ring-white"></div>
+                            <div class="flex-1 border-t-2 border-rose-500 shadow-xs"></div>
+                            <span class="bg-rose-500 text-white font-mono text-[9px] font-bold px-1.5 py-0.5 rounded shadow -mr-1 flex items-center space-x-1"
+                                  x-text="timeFormatted">
+                                ${String(new Date().getHours()).padStart(2, '0')}:${String(new Date().getMinutes()).padStart(2, '0')}
+                            </span>
+                        </div>
 
                         <!-- Continuous Blocks -->
                         ${calendarBlocks.map(block => {

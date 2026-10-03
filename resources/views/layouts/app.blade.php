@@ -24,12 +24,31 @@
     <div class="flex-1 flex flex-col min-w-0 overflow-y-auto">
         
         <!-- Top Navbar -->
-        <header class="h-14 bg-white border-b border-slate-200 px-6 flex items-center justify-between shrink-0 sticky top-0 z-30 shadow-xs">
-            <div class="flex items-center space-x-3">
-                <span class="text-xs text-slate-400 font-medium">laundry.fecc.ma</span>
+        <header class="h-14 bg-white border-b border-slate-200 px-4 sm:px-6 flex items-center justify-between shrink-0 sticky top-0 z-30 shadow-xs">
+            <div class="flex items-center space-x-3 sm:space-x-4">
+                <span class="text-xs text-slate-400 font-medium hidden md:inline">laundry.fecc.ma</span>
+                <span class="text-slate-300 text-xs hidden md:inline">•</span>
+
+                <!-- Server Time Indicator (Always visible on top of website) -->
+                <div id="server-time-indicator"
+                     x-data="serverClock('{{ now()->toIso8601String() }}', '{{ config('app.timezone', 'UTC') }}')" 
+                     class="flex items-center space-x-2 px-3 py-1 rounded-full bg-slate-100 border border-slate-200 text-xs font-medium text-slate-700 shadow-2xs select-none shrink-0 whitespace-nowrap"
+                     title="Heure actuelle du serveur ({{ config('app.timezone', 'UTC') }})">
+                    <span class="relative flex h-2 w-2 shrink-0">
+                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                        <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                    </span>
+                    <span class="text-[11px] font-semibold text-slate-500 whitespace-nowrap">Serveur :</span>
+                    <span class="font-mono font-bold text-slate-800 tracking-tight whitespace-nowrap" x-text="timeFormatted">
+                        {{ now()->format('H:i:s') }}
+                    </span>
+                    <span class="text-[9px] font-bold text-slate-500 bg-white px-1.5 py-0.5 rounded border border-slate-200">
+                        {{ config('app.timezone', 'UTC') }}
+                    </span>
+                </div>
             </div>
 
-            <div class="flex items-center space-x-5">
+            <div class="flex items-center space-x-3 sm:space-x-5">
                 @auth
                     @php
                         $navIsAdmin = auth()->user()->isAdmin();
