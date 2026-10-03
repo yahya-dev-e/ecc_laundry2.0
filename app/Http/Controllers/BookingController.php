@@ -72,11 +72,8 @@ class BookingController extends Controller
         $selectedMachineId = $request->query('machine_id');
         $selectedMachine = $selectedMachineId ? Machine::find($selectedMachineId) : null;
 
-        // Order strictly by name (never by code)
-        $machines = Machine::where('status', MachineStatus::AVAILABLE)
-            ->orWhere('id', $selectedMachineId)
-            ->orderBy('name')
-            ->get();
+        // Fetch all campus machines (including ML3-PE) ordered strictly by name so users can reserve future open slots
+        $machines = Machine::orderBy('name')->get();
 
         $reservations = Reservation::where('start_time', '>=', Carbon::today()->startOfDay())
             ->where('start_time', '<=', Carbon::today()->addDays(8)->endOfDay())

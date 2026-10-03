@@ -105,20 +105,20 @@ const state = {
         weeklyUsed: 2, // 2 credits used
     },
     machines: [
-        { code: 'ML1-OM', name: 'Machine à laver 1 Omar', type: 'washer', bg: '#4338ca', text: 'text-white', status: 'available', cap: '9.0 kg', loc: 'Bâtiment Omar, RDC' },
-        { code: 'ML2-OM', name: 'Machine à laver 2 Omar', type: 'washer', bg: '#0d9488', text: 'text-white', status: 'in_use', cap: '9.0 kg', loc: 'Bâtiment Omar, RDC' },
-        { code: 'ML1-PE', name: 'Machine à laver 1 Petit', type: 'washer', bg: '#2563eb', text: 'text-white', status: 'available', cap: '8.0 kg', loc: 'Bâtiment Petit, Étage 1' },
-        { code: 'ML2-PE', name: 'Machine à laver 2 Petit', type: 'washer', bg: '#d97706', text: 'text-white', status: 'reserved', cap: '8.0 kg', loc: 'Bâtiment Petit, Étage 1' },
-        { code: 'ML3-PE', name: 'Machine à laver 3 Petit', type: 'washer', bg: '#db2777', text: 'text-white', status: 'reserved', cap: '8.5 kg', loc: 'Bâtiment Petit, Étage 1' },
-        { code: 'ML4-PE', name: 'Machine à laver 4 Petit', type: 'washer', bg: '#ea580c', text: 'text-white', status: 'available', cap: '8.5 kg', loc: 'Bâtiment Petit, Étage 2' },
-        { code: 'ML3-OM', name: 'Machine à laver 3 Omar', type: 'washer', bg: '#059669', text: 'text-white', status: 'available', cap: '10.0 kg', loc: 'Bâtiment Omar, RDC' },
+        { id: 1, code: 'ML1-OM', name: 'Machine à laver 1 Omar', type: 'washer', bg: '#4338ca', text: 'text-white', status: 'available', cap: '9.0 kg', loc: 'Bâtiment Omar, RDC' },
+        { id: 2, code: 'ML2-OM', name: 'Machine à laver 2 Omar', type: 'washer', bg: '#0d9488', text: 'text-white', status: 'in_use', cap: '9.0 kg', loc: 'Bâtiment Omar, RDC' },
+        { id: 3, code: 'ML1-PE', name: 'Machine à laver 1 Petit', type: 'washer', bg: '#2563eb', text: 'text-white', status: 'available', cap: '8.0 kg', loc: 'Bâtiment Petit, Étage 1' },
+        { id: 4, code: 'ML2-PE', name: 'Machine à laver 2 Petit', type: 'washer', bg: '#d97706', text: 'text-white', status: 'available', cap: '8.0 kg', loc: 'Bâtiment Petit, Étage 1' },
+        { id: 5, code: 'ML3-PE', name: 'Machine à laver 3 Petit', type: 'washer', bg: '#db2777', text: 'text-white', status: 'available', cap: '8.5 kg', loc: 'Bâtiment Petit, Étage 1' },
+        { id: 6, code: 'ML4-PE', name: 'Machine à laver 4 Petit', type: 'washer', bg: '#ea580c', text: 'text-white', status: 'available', cap: '8.5 kg', loc: 'Bâtiment Petit, Étage 2' },
+        { id: 7, code: 'ML3-OM', name: 'Machine à laver 3 Omar', type: 'washer', bg: '#059669', text: 'text-white', status: 'available', cap: '10.0 kg', loc: 'Bâtiment Omar, RDC' },
         
-        { code: 'SL1-OM', name: 'Sèche-linge 1 Omar', type: 'dryer', bg: '#b45309', text: 'text-white', status: 'available', cap: '9.5 kg', loc: 'Bâtiment Omar, RDC' },
-        { code: 'SL2-OM', name: 'Sèche-linge 2 Omar', type: 'dryer', bg: '#16a34a', text: 'text-white', status: 'available', cap: '9.5 kg', loc: 'Bâtiment Omar, RDC' },
-        { code: 'SL1-PE', name: 'Sèche-linge 1 Petit', type: 'dryer', bg: '#475569', text: 'text-white', status: 'in_use', cap: '8.0 kg', loc: 'Bâtiment Petit, Étage 1' },
-        { code: 'SL2-PE', name: 'Sèche-linge 2 Petit', type: 'dryer', bg: '#65a30d', text: 'text-white', status: 'available', cap: '8.0 kg', loc: 'Bâtiment Petit, Étage 1' },
-        { code: 'SL3-PE', name: 'Sèche-linge 3 Petit', type: 'dryer', bg: '#9333ea', text: 'text-white', status: 'available', cap: '8.5 kg', loc: 'Bâtiment Petit, Étage 2' },
-        { code: 'SL3-OM', name: 'Sèche-linge 3 Omar', type: 'dryer', bg: '#52525b', text: 'text-white', status: 'available', cap: '9.5 kg', loc: 'Bâtiment Omar, RDC' },
+        { id: 8, code: 'SL1-OM', name: 'Sèche-linge 1 Omar', type: 'dryer', bg: '#b45309', text: 'text-white', status: 'available', cap: '9.5 kg', loc: 'Bâtiment Omar, RDC' },
+        { id: 9, code: 'SL2-OM', name: 'Sèche-linge 2 Omar', type: 'dryer', bg: '#16a34a', text: 'text-white', status: 'available', cap: '9.5 kg', loc: 'Bâtiment Omar, RDC' },
+        { id: 10, code: 'SL1-PE', name: 'Sèche-linge 1 Petit', type: 'dryer', bg: '#475569', text: 'text-white', status: 'in_use', cap: '8.0 kg', loc: 'Bâtiment Petit, Étage 1' },
+        { id: 11, code: 'SL2-PE', name: 'Sèche-linge 2 Petit', type: 'dryer', bg: '#65a30d', text: 'text-white', status: 'available', cap: '8.0 kg', loc: 'Bâtiment Petit, Étage 1' },
+        { id: 12, code: 'SL3-PE', name: 'Sèche-linge 3 Petit', type: 'dryer', bg: '#9333ea', text: 'text-white', status: 'available', cap: '8.5 kg', loc: 'Bâtiment Petit, Étage 2' },
+        { id: 13, code: 'SL3-OM', name: 'Sèche-linge 3 Omar', type: 'dryer', bg: '#52525b', text: 'text-white', status: 'available', cap: '9.5 kg', loc: 'Bâtiment Omar, RDC' },
     ],
     reservations: [
         // ML2-OM on Mercredi 30 Septembre extended to 2am (00:00 - 02:00, 2h)
@@ -715,8 +715,8 @@ function renderCalendarPage(selectedDateStr = '2026-09-30') {
 
 // Dedicated full page for reservation (Multi-slot selection + 8h quota system)
 function renderDedicatedReservationPage(selectedMachine = 'ML1-OM') {
-    const washers = state.machines.filter(m => m.type === 'washer');
-    const dryers = state.machines.filter(m => m.type === 'dryer');
+    const washers = [...state.machines.filter(m => m.type === 'washer')].sort((a, b) => a.code.localeCompare(b.code));
+    const dryers = [...state.machines.filter(m => m.type === 'dryer')].sort((a, b) => a.code.localeCompare(b.code));
     const remaining = Math.max(0, state.weeklyLimit - state.user.weeklyUsed);
     
     // Initial available slots for selected machine
@@ -728,7 +728,7 @@ function renderDedicatedReservationPage(selectedMachine = 'ML1-OM') {
         <div class="flex items-center justify-between">
             <div>
                 <h1 class="text-xl font-bold text-slate-800 tracking-tight">Réserver une machine</h1>
-                <p class="text-xs text-slate-500">Planification des créneaux horaires disponibles par machine</p>
+                <p class="text-xs text-slate-500">Planification des créneaux horaires disponibles par machine (24h/24)</p>
             </div>
             <a href="/calendrier" class="text-xs text-[#00897b] hover:underline font-semibold flex items-center space-x-1">
                 <span>&larr;</span>
@@ -747,8 +747,8 @@ function renderDedicatedReservationPage(selectedMachine = 'ML1-OM') {
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <!-- Machine Choice (JUST THE CLEAN CODES - NO PARENTHESES!) -->
                     <div>
-                        <label class="block font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                            Sélectionner la machine
+                        <label for="machineSelect" class="block font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                            Machine
                         </label>
                         <select name="machine" id="machineSelect" onchange="onMachineOrDateChange()"
                                 class="w-full px-3.5 py-2.5 border border-slate-300 rounded text-xs focus:border-[#00897b] focus:outline-none bg-slate-50 font-bold text-slate-800">
@@ -1605,8 +1605,10 @@ const server = http.createServer((req, res) => {
     }
 
     // Dedicated reservation page
-    if (pathname === '/reserver' && req.method === 'GET') {
-        const preselectedMachine = urlObj.searchParams.get('machine') || 'ML1-OM';
+    if ((pathname === '/reserver' || pathname === '/bookings/create') && req.method === 'GET') {
+        let preselectedMachine = urlObj.searchParams.get('machine') || urlObj.searchParams.get('machine_id') || 'ML1-OM';
+        const found = state.machines.find(m => String(m.id) === String(preselectedMachine) || m.code === preselectedMachine);
+        if (found) preselectedMachine = found.code;
         res.writeHead(200, { 'Content-Type': 'text/html' });
         return res.end(renderLayout('Réserver une machine', renderDedicatedReservationPage(preselectedMachine), '/reserver'));
     }

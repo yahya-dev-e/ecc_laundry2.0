@@ -63,7 +63,7 @@ class MachineController extends Controller
         return view('bookings.create', [
             'selectedMachine' => $machine,
             'availableSlots' => $availableSlots,
-            'machines' => Machine::where('status', MachineStatus::AVAILABLE)->orderBy('name')->get(),
+            'machines' => Machine::orderBy('name')->get(),
         ]);
     }
 

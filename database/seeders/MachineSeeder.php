@@ -39,13 +39,13 @@ class MachineSeeder extends Seeder
             [
                 'name' => 'ML2-PE',
                 'type' => MachineType::WASHING_MACHINE,
-                'status' => MachineStatus::RESERVED,
+                'status' => MachineStatus::AVAILABLE,
                 'color' => '#d97706',
             ],
             [
                 'name' => 'ML3-PE',
                 'type' => MachineType::WASHING_MACHINE,
-                'status' => MachineStatus::RESERVED,
+                'status' => MachineStatus::AVAILABLE,
                 'color' => '#db2777',
             ],
             [

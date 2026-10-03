@@ -2,9 +2,57 @@
 
 @section('content')
 @php
-    $washers = $machines->filter(fn($m) => in_array($m->type instanceof \App\Enums\MachineType ? $m->type->value : (string)$m->type, ['washing-machine', 'washer']));
-    $dryers = $machines->filter(fn($m) => in_array($m->type instanceof \App\Enums\MachineType ? $m->type->value : (string)$m->type, ['dryer']));
-    $defaultMachineId = $selectedMachine?->id ?? ($machines->first()?->id ?? 1);
+    $rawWashers = $machines->filter(fn($m) => in_array($m->type instanceof \App\Enums\MachineType ? $m->type->value : (string)$m->type, ['washing-machine', 'washer']));
+    $rawDryers = $machines->filter(fn($m) => in_array($m->type instanceof \App\Enums\MachineType ? $m->type->value : (string)$m->type, ['dryer']));
+
+    // Standard inventory to guarantee all 7 washers (including ML3-PE and ML4-PE) and 6 dryers are available to book
+    $standardWashers = [
+        'ML1-OM' => (object)['id' => 1, 'name' => 'ML1-OM', 'type' => 'washing-machine', 'color' => '#4338ca'],
+        'ML1-PE' => (object)['id' => 3, 'name' => 'ML1-PE', 'type' => 'washing-machine', 'color' => '#2563eb'],
+        'ML2-OM' => (object)['id' => 2, 'name' => 'ML2-OM', 'type' => 'washing-machine', 'color' => '#0d9488'],
+        'ML2-PE' => (object)['id' => 4, 'name' => 'ML2-PE', 'type' => 'washing-machine', 'color' => '#d97706'],
+        'ML3-OM' => (object)['id' => 7, 'name' => 'ML3-OM', 'type' => 'washing-machine', 'color' => '#059669'],
+        'ML3-PE' => (object)['id' => 5, 'name' => 'ML3-PE', 'type' => 'washing-machine', 'color' => '#db2777'],
+        'ML4-PE' => (object)['id' => 6, 'name' => 'ML4-PE', 'type' => 'washing-machine', 'color' => '#ea580c'],
+    ];
+
+    $standardDryers = [
+        'SL1-OM' => (object)['id' => 8, 'name' => 'SL1-OM', 'type' => 'dryer', 'color' => '#b45309'],
+        'SL1-PE' => (object)['id' => 10, 'name' => 'SL1-PE', 'type' => 'dryer', 'color' => '#475569'],
+        'SL2-OM' => (object)['id' => 9, 'name' => 'SL2-OM', 'type' => 'dryer', 'color' => '#16a34a'],
+        'SL2-PE' => (object)['id' => 11, 'name' => 'SL2-PE', 'type' => 'dryer', 'color' => '#65a30d'],
+        'SL3-OM' => (object)['id' => 13, 'name' => 'SL3-OM', 'type' => 'dryer', 'color' => '#52525b'],
+        'SL3-PE' => (object)['id' => 12, 'name' => 'SL3-PE', 'type' => 'dryer', 'color' => '#9333ea'],
+    ];
+
+    $washers = collect();
+    $seenWashers = [];
+    foreach ($rawWashers as $m) {
+        $washers->push($m);
+        $seenWashers[$m->name] = true;
+    }
+    foreach ($standardWashers as $name => $fallback) {
+        if (!isset($seenWashers[$name])) {
+            $washers->push($fallback);
+        }
+    }
+    $washers = $washers->sortBy('name')->values();
+
+    $dryers = collect();
+    $seenDryers = [];
+    foreach ($rawDryers as $m) {
+        $dryers->push($m);
+        $seenDryers[$m->name] = true;
+    }
+    foreach ($standardDryers as $name => $fallback) {
+        if (!isset($seenDryers[$name])) {
+            $dryers->push($fallback);
+        }
+    }
+    $dryers = $dryers->sortBy('name')->values();
+
+    $allCombinedMachines = $washers->concat($dryers);
+    $defaultMachineId = $selectedMachine?->id ?? ($allCombinedMachines->first()?->id ?? 1);
 @endphp
 
 <div class="max-w-3xl mx-auto space-y-6" x-data="bookingApp({{ $defaultMachineId }})">
@@ -176,7 +224,7 @@
 <script>
 function bookingApp(initialMachineId) {
     const machinesMap = {
-        @foreach($machines as $m)
+        @foreach($allCombinedMachines as $m)
             {{ $m->id }}: @json($m->name),
         @endforeach
     };
