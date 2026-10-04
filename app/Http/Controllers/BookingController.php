@@ -72,11 +72,31 @@ class BookingController extends Controller
         $selectedMachineId = $request->query('machine_id');
         $selectedMachine = $selectedMachineId ? Machine::find($selectedMachineId) : null;
 
-        // Fetch all campus machines (including ML3-PE) ordered strictly by name so users can reserve future open slots
+        // Fetch all campus machines ordered strictly by name so users can reserve open slots
         $machines = Machine::orderBy('name')->get();
 
+        $minDate = Carbon::today()->toDateString();
+        $maxDate = config('laundry.restrict_to_current_week', true)
+            ? Carbon::now()->endOfWeek()->toDateString()
+            : Carbon::now()->addDays(config('laundry.max_advance_booking_days', 7))->toDateString();
+
+        $initialDate = $minDate;
+        if ($request->filled('date')) {
+            $candidateDate = $request->query('date');
+            if ($candidateDate >= $minDate && $candidateDate <= $maxDate) {
+                $initialDate = $candidateDate;
+            }
+        } elseif ($request->filled('start_time')) {
+            try {
+                $candidateDate = Carbon::parse($request->query('start_time'))->toDateString();
+                if ($candidateDate >= $minDate && $candidateDate <= $maxDate) {
+                    $initialDate = $candidateDate;
+                }
+            } catch (\Exception $e) {}
+        }
+
         $reservations = Reservation::where('start_time', '>=', Carbon::today()->startOfDay())
-            ->where('start_time', '<=', Carbon::today()->addDays(8)->endOfDay())
+            ->where('start_time', '<=', Carbon::parse($maxDate)->endOfDay())
             ->get(['machine_id', 'start_time', 'end_time'])
             ->map(function ($r) {
                 return [
@@ -91,6 +111,9 @@ class BookingController extends Controller
             'machines' => $machines,
             'selectedMachine' => $selectedMachine,
             'reservations' => $reservations,
+            'minDate' => $minDate,
+            'maxDate' => $maxDate,
+            'initialDate' => $initialDate,
         ]);
     }
 

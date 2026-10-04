@@ -114,8 +114,13 @@
                     <label for="bookingDate" class="block font-bold text-slate-700 uppercase tracking-wider mb-1.5">
                         Date de réservation
                     </label>
-                    <input id="bookingDate" type="date" name="date" x-model="selectedDate" @change="onDateChange()" min="{{ now()->toDateString() }}" max="{{ now()->addDays(7)->toDateString() }}"
+                    <input id="bookingDate" type="date" name="date" x-model="selectedDate" @change="onDateChange()" 
+                           min="{{ $minDate ?? now()->toDateString() }}" 
+                           max="{{ $maxDate ?? now()->endOfWeek()->toDateString() }}"
                            class="w-full px-3.5 py-2.5 border border-slate-300 rounded text-xs focus:border-[#00897b] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00897b]/30 bg-white">
+                    <p class="text-[11px] text-slate-500 mt-1">
+                        Réservations limitées à la semaine en cours (jusqu'au dimanche {{ now()->endOfWeek()->format('d/m') }} à 23h59). Le quota d'heures se réinitialise chaque lundi.
+                    </p>
                 </div>
             </div>
 
@@ -242,22 +247,52 @@ function bookingApp(initialMachineId) {
 
     return {
         selectedMachineId: initialMachineId,
-        selectedDate: '{{ now()->toDateString() }}',
+        selectedDate: '{{ $initialDate ?? now()->toDateString() }}',
+        minDate: '{{ $minDate ?? now()->toDateString() }}',
+        maxDate: '{{ $maxDate ?? now()->endOfWeek()->toDateString() }}',
         weeklyLimit: {{ auth()->check() ? auth()->user()->weeklyLimit() : (auth()->check() && auth()->user()->isAdmin() ? 100 : 8) }},
         remainingHours: {{ auth()->check() ? auth()->user()->weeklyRemainingLimit() : 8 }},
         isAdmin: isAdminUser,
         selectedSlots: [],
         allDaySlots: all24Slots,
+        init() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const startTimeParam = urlParams.get('start_time');
+            if (startTimeParam) {
+                try {
+                    const dateObj = new Date(startTimeParam);
+                    const h = dateObj.getHours();
+                    if (!isNaN(h)) {
+                        const sH = String(h).padStart(2, '0') + ':00';
+                        const eH = String(h + 1 === 24 ? 24 : h + 1).padStart(2, '0') + ':00';
+                        const candidateSlot = sH + ' - ' + eH;
+                        if (this.availableSlots.includes(candidateSlot)) {
+                            this.selectedSlots = [candidateSlot];
+                        }
+                    }
+                } catch (e) {}
+            }
+        },
         get selectedMachineName() {
             return machinesMap[this.selectedMachineId] || 'Machine';
         },
         get availableSlots() {
+            const now = new Date();
+            const currentHour = now.getHours();
+            const isToday = this.selectedDate === this.minDate;
+
             // Filter to show ONLY open slots
             return this.allDaySlots.filter(slot => {
                 const [startStr, endStr] = slot.split(' - ');
-                const slotStartMinutes = parseInt(startStr.split(':')[0], 10) * 60;
+                const slotStartHour = parseInt(startStr.split(':')[0], 10);
+                const slotStartMinutes = slotStartHour * 60;
                 let slotEndMinutes = parseInt(endStr.split(':')[0], 10) * 60;
                 if (slotEndMinutes === 0) slotEndMinutes = 1440;
+
+                // For today, do not show slots that have already passed
+                if (isToday && slotStartHour < currentHour) {
+                    return false;
+                }
 
                 // Check against reservations for this machine and date
                 for (const r of reservationsList) {
@@ -295,6 +330,12 @@ function bookingApp(initialMachineId) {
             this.selectedSlots = [];
         },
         onDateChange() {
+            if (this.selectedDate > this.maxDate) {
+                this.selectedDate = this.maxDate;
+            }
+            if (this.selectedDate < this.minDate) {
+                this.selectedDate = this.minDate;
+            }
             this.selectedSlots = [];
         }
     };

@@ -30,7 +30,8 @@ return [
     // How many minutes a user has to start before auto-release
     'grace_period_minutes' => 15,
 
-    // Maximum days in advance a student can book a slot
+    // Maximum days in advance a student can book a slot (default: current week limit)
+    'restrict_to_current_week' => (bool) env('LAUNDRY_RESTRICT_CURRENT_WEEK', true),
     'max_advance_booking_days' => 7,
 
     // Operating hours (Full 24h day - no artificial limiters)
@@ -39,6 +40,6 @@ return [
         'end'   => '24:00',
     ],
 
-    // Quota reset day (every Monday)
+    // Quota reset day (every Monday 00:00:00)
     'quota_reset_day' => 'Monday',
 ];

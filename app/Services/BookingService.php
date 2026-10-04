@@ -42,6 +42,16 @@ class BookingService
             throw new InvalidArgumentException("Crédits insuffisants. Vous avez besoin de {$cost} crédit(s) pour réserver cette machine ({$remaining} crédit(s) restant(s) sur vos {$limit} crédits cette semaine).");
         }
 
+        // Limit booking window to current week (up to Sunday 23:59:59)
+        if (!$user->isAdmin()) {
+            if ($startTime->lt(Carbon::now()->subMinutes(15))) {
+                throw new InvalidArgumentException("Impossible de réserver un créneau horaire déjà passé.");
+            }
+            if (config('laundry.restrict_to_current_week', true) && $startTime->gt(Carbon::now()->endOfWeek())) {
+                throw new InvalidArgumentException("Les réservations sont limitées à la semaine en cours (jusqu'à dimanche 23h59).");
+            }
+        }
+
         return DB::transaction(function () use ($user, $machine, $startTime, $endTime, $cost) {
             $reservation = Reservation::create([
                 'user_id' => $user->id,

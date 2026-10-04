@@ -38,13 +38,13 @@
 }">
 
     <!-- Info Notice Banner -->
-    <div class="bg-white border-l-4 border-[#00897b] p-3.5 rounded shadow-xs flex items-center justify-between">
+    <div class="bg-white border-l-4 border-[#00897b] p-3.5 rounded shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <div class="flex items-center space-x-3">
             <div class="w-5 h-5 rounded-full bg-[#00897b]/10 text-[#00897b] flex items-center justify-center font-bold text-xs shrink-0">
                 i
             </div>
             <span class="text-xs text-slate-700">
-                Sélectionnez une machine pour consulter son planning ou réserver un créneau.
+                Réservations ouvertes pour la semaine en cours (jusqu'à dimanche 23h59). Vos crédits se réinitialisent chaque lundi.
             </span>
         </div>
 
@@ -248,10 +248,17 @@
                 <div class="flex-1 relative bg-white" style="height: {{ 24 * 52 }}px;">
                     
                     <!-- Background: 24 hour rows with click-to-book and horizontal divider lines -->
+                    @php
+                        $endOfWeekDate = \Carbon\Carbon::now()->endOfWeek()->toDateString();
+                        $isReservableDay = ($selectedDate >= $todayDate && $selectedDate <= $endOfWeekDate);
+                        $currentHour = (int)\Carbon\Carbon::now()->format('H');
+                    @endphp
                     @for ($h = 0; $h < 24; $h++)
                         @php
                             $top = $h * 52;
                             $hourStr = sprintf('%02d:00', $h);
+                            $isPastSlot = ($selectedDate === $todayDate && $h < $currentHour) || ($selectedDate < $todayDate);
+                            $canBook = $isReservableDay && !$isPastSlot;
                         @endphp
                         <!-- Limitor boundary line at top of hour -->
                         <div class="absolute left-0 right-0 border-t border-slate-200 pointer-events-none" style="top: {{ $top }}px;"></div>
@@ -259,15 +266,17 @@
                         <!-- Mid-hour subtle 30m dashed guide line -->
                         <div class="absolute left-0 right-0 border-t border-dashed border-slate-100 pointer-events-none" style="top: {{ $top + 26 }}px;"></div>
 
-                        <!-- Clickable / Hoverable hour row slot -->
-                        <a :href="'{{ route('bookings.create') }}?machine_id=' + selectedMachineId + '&start_time={{ $selectedDate }}T{{ sprintf('%02d', $h) }}:00:00'" 
-                           class="absolute left-0 right-0 h-[52px] hover:bg-slate-50/60 transition-colors group cursor-pointer"
-                           style="top: {{ $top }}px;"
-                           title="Cliquer pour réserver le créneau {{ $hourStr }}">
-                            <div class="w-full h-full flex items-center px-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <span class="text-[10px] text-slate-400 font-medium">+ Réserver à {{ $hourStr }}</span>
-                            </div>
-                        </a>
+                        @if($canBook)
+                            <!-- Clickable / Hoverable hour row slot -->
+                            <a :href="'{{ route('bookings.create') }}?machine_id=' + selectedMachineId + '&start_time={{ $selectedDate }}T{{ sprintf('%02d', $h) }}:00:00'" 
+                               class="absolute left-0 right-0 h-[52px] hover:bg-slate-50/60 transition-colors group cursor-pointer"
+                               style="top: {{ $top }}px;"
+                               title="Cliquer pour réserver le créneau {{ $hourStr }}">
+                                <div class="w-full h-full flex items-center px-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <span class="text-[10px] text-slate-400 font-medium">+ Réserver à {{ $hourStr }}</span>
+                                </div>
+                            </a>
+                        @endif
                     @endfor
                     <!-- Final boundary line at bottom (24:00) -->
                     <div class="absolute left-0 right-0 border-t border-slate-300 pointer-events-none" style="top: {{ 24 * 52 }}px;"></div>
