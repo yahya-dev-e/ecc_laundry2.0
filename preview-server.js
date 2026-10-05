@@ -171,20 +171,20 @@ const state = {
         weeklyUsed: 2, // 2 credits used
     },
     machines: [
-        { id: 1, code: 'ML1-OM', name: 'Machine à laver 1 Omar', type: 'washer', bg: '#4338ca', text: 'text-white', status: 'available', cap: '9.0 kg', loc: 'Bâtiment Omar, RDC' },
-        { id: 2, code: 'ML2-OM', name: 'Machine à laver 2 Omar', type: 'washer', bg: '#0d9488', text: 'text-white', status: 'in_use', cap: '9.0 kg', loc: 'Bâtiment Omar, RDC' },
-        { id: 3, code: 'ML1-PE', name: 'Machine à laver 1 Petit', type: 'washer', bg: '#2563eb', text: 'text-white', status: 'available', cap: '8.0 kg', loc: 'Bâtiment Petit, Étage 1' },
-        { id: 4, code: 'ML2-PE', name: 'Machine à laver 2 Petit', type: 'washer', bg: '#d97706', text: 'text-white', status: 'available', cap: '8.0 kg', loc: 'Bâtiment Petit, Étage 1' },
-        { id: 5, code: 'ML3-PE', name: 'Machine à laver 3 Petit', type: 'washer', bg: '#db2777', text: 'text-white', status: 'available', cap: '8.5 kg', loc: 'Bâtiment Petit, Étage 1' },
-        { id: 6, code: 'ML4-PE', name: 'Machine à laver 4 Petit', type: 'washer', bg: '#ea580c', text: 'text-white', status: 'available', cap: '8.5 kg', loc: 'Bâtiment Petit, Étage 2' },
-        { id: 7, code: 'ML3-OM', name: 'Machine à laver 3 Omar', type: 'washer', bg: '#059669', text: 'text-white', status: 'available', cap: '10.0 kg', loc: 'Bâtiment Omar, RDC' },
+        { id: 1, code: 'ML1-OM', name: 'ML1-OM', type: 'washer', bg: '#4338ca', text: 'text-white', status: 'available' },
+        { id: 2, code: 'ML2-OM', name: 'ML2-OM', type: 'washer', bg: '#0d9488', text: 'text-white', status: 'in_use' },
+        { id: 3, code: 'ML1-PE', name: 'ML1-PE', type: 'washer', bg: '#2563eb', text: 'text-white', status: 'available' },
+        { id: 4, code: 'ML2-PE', name: 'ML2-PE', type: 'washer', bg: '#d97706', text: 'text-white', status: 'available' },
+        { id: 5, code: 'ML3-PE', name: 'ML3-PE', type: 'washer', bg: '#db2777', text: 'text-white', status: 'available' },
+        { id: 6, code: 'ML4-PE', name: 'ML4-PE', type: 'washer', bg: '#ea580c', text: 'text-white', status: 'available' },
+        { id: 7, code: 'ML3-OM', name: 'ML3-OM', type: 'washer', bg: '#059669', text: 'text-white', status: 'available' },
         
-        { id: 8, code: 'SL1-OM', name: 'Sèche-linge 1 Omar', type: 'dryer', bg: '#b45309', text: 'text-white', status: 'available', cap: '9.5 kg', loc: 'Bâtiment Omar, RDC' },
-        { id: 9, code: 'SL2-OM', name: 'Sèche-linge 2 Omar', type: 'dryer', bg: '#16a34a', text: 'text-white', status: 'available', cap: '9.5 kg', loc: 'Bâtiment Omar, RDC' },
-        { id: 10, code: 'SL1-PE', name: 'Sèche-linge 1 Petit', type: 'dryer', bg: '#475569', text: 'text-white', status: 'in_use', cap: '8.0 kg', loc: 'Bâtiment Petit, Étage 1' },
-        { id: 11, code: 'SL2-PE', name: 'Sèche-linge 2 Petit', type: 'dryer', bg: '#65a30d', text: 'text-white', status: 'available', cap: '8.0 kg', loc: 'Bâtiment Petit, Étage 1' },
-        { id: 12, code: 'SL3-PE', name: 'Sèche-linge 3 Petit', type: 'dryer', bg: '#9333ea', text: 'text-white', status: 'available', cap: '8.5 kg', loc: 'Bâtiment Petit, Étage 2' },
-        { id: 13, code: 'SL3-OM', name: 'Sèche-linge 3 Omar', type: 'dryer', bg: '#52525b', text: 'text-white', status: 'available', cap: '9.5 kg', loc: 'Bâtiment Omar, RDC' },
+        { id: 8, code: 'SL1-OM', name: 'SL1-OM', type: 'dryer', bg: '#b45309', text: 'text-white', status: 'available' },
+        { id: 9, code: 'SL2-OM', name: 'SL2-OM', type: 'dryer', bg: '#16a34a', text: 'text-white', status: 'available' },
+        { id: 10, code: 'SL1-PE', name: 'SL1-PE', type: 'dryer', bg: '#475569', text: 'text-white', status: 'in_use' },
+        { id: 11, code: 'SL2-PE', name: 'SL2-PE', type: 'dryer', bg: '#65a30d', text: 'text-white', status: 'available' },
+        { id: 12, code: 'SL3-PE', name: 'SL3-PE', type: 'dryer', bg: '#9333ea', text: 'text-white', status: 'available' },
+        { id: 13, code: 'SL3-OM', name: 'SL3-OM', type: 'dryer', bg: '#52525b', text: 'text-white', status: 'available' },
     ],
     reservations: [
         // ML2-OM on Mercredi 30 Septembre extended to 2am (00:00 - 02:00, 2h)
@@ -856,11 +856,30 @@ function renderCalendarPage(selectedDateStr = '2026-09-30') {
                             const isDarkText = block.textColor === 'text-slate-900';
                             const badgeBg = isDarkText ? 'bg-black/15 text-slate-900' : 'bg-black/25 text-white';
                             const subText = isDarkText ? 'text-slate-800' : 'text-white/90';
+                            const mach = state.machines.find(m => m.code === block.code) || {
+                                code: block.code,
+                                type: block.code.startsWith('SL') ? 'dryer' : 'washer'
+                            };
+                            const machineType = mach.type === 'dryer' ? 'Sèche-linge' : 'Machine à laver';
+                            const durationStr = block.durationFormatted || (block.durationMinutes ? `${block.durationMinutes / 60} h` : '1 h');
+                            const resData = {
+                                code: block.code,
+                                type: machineType,
+                                bg: machineColor,
+                                textColor: block.textColor || 'text-white',
+                                user: block.user || 'Occupé',
+                                date: selectedDateStr,
+                                dateFormatted: `${dayName}, ${dateFormatted}`,
+                                time: block.time,
+                                duration: durationStr
+                            };
+                            const resJson = encodeURIComponent(JSON.stringify(resData));
+
                             return `
                             <div style="background-color: ${machineColor}; top: ${block.top + 1}px; height: ${block.height - 2}px; left: calc(${block.leftPct}% + 4px); width: calc(${block.widthPct}% - 8px);"
-                                 class="absolute rounded-md ${block.textColor || 'text-white'} overflow-hidden transition-all cursor-pointer border border-white/25 select-none shadow-sm hover:shadow-md hover:brightness-105 z-20"
-                                 onclick="pickMachine('${block.code}')"
-                                 title="${block.code} • ${block.time} (${block.user || 'Occupé'}) - Cliquer pour sélectionner la machine">
+                                 class="absolute rounded-md ${block.textColor || 'text-white'} overflow-hidden transition-all cursor-pointer border border-white/25 select-none shadow-sm hover:shadow-md hover:scale-[1.01] hover:brightness-105 z-20"
+                                 onclick="openReservationModal('${resJson}')"
+                                 title="${block.code} • ${block.time} - Cliquer pour voir les détails">
                                 
                                 <div class="h-full p-2 flex flex-col justify-center">
                                     <div class="flex items-center justify-between text-xs leading-tight">
@@ -870,9 +889,6 @@ function renderCalendarPage(selectedDateStr = '2026-09-30') {
                                             <span class="font-bold text-[12px] truncate">${block.code}</span>
                                             ${isMultiHour ? `<span class="text-[10px] font-semibold px-1.5 py-0.5 rounded ${badgeBg} uppercase tracking-wider">${block.durationFormatted}</span>` : ''}
                                         </div>
-                                        ${block.user ? `
-                                            <span class="text-[11px] font-medium truncate max-w-[140px] ml-2 ${subText}">(${block.user})</span>
-                                        ` : ''}
                                     </div>
                                 </div>
                             </div>`;
@@ -892,6 +908,129 @@ function renderCalendarPage(selectedDateStr = '2026-09-30') {
                 </div>
             </div>
         </div>
+
+        <!-- MODAL : DÉTAILS DE LA RÉSERVATION -->
+        <div id="reservationDetailsModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs transition-opacity duration-200">
+            <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden transform transition-all flex flex-col">
+                <!-- Modal Header -->
+                <div style="background: linear-gradient(135deg, #004d40 0%, #00796b 100%); color: white;" class="px-5 py-4 text-white flex items-center justify-between shrink-0">
+                    <div class="flex items-center space-x-3">
+                        <span id="resModalBadge" class="px-2.5 py-1 rounded font-mono font-bold text-xs shadow-xs text-white bg-white/20"></span>
+                        <div>
+                            <h3 class="text-sm font-bold">Détails de la réservation</h3>
+                            <p class="text-[11px] text-emerald-100">Machine, utilisateur et créneau réservé</p>
+                        </div>
+                    </div>
+                    <button type="button" onclick="closeReservationModal()" class="w-8 h-8 rounded-full hover:bg-white/20 text-white flex items-center justify-center transition-colors text-lg">
+                        &times;
+                    </button>
+                </div>
+
+                <!-- Modal Body with 3 distinct cards -->
+                <div class="p-5 space-y-3.5">
+                    <!-- 1. Machine Card -->
+                    <div class="bg-slate-50 border border-slate-200 rounded-xl p-3.5 flex items-center space-x-3">
+                        <div id="resModalMachineIconBox" class="w-10 h-10 rounded-lg flex items-center justify-center text-white shrink-0 font-bold shadow-xs">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <span class="text-[10px] uppercase font-bold tracking-wider text-slate-400 block">Machine réservée</span>
+                            <h4 id="resModalMachineName" class="text-sm font-bold text-slate-800 font-mono tracking-wide"></h4>
+                            <span id="resModalMachineType" class="text-xs text-slate-500 font-medium"></span>
+                        </div>
+                    </div>
+
+                    <!-- 2. Bénéficiaire / User Card -->
+                    <div class="bg-slate-50 border border-slate-200 rounded-xl p-3.5 flex items-center space-x-3">
+                        <div id="resModalUserAvatar" class="w-10 h-10 rounded-full bg-[#00897b] text-white flex items-center justify-center font-bold text-sm shadow-xs shrink-0">
+                            U
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <span class="text-[10px] uppercase font-bold tracking-wider text-slate-400 block">Utilisateur bénéficiaire</span>
+                            <h4 id="resModalUserName" class="text-sm font-bold text-slate-800 truncate"></h4>
+                        </div>
+                    </div>
+
+                    <!-- 3. Time Reserved Card -->
+                    <div class="bg-emerald-50/60 border border-emerald-200 rounded-xl p-3.5 space-y-2">
+                        <span class="text-[10px] uppercase font-bold tracking-wider text-[#00695c] block">Temps Réservé</span>
+                        <div class="grid grid-cols-2 gap-2 text-xs">
+                            <div>
+                                <span class="text-slate-500 text-[10px] block">Date de la séance</span>
+                                <span id="resModalDate" class="font-bold text-slate-800 capitalize"></span>
+                            </div>
+                            <div>
+                                <span class="text-slate-500 text-[10px] block">Créneau horaire</span>
+                                <span id="resModalTime" class="font-bold text-[#00897b] font-mono"></span>
+                            </div>
+                        </div>
+                        <div class="pt-2 border-t border-emerald-200/60 flex items-center justify-between text-xs">
+                            <span class="text-slate-500">Durée décomptée :</span>
+                            <span id="resModalDuration" class="font-bold text-slate-800 font-mono"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Modal Footer -->
+                <div class="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-end space-x-2">
+                    <button type="button" onclick="closeReservationModal()" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-bold rounded-lg transition-colors">
+                        Fermer
+                    </button>
+                    <a id="resModalBookMachineLink" href="/reserver" class="px-4 py-2 bg-[#00897b] hover:bg-[#00796b] text-white text-xs font-bold rounded-lg shadow-sm transition-colors flex items-center space-x-1.5">
+                        <span>Réserver cette machine</span>
+                        <span>&rarr;</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <script>
+        function openReservationModal(encodedData) {
+            try {
+                const data = JSON.parse(decodeURIComponent(encodedData));
+                const badge = document.getElementById('resModalBadge');
+                if (badge) {
+                    badge.textContent = data.code;
+                    badge.style.backgroundColor = data.bg || '#00897b';
+                    badge.className = 'px-2.5 py-1 rounded font-mono font-bold text-xs shadow-xs ' + (data.textColor || 'text-white');
+                }
+                const iconBox = document.getElementById('resModalMachineIconBox');
+                if (iconBox) iconBox.style.backgroundColor = data.bg || '#00897b';
+                
+                document.getElementById('resModalMachineName').textContent = data.code;
+                document.getElementById('resModalMachineType').textContent = data.type || (data.code.startsWith('SL') ? 'Sèche-linge' : 'Machine à laver');
+                
+                const initial = (data.user || 'U').charAt(0).toUpperCase();
+                const avatar = document.getElementById('resModalUserAvatar');
+                if (avatar) avatar.textContent = initial;
+                document.getElementById('resModalUserName').textContent = data.user || 'Occupé';
+
+                document.getElementById('resModalDate').textContent = data.dateFormatted || data.date;
+                document.getElementById('resModalTime').textContent = data.time || '';
+                document.getElementById('resModalDuration').textContent = data.duration || '1 h';
+
+                const bookLink = document.getElementById('resModalBookMachineLink');
+                if (bookLink) bookLink.href = '/reserver?machine=' + encodeURIComponent(data.code) + '&date=' + encodeURIComponent(data.date);
+
+                const modal = document.getElementById('reservationDetailsModal');
+                if (modal) modal.classList.remove('hidden');
+            } catch (e) {
+                console.error('Error opening reservation modal:', e);
+            }
+        }
+
+        function closeReservationModal() {
+            const modal = document.getElementById('reservationDetailsModal');
+            if (modal) modal.classList.add('hidden');
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeReservationModal();
+        });
+        document.getElementById('reservationDetailsModal')?.addEventListener('click', (e) => {
+            if (e.target.id === 'reservationDetailsModal') closeReservationModal();
+        });
+        </script>
     </div>`;
 }
 
@@ -1581,7 +1720,7 @@ function renderMachinesPage() {
 }
 
 // 5. Gestion des utilisateurs (ADMIN ONLY - Dynamic Database)
-function renderUsersPage() {
+function renderUsersPage(flash = '') {
     if (!state.isAdmin) {
         return `<div class="p-8 text-center text-rose-600 font-bold bg-white rounded border border-rose-200">Accès interdit : Cette page est réservée aux administrateurs.</div>`;
     }
@@ -1595,28 +1734,30 @@ function renderUsersPage() {
         const limit = u.weeklyLimit || (isAdmin ? 100 : 8);
         const used = u.weeklyUsed || 0;
         const remaining = Math.max(0, limit - used);
+        const searchKeywords = `${u.name} ${u.email} ${u.role === 'admin' ? 'admin administrateur' : 'etudiant étudiant student'}`.toLowerCase();
+        const jsonEscaped = JSON.stringify(u).replace(/"/g, '&quot;');
 
         return `
-        <div class="bg-slate-50/70 border border-slate-200 rounded-xl p-3.5 space-y-2.5">
+        <div class="user-card-item bg-slate-50/70 border border-slate-200 rounded-xl p-3.5 space-y-2.5 transition-all" data-search="${searchKeywords}">
             <div class="flex items-center justify-between">
                 <div class="flex items-center space-x-2">
                     <span class="w-7 h-7 rounded-full text-white flex items-center justify-center font-bold text-xs shadow-xs" style="background-color: ${avatarBg};">${initial}</span>
-                    <div>
-                        <span class="font-bold text-sm text-slate-800 block">${u.name}</span>
-                        <span class="text-[11px] text-slate-500 font-mono">${u.student_id || 'ID-' + u.id} (${u.room_number || 'Chambre'})</span>
-                    </div>
+                    <span class="font-bold text-sm text-slate-800">${u.name}</span>
                 </div>
                 <span class="px-2.5 py-0.5 rounded ${isAdmin ? 'bg-amber-100 text-amber-800' : 'bg-blue-100 text-blue-800'} font-bold text-[10px]">${isAdmin ? 'Administrateur' : 'Étudiant'}</span>
             </div>
             <div class="flex items-center justify-between text-xs pt-1 border-t border-slate-200/60 font-mono">
-                <span class="text-slate-500">${u.email}</span>
+                <span class="text-slate-500 truncate max-w-[180px]">${u.email}</span>
                 <span class="font-bold ${isAdmin ? 'text-[#00897b]' : (used > 2 ? 'text-amber-600' : 'text-emerald-600')}">
-                    ${isAdmin ? 'Quota : Illimité (100 crédits)' : `${used}h / ${limit}h (${remaining}h rest.)`}
+                    ${isAdmin ? 'Quota : 100 crédits' : `${used}h / ${limit}h (${remaining}h rest.)`}
                 </span>
             </div>
             <div class="pt-2 border-t border-slate-200/60 flex items-center justify-end space-x-2">
                 ${!isAdmin ? `<a href="/reset-user-quota?id=${u.id}" class="px-3 py-1 bg-emerald-50 text-[#00897b] border border-emerald-200 text-xs font-semibold rounded shadow-2xs hover:bg-emerald-100 transition-colors">Réinitialiser quota</a>` : ''}
-                <button type="button" class="px-3 py-1 bg-white border border-slate-200 text-slate-700 text-xs font-semibold rounded shadow-2xs hover:bg-slate-50 transition-colors">Modifier</button>
+                <button type="button" onclick="openEditUserModal(${jsonEscaped})" class="px-3 py-1 bg-white border border-slate-300 text-slate-700 text-xs font-semibold rounded shadow-2xs hover:bg-slate-50 hover:border-slate-400 transition-colors flex items-center space-x-1">
+                    <svg class="w-3.5 h-3.5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                    <span>Modifier</span>
+                </button>
             </div>
         </div>`;
     }).join('');
@@ -1628,24 +1769,28 @@ function renderUsersPage() {
         const limit = u.weeklyLimit || (isAdmin ? 100 : 8);
         const used = u.weeklyUsed || 0;
         const remaining = Math.max(0, limit - used);
+        const searchKeywords = `${u.name} ${u.email} ${u.role === 'admin' ? 'admin administrateur' : 'etudiant étudiant student'}`.toLowerCase();
+        const jsonEscaped = JSON.stringify(u).replace(/"/g, '&quot;');
 
         return `
-        <tr class="hover:bg-slate-50 transition-colors">
+        <tr class="user-row-item hover:bg-slate-50 transition-colors" data-search="${searchKeywords}">
             <td class="p-3.5 font-bold text-slate-800 flex items-center space-x-2">
-                <span class="w-7 h-7 rounded-full text-white flex items-center justify-center font-bold text-[11px] shadow-xs" style="background-color: ${avatarBg};">${initial}</span>
-                <span>${u.name}</span>
+                <span class="w-7 h-7 rounded-full text-white flex items-center justify-center font-bold text-[11px] shadow-xs shrink-0" style="background-color: ${avatarBg};">${initial}</span>
+                <span class="truncate">${u.name}</span>
             </td>
             <td class="p-3.5 text-slate-600 font-mono">${u.email}</td>
-            <td class="p-3.5 text-slate-500 font-mono">${u.student_id || 'ID-' + u.id} (${u.room_number || 'Chambre'})</td>
             <td class="p-3.5">
                 <span class="px-2.5 py-0.5 rounded ${isAdmin ? 'bg-amber-100 text-amber-800' : 'bg-blue-100 text-blue-800'} font-bold text-[10px]">${isAdmin ? 'Administrateur' : 'Étudiant'}</span>
             </td>
             <td class="p-3.5 font-bold ${isAdmin ? 'text-[#00897b]' : (used > 2 ? 'text-amber-600' : 'text-emerald-600')}">
                 ${isAdmin ? 'Illimité (100 crédits / sem)' : `${used}h / ${limit}h utilisées (${remaining}h restantes)`}
             </td>
-            <td class="p-3.5 text-right space-x-2">
-                ${!isAdmin ? `<a href="/reset-user-quota?id=${u.id}" class="text-[#00897b] hover:underline font-semibold cursor-pointer">Réinitialiser quota</a>` : ''}
-                <button type="button" class="text-slate-400 hover:text-slate-600 font-semibold cursor-pointer">Modifier</button>
+            <td class="p-3.5 text-right space-x-2 whitespace-nowrap">
+                ${!isAdmin ? `<a href="/reset-user-quota?id=${u.id}" class="text-[#00897b] hover:underline font-semibold cursor-pointer text-xs">Réinitialiser quota</a>` : ''}
+                <button type="button" onclick="openEditUserModal(${jsonEscaped})" class="inline-flex items-center space-x-1 text-slate-600 hover:text-[#00897b] font-semibold cursor-pointer text-xs px-2 py-1 rounded hover:bg-slate-100 transition-colors">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                    <span>Modifier</span>
+                </button>
             </td>
         </tr>`;
     }).join('');
@@ -1655,14 +1800,35 @@ function renderUsersPage() {
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
                 <h1 class="text-xl font-bold text-slate-800">Gestion des Utilisateurs</h1>
-                <p class="text-xs text-slate-500">Supervision des comptes réels de la base de données (${state.users.length} comptes enregistrés) et suivi des quotas</p>
+                <p class="text-xs text-slate-500">Supervision des comptes réels de la base de données (<span id="userTotalCount">${state.users.length}</span> comptes enregistrés) et suivi des quotas</p>
             </div>
-            <a href="/register" class="px-4 py-2 bg-[#00897b] hover:bg-[#00796b] text-white rounded text-xs font-bold shadow-xs self-start sm:self-auto transition-colors">+ Ajouter utilisateur</a>
+            <a href="/register" class="px-4 py-2 bg-[#00897b] hover:bg-[#00796b] text-white rounded text-xs font-bold shadow-xs self-start sm:self-auto transition-colors flex items-center space-x-1.5">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                <span>Ajouter un utilisateur</span>
+            </a>
+        </div>
+
+        <!-- Search Bar & Stats -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
+            <div class="relative flex-1 max-w-lg">
+                <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                </div>
+                <input type="text" id="userSearchInput" oninput="filterUsers(this.value)" placeholder="Rechercher par nom, email, rôle..."
+                       class="w-full pl-10 pr-9 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs placeholder-slate-400 focus:outline-none focus:bg-white focus:border-[#00897b] focus:ring-1 focus:ring-[#00897b] transition-all">
+                <button type="button" id="clearSearchBtn" onclick="clearUserSearch()" class="hidden absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 text-sm font-bold">
+                    &times;
+                </button>
+            </div>
+            <div class="text-xs text-slate-500 font-medium shrink-0 flex items-center space-x-2">
+                <span class="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span>
+                <span><strong id="userMatchCount" class="text-slate-800 font-bold">${state.users.length}</strong> utilisateur(s) affiché(s)</span>
+            </div>
         </div>
 
         <div class="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
             <!-- Mobile User Cards (< sm) -->
-            <div class="sm:hidden p-3 space-y-3">
+            <div id="mobileCardsContainer" class="sm:hidden p-3 space-y-3">
                 ${mobileCards}
             </div>
 
@@ -1673,18 +1839,164 @@ function renderUsersPage() {
                         <tr>
                             <th class="p-3.5">Nom</th>
                             <th class="p-3.5">Email</th>
-                            <th class="p-3.5">Identifiant / Chambre</th>
                             <th class="p-3.5">Rôle</th>
                             <th class="p-3.5">Quota Hebdomadaire</th>
                             <th class="p-3.5 text-right">Actions</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-slate-100">
+                    <tbody id="desktopTableBody" class="divide-y divide-slate-100">
                         ${desktopRows}
                     </tbody>
                 </table>
             </div>
+
+            <!-- Empty Search Results State -->
+            <div id="noUsersMatchMsg" class="hidden p-8 text-center bg-slate-50/50">
+                <svg class="w-10 h-10 mx-auto text-slate-300 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                <p class="text-xs font-bold text-slate-700">Aucun utilisateur ne correspond à votre recherche</p>
+                <p class="text-[11px] text-slate-400 mt-1">Essayez un autre mot-clé ou réinitialisez le filtre.</p>
+                <button type="button" onclick="clearUserSearch()" class="mt-3 px-3.5 py-1.5 bg-[#00897b] text-white text-xs font-bold rounded shadow-xs hover:bg-[#00796b] transition-colors">
+                    Effacer la recherche
+                </button>
+            </div>
         </div>
+
+        <!-- MODAL : MODIFIER UN UTILISATEUR -->
+        <div id="editUserModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs transition-opacity duration-200">
+            <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden transform transition-all flex flex-col max-h-[90vh]">
+                <!-- Modal Header -->
+                <div style="background: linear-gradient(135deg, #004d40 0%, #00796b 100%); color: white;" class="px-6 py-4 text-white flex items-center justify-between shrink-0">
+                    <div class="flex items-center space-x-2.5">
+                        <div class="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-white">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                        </div>
+                        <div>
+                            <h3 class="text-base font-bold">Modifier l'utilisateur</h3>
+                            <p class="text-[11px] text-emerald-100">Modifiez les informations du profil et le quota</p>
+                        </div>
+                    </div>
+                    <button type="button" onclick="closeEditUserModal()" class="w-8 h-8 rounded-full hover:bg-white/20 text-white flex items-center justify-center transition-colors text-lg">
+                        &times;
+                    </button>
+                </div>
+
+                <!-- Modal Body / Form -->
+                <form id="editUserForm" action="/admin/users/update" method="POST" class="p-6 space-y-4 overflow-y-auto">
+                    <input type="hidden" id="editUserId" name="id" value="">
+
+                    <div>
+                        <label for="editUserName" class="block text-xs font-bold text-slate-700 mb-1">Nom complet</label>
+                        <input type="text" id="editUserName" name="name" required
+                               class="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:border-[#00897b] focus:ring-1 focus:ring-[#00897b]">
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label for="editUserEmail" class="block text-xs font-bold text-slate-700 mb-1">Email institutionnel</label>
+                            <input type="email" id="editUserEmail" name="email" required
+                                   class="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:border-[#00897b] focus:ring-1 focus:ring-[#00897b]">
+                        </div>
+                        <div>
+                            <label for="editUserRole" class="block text-xs font-bold text-slate-700 mb-1">Rôle</label>
+                            <select id="editUserRole" name="role"
+                                    class="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:border-[#00897b] focus:ring-1 focus:ring-[#00897b] bg-white">
+                                <option value="student">Étudiant</option>
+                                <option value="admin">Administrateur</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-slate-100">
+                        <div>
+                            <label for="editUserLimit" class="block text-xs font-bold text-slate-700 mb-1">Quota hebdomadaire (heures)</label>
+                            <input type="number" id="editUserLimit" name="weeklyLimit" min="1" max="200" required
+                                   class="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:border-[#00897b] focus:ring-1 focus:ring-[#00897b]">
+                            <span class="text-[10px] text-slate-400">Standard étudiant : 8h / sem</span>
+                        </div>
+                        <div>
+                            <label for="editUserUsed" class="block text-xs font-bold text-slate-700 mb-1">Heures consommées</label>
+                            <input type="number" id="editUserUsed" name="weeklyUsed" min="0" max="200" required
+                                   class="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:border-[#00897b] focus:ring-1 focus:ring-[#00897b]">
+                            <span class="text-[10px] text-slate-400">Heures réservées cette semaine</span>
+                        </div>
+                    </div>
+
+                    <div class="pt-4 border-t border-slate-200 flex items-center justify-end space-x-2 shrink-0">
+                        <button type="button" onclick="closeEditUserModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-lg transition-colors">
+                            Annuler
+                        </button>
+                        <button type="submit" class="px-5 py-2 bg-[#00897b] hover:bg-[#00796b] text-white text-xs font-bold rounded-lg shadow-sm transition-colors flex items-center space-x-1.5">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                            <span>Enregistrer les modifications</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <script>
+        function filterUsers(query) {
+            const q = (query || '').trim().toLowerCase();
+            const clearBtn = document.getElementById('clearSearchBtn');
+            if (clearBtn) clearBtn.style.display = q ? 'flex' : 'none';
+
+            let matchCount = 0;
+            const cards = document.querySelectorAll('.user-card-item');
+            cards.forEach(card => {
+                const search = (card.getAttribute('data-search') || '').toLowerCase();
+                const matched = !q || search.includes(q);
+                card.style.display = matched ? '' : 'none';
+            });
+
+            const rows = document.querySelectorAll('.user-row-item');
+            rows.forEach(row => {
+                const search = (row.getAttribute('data-search') || '').toLowerCase();
+                const matched = !q || search.includes(q);
+                row.style.display = matched ? '' : 'none';
+                if (matched) matchCount++;
+            });
+
+            const countDisplay = document.getElementById('userMatchCount');
+            if (countDisplay) countDisplay.textContent = matchCount;
+
+            const emptyMsg = document.getElementById('noUsersMatchMsg');
+            if (emptyMsg) emptyMsg.style.display = (matchCount === 0) ? 'block' : 'none';
+        }
+
+        function clearUserSearch() {
+            const input = document.getElementById('userSearchInput');
+            if (input) {
+                input.value = '';
+                filterUsers('');
+                input.focus();
+            }
+        }
+
+        function openEditUserModal(user) {
+            if (!user) return;
+            document.getElementById('editUserId').value = user.id || '';
+            document.getElementById('editUserName').value = user.name || '';
+            document.getElementById('editUserEmail').value = user.email || '';
+            document.getElementById('editUserRole').value = user.role || 'student';
+            document.getElementById('editUserLimit').value = user.weeklyLimit !== undefined ? user.weeklyLimit : (user.role === 'admin' ? 100 : 8);
+            document.getElementById('editUserUsed').value = user.weeklyUsed !== undefined ? user.weeklyUsed : 0;
+
+            const modal = document.getElementById('editUserModal');
+            if (modal) modal.classList.remove('hidden');
+        }
+
+        function closeEditUserModal() {
+            const modal = document.getElementById('editUserModal');
+            if (modal) modal.classList.add('hidden');
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeEditUserModal();
+        });
+        document.getElementById('editUserModal')?.addEventListener('click', (e) => {
+            if (e.target.id === 'editUserModal') closeEditUserModal();
+        });
+        </script>
     </div>`;
 }
 
@@ -2186,6 +2498,41 @@ const server = http.createServer((req, res) => {
         }
         res.writeHead(302, { 'Location': '/utilisateurs' });
         return res.end();
+    }
+
+    // Admin Edit User Action (Save modifications to database/users.json)
+    if (pathname === '/admin/users/update' && req.method === 'POST') {
+        let body = '';
+        req.on('data', chunk => body += chunk);
+        req.on('end', () => {
+            const params = new URLSearchParams(body);
+            const id = parseInt(params.get('id'), 10);
+            const targetUser = state.users.find(u => u.id === id);
+            if (targetUser) {
+                targetUser.name = params.get('name') || targetUser.name;
+                targetUser.email = params.get('email') || targetUser.email;
+                targetUser.student_id = params.get('student_id') || targetUser.student_id;
+                targetUser.room_number = params.get('room_number') || targetUser.room_number;
+                targetUser.role = params.get('role') || targetUser.role;
+                const newLimit = parseInt(params.get('weeklyLimit'), 10);
+                if (!isNaN(newLimit) && newLimit >= 0) {
+                    targetUser.weeklyLimit = newLimit;
+                }
+                const newUsed = parseInt(params.get('weeklyUsed'), 10);
+                if (!isNaN(newUsed) && newUsed >= 0) {
+                    targetUser.weeklyUsed = newUsed;
+                }
+                targetUser.credits = Math.max(0, (targetUser.weeklyLimit || 8) - (targetUser.weeklyUsed || 0));
+                saveUsersToDb(state.users);
+                console.log(`\n✏️ [UTILISATEUR MIS À JOUR] ${targetUser.name} (${targetUser.email}) - Modifié avec succès.`);
+                const msg = encodeURIComponent(`Utilisateur ${targetUser.name} mis à jour avec succès.`);
+                res.writeHead(302, { 'Location': `/utilisateurs?flash=${msg}` });
+                return res.end();
+            }
+            res.writeHead(302, { 'Location': '/utilisateurs' });
+            return res.end();
+        });
+        return;
     }
 
     // HANDLE MULTI-SLOT RESERVATION ACTION WITH 8H WEEKLY QUOTA SURVEILLANCE

@@ -16,10 +16,10 @@
     "email": "alex.rivera@fecc.ma",
     "role": "student",
     "student_id": "STU-98241",
-    "room_number": "Bât. Omar, Ch. 214",
+    "room_number": "Bât. Omar, Ch. 555-VIP",
     "weeklyUsed": 0,
-    "weeklyLimit": 8,
-    "credits": 8
+    "weeklyLimit": 10,
+    "credits": 10
   },
   {
     "id": 3,

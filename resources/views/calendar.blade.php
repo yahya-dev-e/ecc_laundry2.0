@@ -31,9 +31,19 @@
     selectedMachineName: '{{ $currentMachine?->name ?? 'ML1-OM' }}',
     selectedMachineId: {{ $currentMachine?->id ?? 1 }},
     selectedDate: '{{ $selectedDate }}',
+    resModalOpen: false,
+    resModalData: null,
     selectMachine(name, id) {
         this.selectedMachineName = name;
         this.selectedMachineId = id;
+    },
+    openReservationModal(data) {
+        this.resModalData = data;
+        this.resModalOpen = true;
+    },
+    closeReservationModal() {
+        this.resModalOpen = false;
+        this.resModalData = null;
     }
 }">
 
@@ -313,12 +323,23 @@
                         @php
                             $isMultiHour = $block['durationMinutes'] > 60;
                             $machineColor = $machineColorPalette[$block['machine']->name ?? ''] ?? $block['machine']->color ?? '#4338ca';
+                            $mName = $block['machine']->name ?? 'Machine';
+                            $mTypeStr = ($block['machine']->type instanceof \App\Enums\MachineType ? $block['machine']->type->value : (string)($block['machine']->type ?? '')) === 'dryer' ? 'Sèche-linge' : 'Machine à laver';
+                            $uName = $block['user']?->name ?? 'Réservé';
                         @endphp
                         <div style="background-color: {{ $machineColor }}; top: {{ $block['top'] + 1 }}px; height: {{ $block['height'] - 2 }}px; left: calc({{ $block['leftPct'] }}% + 4px); width: calc({{ $block['widthPct'] }}% - 8px);"
-                             :class="{'ring-3 ring-slate-900 shadow-xl scale-[1.01] z-30': selectedMachineId === {{ $block['machine_id'] }}, 'shadow-sm hover:shadow-md hover:brightness-105 z-20': selectedMachineId !== {{ $block['machine_id'] }}}"
-                             class="absolute rounded-md text-white overflow-hidden transition-all cursor-pointer border border-white/20 select-none"
-                             @click.stop="selectMachine('{{ $block['machine']->name }}', {{ $block['machine_id'] }})"
-                             title="{{ $block['machine']->name }} • {{ $block['timeFormatted'] }} ({{ $block['user']?->name ?? 'Occupé' }}) - Cliquer pour sélectionner la machine">
+                             class="absolute rounded-md text-white overflow-hidden transition-all cursor-pointer border border-white/20 select-none shadow-sm hover:shadow-md hover:scale-[1.01] hover:brightness-105 z-20"
+                             @click.stop="openReservationModal({
+                                 code: '{{ addslashes($mName) }}',
+                                 type: '{{ addslashes($mTypeStr) }}',
+                                 bg: '{{ $machineColor }}',
+                                 machine_id: {{ $block['machine_id'] ?? 1 }},
+                                 user: '{{ addslashes($uName) }}',
+                                 date: '{{ $selectedDate }}',
+                                 time: '{{ $block['timeFormatted'] }}',
+                                 duration: '{{ $block['durationFormatted'] }}'
+                             })"
+                             title="{{ $mName }} • {{ $block['timeFormatted'] }} - Cliquer pour voir les détails">
                             
                             <div class="h-full p-2 flex flex-col justify-center">
                                 <div class="flex items-center justify-between text-xs leading-tight">
@@ -330,11 +351,6 @@
                                             <span class="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-black/25 uppercase tracking-wider">{{ $block['durationFormatted'] }}</span>
                                         @endif
                                     </div>
-                                    @if($block['user'])
-                                        <span class="opacity-90 text-[11px] font-medium truncate max-w-[140px] ml-2">
-                                            ({{ $block['user']->name }})
-                                        </span>
-                                    @endif
                                 </div>
                             </div>
                         </div>
@@ -350,6 +366,89 @@
                     @endforelse
 
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL : DÉTAILS DE LA RÉSERVATION -->
+    <div x-show="resModalOpen" 
+         x-cloak
+         @keydown.escape.window="closeReservationModal()"
+         class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs transition-opacity duration-200">
+        <div @click.outside="closeReservationModal()"
+             class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden transform transition-all flex flex-col">
+            <!-- Modal Header -->
+            <div style="background: linear-gradient(135deg, #004d40 0%, #00796b 100%); color: white;" class="px-5 py-4 text-white flex items-center justify-between shrink-0">
+                <div class="flex items-center space-x-3">
+                    <span :style="'background-color: ' + (resModalData?.bg || '#00897b')"
+                          class="px-2.5 py-1 rounded font-mono font-bold text-xs shadow-xs text-white"
+                          x-text="resModalData?.code"></span>
+                    <div>
+                        <h3 class="text-sm font-bold">Détails de la réservation</h3>
+                        <p class="text-[11px] text-emerald-100">Machine, utilisateur et créneau réservé</p>
+                    </div>
+                </div>
+                <button type="button" @click="closeReservationModal()" class="w-8 h-8 rounded-full hover:bg-white/20 text-white flex items-center justify-center transition-colors text-lg">
+                    &times;
+                </button>
+            </div>
+
+            <!-- Modal Body with 3 distinct cards -->
+            <div class="p-5 space-y-3.5" x-show="resModalData">
+                <!-- 1. Machine Card -->
+                <div class="bg-slate-50 border border-slate-200 rounded-xl p-3.5 flex items-center space-x-3">
+                    <div :style="'background-color: ' + (resModalData?.bg || '#00897b')" 
+                         class="w-10 h-10 rounded-lg flex items-center justify-center text-white shrink-0 font-bold shadow-xs">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <span class="text-[10px] uppercase font-bold tracking-wider text-slate-400 block">Machine réservée</span>
+                        <h4 class="text-sm font-bold text-slate-800 font-mono tracking-wide" x-text="resModalData?.code"></h4>
+                        <span class="text-xs text-slate-500 font-medium" x-text="resModalData?.type"></span>
+                    </div>
+                </div>
+
+                <!-- 2. Bénéficiaire / User Card -->
+                <div class="bg-slate-50 border border-slate-200 rounded-xl p-3.5 flex items-center space-x-3">
+                    <div class="w-10 h-10 rounded-full bg-[#00897b] text-white flex items-center justify-center font-bold text-sm shadow-xs shrink-0"
+                         x-text="(resModalData?.user || 'U').charAt(0).toUpperCase()">
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <span class="text-[10px] uppercase font-bold tracking-wider text-slate-400 block">Utilisateur bénéficiaire</span>
+                        <h4 class="text-sm font-bold text-slate-800 truncate" x-text="resModalData?.user"></h4>
+                    </div>
+                </div>
+
+                <!-- 3. Time Reserved Card -->
+                <div class="bg-emerald-50/60 border border-emerald-200 rounded-xl p-3.5 space-y-2">
+                    <span class="text-[10px] uppercase font-bold tracking-wider text-[#00695c] block">Temps Réservé</span>
+                    <div class="grid grid-cols-2 gap-2 text-xs">
+                        <div>
+                            <span class="text-slate-500 text-[10px] block">Date de la séance</span>
+                            <span class="font-bold text-slate-800 capitalize" x-text="resModalData?.date"></span>
+                        </div>
+                        <div>
+                            <span class="text-slate-500 text-[10px] block">Créneau horaire</span>
+                            <span class="font-bold text-[#00897b] font-mono" x-text="resModalData?.time"></span>
+                        </div>
+                    </div>
+                    <div class="pt-2 border-t border-emerald-200/60 flex items-center justify-between text-xs">
+                        <span class="text-slate-500">Durée décomptée :</span>
+                        <span class="font-bold text-slate-800 font-mono" x-text="resModalData?.duration"></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-end space-x-2">
+                <button type="button" @click="closeReservationModal()" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-bold rounded-lg transition-colors">
+                    Fermer
+                </button>
+                <a :href="'{{ route('bookings.create') }}?machine_id=' + (resModalData?.machine_id || selectedMachineId) + '&date=' + (resModalData?.date || selectedDate)" 
+                   class="px-4 py-2 bg-[#00897b] hover:bg-[#00796b] text-white text-xs font-bold rounded-lg shadow-sm transition-colors flex items-center space-x-1.5">
+                    <span>Réserver cette machine</span>
+                    <span>&rarr;</span>
+                </a>
             </div>
         </div>
     </div>

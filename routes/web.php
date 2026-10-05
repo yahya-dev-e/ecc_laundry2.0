@@ -57,6 +57,44 @@ Route::middleware('auth')->group(function () {
         return view('admin.users', compact('users'));
     })->name('admin.users');
 
+    Route::post('/admin/users/update', function (\Illuminate\Http\Request $request) {
+        $validated = $request->validate([
+            'id' => ['required'],
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'email', 'max:255'],
+            'student_id' => ['required', 'string', 'max:50'],
+            'room_number' => ['required', 'string', 'max:50'],
+            'role' => ['required', 'in:admin,student'],
+            'weeklyLimit' => ['nullable', 'integer', 'min:1'],
+        ]);
+
+        $user = \App\Models\User::find($validated['id']);
+        if ($user) {
+            $user->update([
+                'name' => $validated['name'],
+                'email' => $validated['email'],
+                'student_id' => $validated['student_id'],
+                'room_number' => $validated['room_number'],
+                'role' => $validated['role'],
+            ]);
+            if (isset($validated['weeklyLimit']) && \App\Models\User::hasCreditsColumn()) {
+                $user->credits = $validated['weeklyLimit'];
+                $user->save();
+            }
+        }
+
+        return redirect()->route('admin.users')->with('success', "L'utilisateur {$request->name} a été mis à jour avec succès.");
+    })->name('admin.users.update');
+
+    Route::get('/reset-user-quota', function (\Illuminate\Http\Request $request) {
+        $user = \App\Models\User::find($request->query('id'));
+        if ($user && \App\Models\User::hasCreditsColumn()) {
+            $user->credits = $user->weeklyLimit();
+            $user->save();
+        }
+        return redirect()->route('admin.users')->with('success', "Le quota a été réinitialisé avec succès.");
+    });
+
     // Sections retirées (Réservations, Machines, Réclamations, Paramètres) -> Redirection vers Tableau de bord
     Route::get('/reservations', fn() => redirect()->route('dashboard'))->name('bookings.index');
     Route::get('/bookings', fn() => redirect()->route('dashboard'));
