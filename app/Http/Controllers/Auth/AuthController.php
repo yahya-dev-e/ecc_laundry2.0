@@ -77,10 +77,17 @@ class AuthController extends Controller
         }
         $user = User::create($userData);
 
+        // Envoi de l'e-mail de bienvenue et confirmation
+        try {
+            $user->notify(new \App\Notifications\WelcomeNotification());
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('Welcome notification email failed to send: ' . $e->getMessage());
+        }
+
         Auth::login($user);
 
         return redirect()->route('dashboard')
-            ->with('success', "Account created successfully! You've received {$user->credits} welcome laundry credits.");
+            ->with('success', "Votre compte a été créé avec succès ! Un e-mail de confirmation et de bienvenue a été envoyé à {$user->email}.");
     }
 
     /**

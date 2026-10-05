@@ -1,0 +1,112 @@
+[
+  {
+    "id": 1,
+    "name": "R. Omari",
+    "email": "r.omari@fecc.ma",
+    "role": "admin",
+    "student_id": "ADM-001",
+    "room_number": "Direction Campus",
+    "weeklyUsed": 0,
+    "weeklyLimit": 100,
+    "credits": 100
+  },
+  {
+    "id": 2,
+    "name": "Alex Rivera",
+    "email": "alex.rivera@fecc.ma",
+    "role": "student",
+    "student_id": "STU-98241",
+    "room_number": "Bât. Omar, Ch. 214",
+    "weeklyUsed": 0,
+    "weeklyLimit": 8,
+    "credits": 8
+  },
+  {
+    "id": 3,
+    "name": "Sara Bennani",
+    "email": "sara.bennani@fecc.ma",
+    "role": "student",
+    "student_id": "STU-88219",
+    "room_number": "Bât. Petit, Ch. 108",
+    "weeklyUsed": 2,
+    "weeklyLimit": 8,
+    "credits": 6
+  },
+  {
+    "id": 4,
+    "name": "Mehdi Tazi",
+    "email": "mehdi.tazi@fecc.ma",
+    "role": "student",
+    "student_id": "STU-77312",
+    "room_number": "Bât. Omar, Ch. 105",
+    "weeklyUsed": 3,
+    "weeklyLimit": 8,
+    "credits": 5
+  },
+  {
+    "id": 5,
+    "name": "Khadija Mansour",
+    "email": "khadija.mansour@fecc.ma",
+    "role": "student",
+    "student_id": "STU-66104",
+    "room_number": "Bât. Petit, Ch. 312",
+    "weeklyUsed": 0,
+    "weeklyLimit": 8,
+    "credits": 8
+  },
+  {
+    "id": 6,
+    "name": "Youssef Alami",
+    "email": "youssef.alami@fecc.ma",
+    "role": "student",
+    "student_id": "STU-55209",
+    "room_number": "Bât. Omar, Ch. 402",
+    "weeklyUsed": 1,
+    "weeklyLimit": 8,
+    "credits": 7
+  },
+  {
+    "id": 7,
+    "name": "Karim Senhaji",
+    "email": "karim.senhaji.1791209847196@fecc.ma",
+    "role": "student",
+    "student_id": "STU-33019",
+    "room_number": "Bât. Omar, Ch. 305",
+    "weeklyUsed": 0,
+    "weeklyLimit": 8,
+    "credits": 8
+  },
+  {
+    "id": 8,
+    "name": "Karim Senhaji",
+    "email": "karim.senhaji.1791209927842@fecc.ma",
+    "role": "student",
+    "student_id": "STU-33019",
+    "room_number": "Bât. Omar, Ch. 305",
+    "weeklyUsed": 0,
+    "weeklyLimit": 8,
+    "credits": 8
+  },
+  {
+    "id": 9,
+    "name": "Karim Senhaji",
+    "email": "karim.senhaji.1791209959200@fecc.ma",
+    "role": "student",
+    "student_id": "STU-33019",
+    "room_number": "Bât. Omar, Ch. 305",
+    "weeklyUsed": 0,
+    "weeklyLimit": 8,
+    "credits": 8
+  },
+  {
+    "id": 10,
+    "name": "Karim Senhaji",
+    "email": "karim.senhaji.1791210070708@fecc.ma",
+    "role": "student",
+    "student_id": "STU-33019",
+    "room_number": "Bât. Omar, Ch. 305",
+    "weeklyUsed": 0,
+    "weeklyLimit": 8,
+    "credits": 8
+  }
+]

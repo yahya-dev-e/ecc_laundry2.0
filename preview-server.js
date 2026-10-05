@@ -1,6 +1,7 @@
 import http from 'http';
 import fs from 'fs';
 import path from 'path';
+import zlib from 'zlib';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -8,7 +9,10 @@ const __dirname = path.dirname(__filename);
 
 const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 
+// Asset manifest cache
+let cachedAssets = null;
 function getAssets() {
+    if (cachedAssets) return cachedAssets;
     let cssFile = 'assets/app-BaKgmCTs.css';
     let jsFile = 'assets/app-CEzoOuxG.js';
     try {
@@ -18,7 +22,38 @@ function getAssets() {
     } catch (e) {
         console.warn('Fallback manifest assets');
     }
-    return { cssFile, jsFile };
+    cachedAssets = { cssFile, jsFile };
+    return cachedAssets;
+}
+
+// In-memory static file cache for high-speed delivery
+const staticCache = new Map();
+
+function sendCompressedResponse(req, res, statusCode, headers, content) {
+    const buffer = Buffer.isBuffer(content) ? content : Buffer.from(content, 'utf8');
+    const acceptEncoding = req.headers['accept-encoding'] || '';
+
+    // Simple hash-based ETag for 304 Not Modified
+    const etag = `"${buffer.length}-${buffer.subarray(0, 32).reduce((acc, byte) => acc + byte, 0)}"`;
+    headers['ETag'] = etag;
+
+    if (req.headers['if-none-match'] === etag) {
+        res.writeHead(304, headers);
+        return res.end();
+    }
+
+    if (acceptEncoding.includes('gzip')) {
+        const compressed = zlib.gzipSync(buffer);
+        headers['Content-Encoding'] = 'gzip';
+        headers['Vary'] = 'Accept-Encoding';
+        headers['Content-Length'] = compressed.length;
+        res.writeHead(statusCode, headers);
+        return res.end(compressed);
+    }
+
+    headers['Content-Length'] = buffer.length;
+    res.writeHead(statusCode, headers);
+    return res.end(buffer);
 }
 
 // 24 standard 1-hour slots for campus laundry
@@ -94,11 +129,42 @@ function isSlotBooked(reservations, machineCode, date, slotTime) {
     return false;
 }
 
+// Persistent Database for Users
+const DB_USERS_PATH = path.join(__dirname, 'database/users.json');
+
+function loadUsersFromDb() {
+    try {
+        if (fs.existsSync(DB_USERS_PATH)) {
+            const data = fs.readFileSync(DB_USERS_PATH, 'utf8');
+            return JSON.parse(data);
+        }
+    } catch (e) {
+        console.error('Error reading database/users.json:', e);
+    }
+    return [
+        { id: 1, name: 'R. Omari', email: 'r.omari@fecc.ma', role: 'admin', student_id: 'ADM-001', room_number: 'Direction Campus', weeklyUsed: 0, weeklyLimit: 100, credits: 100 },
+        { id: 2, name: 'Alex Rivera', email: 'alex.rivera@fecc.ma', role: 'student', student_id: 'STU-98241', room_number: 'Bât. Omar, Ch. 214', weeklyUsed: 1, weeklyLimit: 8, credits: 7 },
+        { id: 3, name: 'Sara Bennani', email: 'sara.bennani@fecc.ma', role: 'student', student_id: 'STU-88219', room_number: 'Bât. Petit, Ch. 108', weeklyUsed: 2, weeklyLimit: 8, credits: 6 },
+        { id: 4, name: 'Mehdi Tazi', email: 'mehdi.tazi@fecc.ma', role: 'student', student_id: 'STU-77312', room_number: 'Bât. Omar, Ch. 105', weeklyUsed: 3, weeklyLimit: 8, credits: 5 },
+        { id: 5, name: 'Khadija Mansour', email: 'khadija.mansour@fecc.ma', role: 'student', student_id: 'STU-66104', room_number: 'Bât. Petit, Ch. 312', weeklyUsed: 0, weeklyLimit: 8, credits: 8 },
+        { id: 6, name: 'Youssef Alami', email: 'youssef.alami@fecc.ma', role: 'student', student_id: 'STU-55209', room_number: 'Bât. Omar, Ch. 402', weeklyUsed: 1, weeklyLimit: 8, credits: 7 }
+    ];
+}
+
+function saveUsersToDb(users) {
+    try {
+        fs.writeFileSync(DB_USERS_PATH, JSON.stringify(users, null, 2), 'utf8');
+    } catch (e) {
+        console.error('Error writing to database/users.json:', e);
+    }
+}
+
 // In-memory state with 8-hour weekly reservation quota (1h = 1 credit)
 const state = {
     isAuthenticated: true, // Auto-authenticated for instant development preview
     isAdmin: true, // Role switcher for testing
     weeklyLimit: 100, // 100 credits for admin, 8 for normal user
+    users: loadUsersFromDb(), // Dynamic Database-driven users list
     user: {
         name: 'El Omari',
         email: 'r.omari@fecc.ma',
@@ -162,14 +228,19 @@ function renderLayout(title, content, currentPath = '/', flash = '') {
     <title>${title} - Centrale Casablanca</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Montserrat:wght@500;600;700&display=swap" rel="stylesheet">
+    <link rel="dns-prefetch" href="https://fonts.googleapis.com">
+    <link rel="dns-prefetch" href="https://fonts.gstatic.com">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Montserrat:wght@500;600;700&display=swap" media="print" onload="this.media='all'">
+    <noscript>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Montserrat:wght@500;600;700&display=swap">
+    </noscript>
     <link rel="stylesheet" href="/build/${cssFile}">
     <script defer src="/build/${jsFile}"></script>
 </head>
-<body class="min-h-screen bg-[#f4f7f6] text-slate-800 flex font-sans antialiased">
+<body x-data="{ mobileMenuOpen: false }" class="min-h-screen bg-[#f4f7f6] text-slate-800 flex font-sans antialiased">
 
-    <!-- Sidebar matching Image 2 -->
-    <aside class="w-64 admin-sidebar min-h-screen flex flex-col justify-between shrink-0 shadow-lg select-none">
+    <!-- Desktop Sidebar (visible on screens >= lg) -->
+    <aside class="hidden lg:flex w-64 admin-sidebar min-h-screen flex-col justify-between shrink-0 shadow-lg select-none">
         <div>
             <!-- Header -->
             <div class="px-5 py-5 flex items-center space-x-3 border-b border-[#00695c]">
@@ -217,67 +288,172 @@ function renderLayout(title, content, currentPath = '/', flash = '') {
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
                 <span>Déconnexion</span>
             </a>
-            <span class="text-[10px] text-emerald-200/50">v2.0</span>
+            <span class="text-[10px] text-emerald-200/50">v2.0 FECC</span>
         </div>
     </aside>
 
+    <!-- Mobile Slide-over Drawer (visible on screens < lg when toggled) -->
+    <div x-show="mobileMenuOpen" class="fixed inset-0 z-50 lg:hidden" style="display: none;" x-cloak>
+        <!-- Backdrop -->
+        <div @click="mobileMenuOpen = false" 
+             x-show="mobileMenuOpen" 
+             x-transition:enter="transition-opacity ease-out duration-200" 
+             x-transition:enter-start="opacity-0" 
+             x-transition:enter-end="opacity-100" 
+             x-transition:leave="transition-opacity ease-in duration-150" 
+             x-transition:leave-start="opacity-100" 
+             x-transition:leave-end="opacity-0" 
+             class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs"></div>
+
+        <!-- Mobile Navigation Panel -->
+        <aside x-show="mobileMenuOpen" 
+               x-transition:enter="transition ease-out duration-200 transform" 
+               x-transition:enter-start="-translate-x-full" 
+               x-transition:enter-end="translate-x-0" 
+               x-transition:leave="transition ease-in duration-150 transform" 
+               x-transition:leave-start="translate-x-0" 
+               x-transition:leave-end="-translate-x-full" 
+               class="relative w-72 max-w-[85vw] admin-sidebar h-full min-h-screen flex flex-col justify-between shadow-2xl z-50">
+            <div>
+                <!-- Header with Close Button -->
+                <div class="px-5 py-4 flex items-center justify-between border-b border-[#00695c]">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-9 h-9 rounded-full bg-white flex items-center justify-center text-[#00796b] shadow font-black text-sm">
+                            ${state.isAdmin 
+                                ? '<svg class="w-5 h-5 text-[#00796b]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>' 
+                                : '<svg class="w-5 h-5 text-[#00796b]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l9-5-9-5-9 5 9 5z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z"/></svg>'}
+                        </div>
+                        <div>
+                            <span class="text-xs font-black tracking-wider uppercase text-white block">
+                                ${state.isAdmin ? 'ADMIN PANNEAU' : 'ESPACE ÉTUDIANT'}
+                            </span>
+                            <span class="text-[10px] text-emerald-200/70 font-semibold block">Centrale Casablanca</span>
+                        </div>
+                    </div>
+                    <button type="button" @click="mobileMenuOpen = false" class="p-1.5 text-white/80 hover:text-white rounded-lg hover:bg-[#00695c]" aria-label="Fermer le menu">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                </div>
+
+                <!-- Navigation Links -->
+                <nav class="mt-3 space-y-0.5 px-2">
+                    <a href="/dashboard" @click="mobileMenuOpen = false" class="sidebar-link rounded-lg ${currentPath === '/dashboard' ? 'active' : ''}">
+                        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+                        <span>Tableau de bord</span>
+                    </a>
+
+                    <a href="/calendrier" @click="mobileMenuOpen = false" class="sidebar-link rounded-lg ${currentPath === '/calendrier' ? 'active' : ''}">
+                        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                        <span>Calendrier des réservations</span>
+                    </a>
+
+                    <a href="/reserver" @click="mobileMenuOpen = false" class="sidebar-link rounded-lg ${currentPath === '/reserver' ? 'active' : ''}">
+                        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                        <span>Réserver une machine</span>
+                    </a>
+
+                    ${state.isAdmin ? `
+                        <a href="/utilisateurs" @click="mobileMenuOpen = false" class="sidebar-link rounded-lg ${currentPath === '/utilisateurs' ? 'active' : ''}">
+                            <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+                            <span>Gestion des utilisateurs</span>
+                        </a>
+                    ` : ''}
+                </nav>
+            </div>
+
+            <!-- Role switcher and Logout -->
+            <div class="p-4 border-t border-[#00695c] space-y-3">
+                <a href="/toggle-role" class="block text-center py-2 px-3 rounded-lg text-xs font-bold ${state.isAdmin ? 'bg-amber-500/20 text-amber-200 border border-amber-400/30' : 'bg-blue-500/20 text-blue-200 border border-blue-400/30'}">
+                    ${state.isAdmin ? 'Mode: ADMIN (Basculer)' : 'Mode: ÉTUDIANT (Basculer)'}
+                </a>
+                <div class="flex items-center justify-between text-xs pt-1">
+                    <a href="/logout" class="flex items-center space-x-1.5 text-emerald-200/80 hover:text-white transition-colors">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+                        <span>Déconnexion</span>
+                    </a>
+                    <span class="text-[10px] text-emerald-200/50">v2.0 FECC</span>
+                </div>
+            </div>
+        </aside>
+    </div>
+
     <!-- Main Content Area -->
-    <div class="flex-1 flex flex-col min-w-0 overflow-y-auto">
+    <div class="flex-1 flex flex-col min-w-0 overflow-y-auto w-full">
         
         <!-- Top Navbar -->
-        <header class="h-14 bg-white border-b border-slate-200 px-4 sm:px-6 flex items-center justify-between shrink-0 sticky top-0 z-30 shadow-xs">
-            <div class="flex items-center space-x-3 sm:space-x-4">
-                <span class="text-xs text-slate-400 font-medium hidden md:inline">laundry.fecc.ma${currentPath}</span>
-                <span class="text-slate-300 text-xs hidden md:inline">•</span>
+        <header class="h-14 bg-white border-b border-slate-200 px-3 sm:px-6 flex items-center justify-between shrink-0 sticky top-0 z-30 shadow-xs">
+            <div class="flex items-center space-x-2 sm:space-x-4">
+                <!-- Mobile Hamburger Toggle Button -->
+                <button type="button" 
+                        @click="mobileMenuOpen = true" 
+                        class="lg:hidden p-1.5 -ml-1 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#00796b]" 
+                        aria-label="Ouvrir le menu">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                    </svg>
+                </button>
 
-                <!-- Server Time Indicator (Always visible on top of website) -->
+                <span class="text-xs text-slate-400 font-medium hidden xl:inline">laundry.fecc.ma${currentPath}</span>
+                <span class="text-slate-300 text-xs hidden xl:inline">•</span>
+
+                <!-- Server Time Indicator (Adaptive on Mobile) -->
                 <div id="server-time-indicator"
                      x-data="serverClock('${new Date().toISOString()}', 'UTC')" 
-                     class="flex items-center space-x-2 px-3 py-1 rounded-full bg-slate-100 border border-slate-200 text-xs font-medium text-slate-700 shadow-2xs select-none shrink-0 whitespace-nowrap"
+                     class="flex items-center space-x-1.5 sm:space-x-2 px-2.5 sm:px-3 py-1 rounded-full bg-slate-100 border border-slate-200 text-xs font-medium text-slate-700 shadow-2xs select-none shrink-0"
                      title="Heure actuelle du serveur (UTC)">
                     <span class="relative flex h-2 w-2 shrink-0">
                         <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                         <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
                     </span>
-                    <span class="text-[11px] font-semibold text-slate-500 whitespace-nowrap">Serveur :</span>
+                    <span class="text-[11px] font-semibold text-slate-500 whitespace-nowrap hidden sm:inline">Serveur :</span>
                     <span class="font-mono font-bold text-slate-800 tracking-tight whitespace-nowrap" x-text="timeFormatted">
                         ${new Date().toISOString().substring(11, 19)}
                     </span>
-                    <span class="text-[9px] font-bold text-slate-500 bg-white px-1.5 py-0.5 rounded border border-slate-200">
+                    <span class="text-[9px] font-bold text-slate-500 bg-white px-1.5 py-0.5 rounded border border-slate-200 hidden md:inline">
                         UTC
                     </span>
                 </div>
                 
-                <a href="/toggle-role" class="px-2.5 py-1 rounded-full text-[11px] font-bold border transition-all ${state.isAdmin ? 'bg-amber-50 text-amber-800 border-amber-300' : 'bg-blue-50 text-blue-800 border-blue-300'}" title="Cliquez pour basculer entre vue Administrateur et vue Étudiant">
-                    ${state.isAdmin ? 'Mode: ADMIN (Cliquez pour tester vue Étudiant)' : 'Mode: ÉTUDIANT (Cliquez pour tester vue Admin)'}
+                <a href="/toggle-role" class="hidden md:inline-flex px-2.5 py-1 rounded-full text-[11px] font-bold border transition-all ${state.isAdmin ? 'bg-amber-50 text-amber-800 border-amber-300' : 'bg-blue-50 text-blue-800 border-blue-300'}" title="Cliquez pour basculer de rôle">
+                    ${state.isAdmin ? 'Admin (100h)' : 'Étudiant (8h)'}
                 </a>
             </div>
 
-            <div class="flex items-center space-x-5">
-                <div class="flex items-center space-x-2 px-3 py-1 rounded-full ${state.isAdmin ? 'bg-amber-50 text-amber-900 border border-amber-200' : (remaining > 0 ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-rose-50 text-rose-800 border border-rose-200')} text-xs font-semibold">
-                    <span class="w-2 h-2 rounded-full ${state.isAdmin ? 'bg-amber-500' : (remaining > 0 ? 'bg-emerald-500' : 'bg-rose-500')}"></span>
-                    <span>
+            <div class="flex items-center space-x-2 sm:space-x-4">
+                <!-- Quota Indicator (Adaptive on Mobile) -->
+                <div class="flex items-center space-x-1.5 sm:space-x-2 px-2.5 sm:px-3 py-1 rounded-full ${state.isAdmin ? 'bg-amber-50 text-amber-900 border border-amber-200' : (remaining > 0 ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-rose-50 text-rose-800 border border-rose-200')} text-xs font-semibold">
+                    <span class="w-2 h-2 rounded-full shrink-0 ${state.isAdmin ? 'bg-amber-500' : (remaining > 0 ? 'bg-emerald-500' : 'bg-rose-500')}"></span>
+                    <span class="hidden sm:inline">
                         ${state.isAdmin ? `Quota Admin : ${state.user.weeklyUsed} / 100 crédits (${remaining} restants)` : `Quota : ${state.user.weeklyUsed} / 8 crédits (${remaining} restants)`}
+                    </span>
+                    <span class="inline sm:hidden font-mono font-bold">
+                        ${state.isAdmin ? `${remaining}/100 cr.` : `${remaining}/8 cr.`}
                     </span>
                 </div>
 
-                <div class="flex items-center space-x-1 cursor-pointer">
+                <div class="hidden xs:flex items-center space-x-1 cursor-pointer">
                     <span class="text-xs font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">FR</span>
                 </div>
 
-                <div class="flex items-center space-x-2.5">
-                    <div class="w-8 h-8 rounded-full bg-slate-200 border border-slate-300 flex items-center justify-center overflow-hidden">
-                        <svg class="w-5 h-5 text-slate-500" fill="currentColor" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+                <div class="flex items-center space-x-2">
+                    <div class="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-slate-200 border border-slate-300 flex items-center justify-center overflow-hidden shrink-0">
+                        <svg class="w-4 h-4 sm:w-5 sm:h-5 text-slate-500" fill="currentColor" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
                     </div>
-                    <span class="text-xs font-semibold text-slate-700">${state.isAdmin ? 'El Omari' : 'Alex Rivera'}</span>
+                    <span class="text-xs font-semibold text-slate-700 hidden md:inline truncate max-w-[100px]">${state.isAdmin ? 'El Omari' : 'Alex Rivera'}</span>
                 </div>
+
+                <!-- Disconnect Button in Header -->
+                <a href="/logout" class="flex items-center space-x-1 px-2.5 py-1 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-50 border border-slate-200 hover:border-rose-200 text-xs font-medium transition-all shadow-2xs" title="Se déconnecter">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+                    <span class="hidden sm:inline">Déconnexion</span>
+                </a>
             </div>
         </header>
 
         <!-- Flash Toast Notification if exists -->
         ${flash ? `
-        <div class="px-6 pt-4">
-            <div class="p-3.5 rounded bg-emerald-50 border-l-4 border-emerald-500 text-emerald-800 text-xs flex items-center justify-between shadow-xs">
+        <div class="px-3 sm:px-6 pt-3 sm:pt-4">
+            <div class="p-3 sm:p-3.5 rounded bg-emerald-50 border-l-4 border-emerald-500 text-emerald-800 text-xs flex items-center justify-between shadow-xs">
                 <div class="flex items-center space-x-2">
                     <svg class="w-4 h-4 text-emerald-600 inline-block shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
                     <span>${flash}</span>
@@ -286,7 +462,7 @@ function renderLayout(title, content, currentPath = '/', flash = '') {
             </div>
         </div>` : ''}
 
-        <main class="p-6 md:p-8 flex-1">
+        <main class="p-3 sm:p-6 md:p-8 flex-1 w-full max-w-full overflow-x-hidden">
             ${content}
         </main>
     </div>
@@ -506,7 +682,7 @@ function renderCalendarPage(selectedDateStr = '2026-09-30') {
 
     return `
     <div class="space-y-6 max-w-6xl mx-auto">
-        <div class="bg-white border-l-4 border-[#00897b] p-3.5 rounded shadow-xs flex items-center justify-between">
+        <div class="bg-white border-l-4 border-[#00897b] p-3.5 rounded shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div class="flex items-center space-x-3">
                 <div class="w-5 h-5 rounded-full bg-[#00897b]/10 text-[#00897b] flex items-center justify-center font-bold text-xs shrink-0">i</div>
                 <span class="text-xs text-slate-700">Cliquez sur une machine pour voir ses créneaux et réserver directement.</span>
@@ -528,26 +704,26 @@ function renderCalendarPage(selectedDateStr = '2026-09-30') {
                 <div>Sèche-linge (${dryers.length})</div>
             </div>
 
-            <div class="grid grid-cols-2 divide-x divide-slate-200 p-4">
-                <div class="grid grid-cols-3 gap-2 pr-3">
+            <div class="grid grid-cols-2 divide-x divide-slate-200 p-3 sm:p-4">
+                <div class="grid grid-cols-2 sm:grid-cols-3 gap-1.5 sm:gap-2 pr-2 sm:pr-3">
                     ${washers.map(m => `
                         <button type="button" 
                                 onclick="pickMachine('${m.code}')" 
                                 data-code="${m.code}"
                                 style="background-color: ${m.bg};"
-                                class="badge-machine badge-machine-btn ${m.text} ${m.code === 'ML1-OM' ? 'ring-3 ring-slate-900 scale-105 shadow-md' : ''}">
+                                class="badge-machine badge-machine-btn ${m.text} py-1.5 px-2 sm:px-3 text-[11px] sm:text-xs justify-center text-center ${m.code === 'ML1-OM' ? 'ring-2 ring-slate-900 scale-105 shadow-md' : ''}">
                             <span>${m.code}</span>
                         </button>
                     `).join('')}
                 </div>
 
-                <div class="grid grid-cols-2 gap-2 pl-3">
+                <div class="grid grid-cols-2 sm:grid-cols-2 gap-1.5 sm:gap-2 pl-2 sm:pl-3">
                     ${dryers.map(m => `
                         <button type="button" 
                                 onclick="pickMachine('${m.code}')" 
                                 data-code="${m.code}"
                                 style="background-color: ${m.bg};"
-                                class="badge-machine badge-machine-btn ${m.text}">
+                                class="badge-machine badge-machine-btn ${m.text} py-1.5 px-2 sm:px-3 text-[11px] sm:text-xs justify-center text-center">
                             <span>${m.code}</span>
                         </button>
                     `).join('')}
@@ -571,21 +747,21 @@ function renderCalendarPage(selectedDateStr = '2026-09-30') {
 
         <!-- Date Controls and 7-day strip -->
         <div class="space-y-3 pt-4 border-t border-slate-200">
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div class="flex items-center space-x-3">
-                    <h2 class="text-xl font-normal text-slate-700 capitalize">${dayName}, ${dateFormatted}</h2>
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div class="flex flex-wrap items-center gap-2">
+                    <h2 class="text-base sm:text-xl font-bold text-slate-800 capitalize">${dayName}, ${dateFormatted}</h2>
                     <input type="date" value="${selectedDateStr}" 
                            onchange="window.location.href = '/calendrier?date=' + this.value"
                            class="px-2.5 py-1 text-xs border border-slate-300 rounded bg-white text-slate-700 hover:border-[#00897b] focus:outline-none focus:border-[#00897b] cursor-pointer shadow-xs font-medium"
                            title="Choisir une date quelconque">
                 </div>
-                <div class="inline-flex rounded shadow-xs text-xs">
-                    <a href="/calendrier?date=${todayStr}" class="px-3.5 py-1.5 ${selectedDateStr === todayStr ? 'bg-[#00897b] text-white font-bold' : 'bg-[#546e7a] hover:bg-[#455a64] text-white font-medium'} rounded-l transition-colors flex items-center">Aujourd'hui</a>
-                    <a href="/calendrier?date=${prevDateStr}" class="px-3.5 py-1.5 bg-[#37474f] hover:bg-[#263238] text-white font-medium transition-colors flex items-center space-x-1" title="Jour précédent (${prevDateStr})">
+                <div class="inline-flex rounded shadow-xs text-xs self-start sm:self-auto">
+                    <a href="/calendrier?date=${todayStr}" class="px-3.5 py-2 ${selectedDateStr === todayStr ? 'bg-[#00897b] text-white font-bold' : 'bg-[#546e7a] hover:bg-[#455a64] text-white font-medium'} rounded-l transition-colors flex items-center">Aujourd'hui</a>
+                    <a href="/calendrier?date=${prevDateStr}" class="px-3 py-2 bg-[#37474f] hover:bg-[#263238] text-white font-medium transition-colors flex items-center space-x-1" title="Jour précédent (${prevDateStr})">
                         <span>&larr;</span>
                         <span>Précédent</span>
                     </a>
-                    <a href="/calendrier?date=${nextDateStr}" class="px-3.5 py-1.5 bg-[#263238] hover:bg-black text-white font-medium rounded-r transition-colors flex items-center space-x-1" title="Jour suivant (${nextDateStr})">
+                    <a href="/calendrier?date=${nextDateStr}" class="px-3 py-2 bg-[#263238] hover:bg-black text-white font-medium rounded-r transition-colors flex items-center space-x-1" title="Jour suivant (${nextDateStr})">
                         <span>Suivant</span>
                         <span>&rarr;</span>
                     </a>
@@ -596,7 +772,7 @@ function renderCalendarPage(selectedDateStr = '2026-09-30') {
             <div class="grid grid-cols-7 gap-1 sm:gap-2 p-1.5 bg-white rounded-lg border border-slate-200 shadow-xs">
                 ${weekDays.map(w => `
                     <a href="/calendrier?date=${w.date}" 
-                       class="py-2 px-1 text-center rounded transition-all flex flex-col items-center justify-center ${w.isSelected ? 'bg-[#00897b] text-white font-bold shadow-xs scale-102' : 'hover:bg-slate-100 text-slate-700'}">
+                       class="py-2.5 px-1 text-center rounded transition-all flex flex-col items-center justify-center min-h-[48px] ${w.isSelected ? 'bg-[#00897b] text-white font-bold shadow-xs scale-102' : 'hover:bg-slate-100 text-slate-700'}">
                         <span class="text-[10px] uppercase font-semibold ${w.isSelected ? 'text-emerald-100' : 'text-slate-400'}">${w.shortName}</span>
                         <span class="text-sm font-bold ${w.isSelected ? 'text-white' : (w.isToday ? 'text-[#00897b]' : 'text-slate-800')}">${w.dayNumber}</span>
                         ${w.isToday ? `<span class="w-1.5 h-1.5 rounded-full ${w.isSelected ? 'bg-white' : 'bg-[#00897b]'} mt-0.5"></span>` : '<span class="w-1.5 h-1.5 mt-0.5"></span>'}
@@ -605,10 +781,16 @@ function renderCalendarPage(selectedDateStr = '2026-09-30') {
             </div>
         </div>
 
+        <!-- Mobile Horizontal Scroll Cue -->
+        <div class="sm:hidden flex items-center justify-end space-x-1.5 text-[11px] text-slate-500 px-1 -mb-2 select-none">
+            <svg class="w-3.5 h-3.5 text-[#00897b]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+            <span class="font-medium">Glissez vers la droite pour voir les machines</span>
+        </div>
+
         <!-- Timetable / Calendar Timeline Grid with Continuous Blocks & Limitor Lines -->
         <div class="bg-white rounded-lg border border-slate-300 shadow-xs overflow-hidden">
             <div class="flex border-b border-slate-300 bg-[#f9f9e8] text-xs font-semibold text-slate-700">
-                <div class="w-16 sm:w-20 p-2.5 text-center border-r border-slate-300 text-[11px] text-slate-500 font-semibold tracking-tight">Horaires</div>
+                <div class="w-14 sm:w-20 p-2 sm:p-2.5 text-center border-r border-slate-300 text-[10px] sm:text-[11px] text-slate-500 font-semibold tracking-tight sticky left-0 z-30 bg-[#f9f9e8] shadow-xs">Horaires</div>
                 <div class="flex-1 p-2.5 text-center font-bold text-slate-800 capitalize flex items-center justify-center space-x-2">
                     <span>${dayName} (${dateFormatted})</span>
                     ${calendarBlocks.length > 0 ? `<span class="text-[10px] font-normal text-slate-500 bg-white/80 px-2 py-0.5 rounded border border-slate-200">${calendarBlocks.length} réservation${calendarBlocks.length > 1 ? 's' : ''}</span>` : ''}
@@ -618,14 +800,14 @@ function renderCalendarPage(selectedDateStr = '2026-09-30') {
             <div class="relative overflow-x-auto">
                 <div class="flex min-w-[620px] relative select-none">
                     
-                    <!-- Left Axis: Hours of the Day directly ON the line as limitor indicators -->
-                    <div class="w-16 sm:w-20 shrink-0 border-r border-slate-300 bg-slate-50/70 relative select-none" style="height: ${24 * 52}px;">
+                    <!-- Left Axis: Hours of the Day directly ON the line as limitor indicators (sticky on mobile horizontal scroll) -->
+                    <div class="w-14 sm:w-20 shrink-0 border-r border-slate-300 bg-slate-50/95 sticky left-0 z-30 shadow-xs select-none" style="height: ${24 * 52}px;">
                         ${Array.from({ length: 25 }, (_, h) => {
                             const top = h * 52;
                             const hourLabel = String(h === 24 ? 24 : h).padStart(2, '0') + ':00';
                             return `
-                            <div class="absolute right-0 pr-3 flex items-center -translate-y-1/2 pointer-events-none" style="top: ${top}px;">
-                                <span class="text-[11px] font-bold text-slate-500 font-mono tracking-tight">${hourLabel}</span>
+                            <div class="absolute right-0 pr-1.5 sm:pr-3 flex items-center -translate-y-1/2 pointer-events-none" style="top: ${top}px;">
+                                <span class="text-[10px] sm:text-[11px] font-bold text-slate-500 font-mono tracking-tight">${hourLabel}</span>
                             </div>`;
                         }).join('')}
                     </div>
@@ -725,12 +907,12 @@ function renderDedicatedReservationPage(selectedMachine = 'ML1-OM') {
 
     return `
     <div class="max-w-3xl mx-auto space-y-6">
-        <div class="flex items-center justify-between">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
             <div>
                 <h1 class="text-xl font-bold text-slate-800 tracking-tight">Réserver une machine</h1>
                 <p class="text-xs text-slate-500">Planification des créneaux horaires disponibles par machine (24h/24)</p>
             </div>
-            <a href="/calendrier" class="text-xs text-[#00897b] hover:underline font-semibold flex items-center space-x-1">
+            <a href="/calendrier" class="text-xs text-[#00897b] hover:underline font-semibold flex items-center space-x-1 self-start sm:self-auto">
                 <span>&larr;</span>
                 <span>Retour au calendrier</span>
             </a>
@@ -830,14 +1012,27 @@ function renderDedicatedReservationPage(selectedMachine = 'ML1-OM') {
                     </div>
                 </div>
 
-                <div class="pt-3 flex items-center justify-end space-x-3 border-t border-slate-200">
+                <div class="pt-3 flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2 sm:space-x-3 border-t border-slate-200">
                     <a href="/calendrier" 
-                       class="px-4 py-2 border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-bold rounded">
+                       class="px-4 py-2.5 border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-bold rounded text-center">
                         Annuler
                     </a>
                     <button type="submit" id="submitBookingBtn" disabled
-                            class="px-6 py-2.5 opacity-50 cursor-not-allowed bg-slate-400 text-white text-xs font-bold rounded transition-all shadow-xs">
+                            class="px-6 py-2.5 opacity-50 cursor-not-allowed bg-slate-400 text-white text-xs font-bold rounded transition-all shadow-xs text-center">
                         Sélectionnez au moins 1 créneau
+                    </button>
+                </div>
+
+                <!-- Sticky Mobile Bottom Bar (Visible on mobile screens < sm) -->
+                <div id="mobileStickyBar" style="display: none;" 
+                     class="sm:hidden fixed bottom-0 inset-x-0 bg-white/95 backdrop-blur-md border-t border-slate-200 px-4 py-3 shadow-2xl z-40 flex items-center justify-between safe-pb">
+                    <div>
+                        <div id="stickySelectedCount" class="text-xs font-bold text-slate-800">0 créneau</div>
+                        <div id="stickyCost" class="text-[11px] text-[#00897b] font-semibold font-mono">0 crédit</div>
+                    </div>
+                    <button type="button" onclick="document.getElementById('bookingForm').submit()" id="stickySubmitBtn" disabled
+                            class="px-5 py-2.5 bg-[#00897b] hover:bg-[#00796b] text-white text-xs font-bold rounded-lg shadow-md transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed">
+                        Confirmer
                     </button>
                 </div>
             </form>
@@ -915,7 +1110,7 @@ function renderDedicatedReservationPage(selectedMachine = 'ML1-OM') {
 
         // Render available slots
         grid.innerHTML = availableSlots.map((slot, idx) => {
-            return '<label id="card-' + idx + '" class="flex items-center justify-between p-2.5 rounded border border-slate-200 bg-white text-slate-700 hover:border-[#00897b] transition-all cursor-pointer select-none text-xs">' +
+            return '<label id="card-' + idx + '" class="flex items-center justify-between p-2.5 rounded border border-slate-200 bg-white text-slate-700 hover:border-[#00897b] transition-all cursor-pointer select-none text-xs min-h-[44px]">' +
                 '<input type="checkbox" name="hours" value="' + slot + '" id="slot-cb-' + idx + '" onchange="onSlotToggle(' + idx + ')" class="slot-checkbox hidden">' +
                 '<span class="font-mono font-medium">' + slot + '</span>' +
                 '<span id="check-' + idx + '" class="w-4 h-4 rounded-full border border-slate-300 flex items-center justify-center text-[10px]"></span>' +
@@ -980,6 +1175,28 @@ function renderDedicatedReservationPage(selectedMachine = 'ML1-OM') {
                 btn.disabled = true;
                 btn.className = 'px-6 py-2.5 opacity-50 cursor-not-allowed bg-slate-400 text-white text-xs font-bold rounded transition-all shadow-xs';
                 btn.innerText = 'Sélectionnez au moins 1 créneau';
+            }
+        }
+
+        const mobileBar = document.getElementById('mobileStickyBar');
+        const stickyCount = document.getElementById('stickySelectedCount');
+        const stickyCost = document.getElementById('stickyCost');
+        const stickyBtn = document.getElementById('stickySubmitBtn');
+
+        if (mobileBar && stickyCount && stickyCost && stickyBtn) {
+            if (count > 0 && afterBalance >= 0) {
+                mobileBar.style.display = 'flex';
+                stickyCount.innerText = count + ' créneau' + (count > 1 ? 'x' : '');
+                stickyCost.innerText = count + ' crédit' + (count > 1 ? 's' : '');
+                stickyBtn.disabled = false;
+            } else if (count > 0 && afterBalance < 0) {
+                mobileBar.style.display = 'flex';
+                stickyCount.innerText = 'Quota dépassé';
+                stickyCost.innerText = remaining + 'h restants';
+                stickyBtn.disabled = true;
+            } else {
+                mobileBar.style.display = 'none';
+                stickyBtn.disabled = true;
             }
         }
     }
@@ -1155,7 +1372,43 @@ function renderDashboardPage() {
                     </a>
                 </div>
             ` : `
-                <div class="overflow-x-auto">
+                <!-- Mobile Reservation Cards (Visible on mobile screens < sm) -->
+                <div class="sm:hidden p-3 space-y-3">
+                    ${userReservations.map(res => `
+                        <div class="bg-white border border-slate-200 rounded-xl p-3.5 space-y-2.5 shadow-2xs">
+                            <div class="flex items-center justify-between">
+                                <span style="background-color: ${res.bg || '#4338ca'};" class="px-2.5 py-1 rounded text-xs font-mono font-bold ${res.textColor || 'text-white'} shadow-xs inline-block">
+                                    ${res.code}
+                                </span>
+                                <span class="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold text-[10px] inline-flex items-center space-x-1">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
+                                    <span>Confirmé</span>
+                                </span>
+                            </div>
+                            <div class="grid grid-cols-2 gap-2 text-xs pt-1">
+                                <div class="flex items-center space-x-1.5 text-slate-700">
+                                    <svg class="w-3.5 h-3.5 text-slate-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                                    <span class="font-medium">${res.date}</span>
+                                </div>
+                                <div class="flex items-center space-x-1.5 text-slate-800 font-mono font-bold">
+                                    <svg class="w-3.5 h-3.5 text-slate-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                    <span>${res.time}</span>
+                                </div>
+                            </div>
+                            <div class="flex items-center justify-between pt-2 border-t border-slate-100">
+                                <span class="text-[11px] text-slate-600 font-semibold">
+                                    ${res.durationHours} h (${res.durationHours} crédit${res.durationHours > 1 ? 's' : ''})
+                                </span>
+                                <a href="/calendrier?date=${res.date}" class="px-3 py-1.5 text-xs font-semibold text-[#00897b] bg-emerald-50 hover:bg-emerald-100 rounded-lg border border-emerald-200 transition-colors">
+                                    Voir au calendrier &rarr;
+                                </a>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+
+                <!-- Desktop Table View (Visible on >= sm) -->
+                <div class="hidden sm:block overflow-x-auto">
                     <table class="w-full text-left text-xs">
                         <thead class="bg-slate-100/75 text-slate-700 font-bold border-b border-slate-200">
                             <tr>
@@ -1327,61 +1580,110 @@ function renderMachinesPage() {
     </div>`;
 }
 
-// 5. Gestion des utilisateurs (ADMIN ONLY)
+// 5. Gestion des utilisateurs (ADMIN ONLY - Dynamic Database)
 function renderUsersPage() {
     if (!state.isAdmin) {
         return `<div class="p-8 text-center text-rose-600 font-bold bg-white rounded border border-rose-200">Accès interdit : Cette page est réservée aux administrateurs.</div>`;
     }
 
+    const avatarColors = ['#00897b', '#2563eb', '#9333ea', '#d97706', '#059669', '#4f46e5', '#e11d48', '#0d9488'];
+
+    const mobileCards = state.users.map((u, idx) => {
+        const initial = (u.name || 'U').charAt(0).toUpperCase();
+        const avatarBg = avatarColors[idx % avatarColors.length];
+        const isAdmin = u.role === 'admin';
+        const limit = u.weeklyLimit || (isAdmin ? 100 : 8);
+        const used = u.weeklyUsed || 0;
+        const remaining = Math.max(0, limit - used);
+
+        return `
+        <div class="bg-slate-50/70 border border-slate-200 rounded-xl p-3.5 space-y-2.5">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-2">
+                    <span class="w-7 h-7 rounded-full text-white flex items-center justify-center font-bold text-xs shadow-xs" style="background-color: ${avatarBg};">${initial}</span>
+                    <div>
+                        <span class="font-bold text-sm text-slate-800 block">${u.name}</span>
+                        <span class="text-[11px] text-slate-500 font-mono">${u.student_id || 'ID-' + u.id} (${u.room_number || 'Chambre'})</span>
+                    </div>
+                </div>
+                <span class="px-2.5 py-0.5 rounded ${isAdmin ? 'bg-amber-100 text-amber-800' : 'bg-blue-100 text-blue-800'} font-bold text-[10px]">${isAdmin ? 'Administrateur' : 'Étudiant'}</span>
+            </div>
+            <div class="flex items-center justify-between text-xs pt-1 border-t border-slate-200/60 font-mono">
+                <span class="text-slate-500">${u.email}</span>
+                <span class="font-bold ${isAdmin ? 'text-[#00897b]' : (used > 2 ? 'text-amber-600' : 'text-emerald-600')}">
+                    ${isAdmin ? 'Quota : Illimité (100 crédits)' : `${used}h / ${limit}h (${remaining}h rest.)`}
+                </span>
+            </div>
+            <div class="pt-2 border-t border-slate-200/60 flex items-center justify-end space-x-2">
+                ${!isAdmin ? `<a href="/reset-user-quota?id=${u.id}" class="px-3 py-1 bg-emerald-50 text-[#00897b] border border-emerald-200 text-xs font-semibold rounded shadow-2xs hover:bg-emerald-100 transition-colors">Réinitialiser quota</a>` : ''}
+                <button type="button" class="px-3 py-1 bg-white border border-slate-200 text-slate-700 text-xs font-semibold rounded shadow-2xs hover:bg-slate-50 transition-colors">Modifier</button>
+            </div>
+        </div>`;
+    }).join('');
+
+    const desktopRows = state.users.map((u, idx) => {
+        const initial = (u.name || 'U').charAt(0).toUpperCase();
+        const avatarBg = avatarColors[idx % avatarColors.length];
+        const isAdmin = u.role === 'admin';
+        const limit = u.weeklyLimit || (isAdmin ? 100 : 8);
+        const used = u.weeklyUsed || 0;
+        const remaining = Math.max(0, limit - used);
+
+        return `
+        <tr class="hover:bg-slate-50 transition-colors">
+            <td class="p-3.5 font-bold text-slate-800 flex items-center space-x-2">
+                <span class="w-7 h-7 rounded-full text-white flex items-center justify-center font-bold text-[11px] shadow-xs" style="background-color: ${avatarBg};">${initial}</span>
+                <span>${u.name}</span>
+            </td>
+            <td class="p-3.5 text-slate-600 font-mono">${u.email}</td>
+            <td class="p-3.5 text-slate-500 font-mono">${u.student_id || 'ID-' + u.id} (${u.room_number || 'Chambre'})</td>
+            <td class="p-3.5">
+                <span class="px-2.5 py-0.5 rounded ${isAdmin ? 'bg-amber-100 text-amber-800' : 'bg-blue-100 text-blue-800'} font-bold text-[10px]">${isAdmin ? 'Administrateur' : 'Étudiant'}</span>
+            </td>
+            <td class="p-3.5 font-bold ${isAdmin ? 'text-[#00897b]' : (used > 2 ? 'text-amber-600' : 'text-emerald-600')}">
+                ${isAdmin ? 'Illimité (100 crédits / sem)' : `${used}h / ${limit}h utilisées (${remaining}h restantes)`}
+            </td>
+            <td class="p-3.5 text-right space-x-2">
+                ${!isAdmin ? `<a href="/reset-user-quota?id=${u.id}" class="text-[#00897b] hover:underline font-semibold cursor-pointer">Réinitialiser quota</a>` : ''}
+                <button type="button" class="text-slate-400 hover:text-slate-600 font-semibold cursor-pointer">Modifier</button>
+            </td>
+        </tr>`;
+    }).join('');
+
     return `
     <div class="space-y-6 max-w-6xl mx-auto">
-        <div class="flex items-center justify-between">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
                 <h1 class="text-xl font-bold text-slate-800">Gestion des Utilisateurs</h1>
-                <p class="text-xs text-slate-500">Supervision des comptes étudiants et suivi des quotas de réservation par semaine</p>
+                <p class="text-xs text-slate-500">Supervision des comptes réels de la base de données (${state.users.length} comptes enregistrés) et suivi des quotas</p>
             </div>
-            <button class="px-4 py-2 bg-[#00897b] text-white rounded text-xs font-bold shadow-xs">+ Ajouter utilisateur</button>
+            <a href="/register" class="px-4 py-2 bg-[#00897b] hover:bg-[#00796b] text-white rounded text-xs font-bold shadow-xs self-start sm:self-auto transition-colors">+ Ajouter utilisateur</a>
         </div>
 
-        <div class="bg-white rounded-lg border border-slate-200 shadow-xs overflow-hidden">
-            <table class="w-full text-left text-xs">
-                <thead class="bg-[#00897b] text-white font-bold">
-                    <tr>
-                        <th class="p-3.5">Nom</th>
-                        <th class="p-3.5">Email</th>
-                        <th class="p-3.5">Identifiant / Chambre</th>
-                        <th class="p-3.5">Rôle</th>
-                        <th class="p-3.5">Quota Hebdomadaire</th>
-                        <th class="p-3.5 text-right">Actions</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-slate-100">
-                    <tr>
-                        <td class="p-3.5 font-bold text-slate-800">R. Omari</td>
-                        <td class="p-3.5 text-slate-600">r.omari@fecc.ma</td>
-                        <td class="p-3.5 text-slate-500 font-mono">ADM-001 (Direction Campus)</td>
-                        <td class="p-3.5"><span class="px-2.5 py-0.5 rounded bg-amber-100 text-amber-800 font-bold text-[10px]">Administrateur</span></td>
-                        <td class="p-3.5 font-bold text-[#00897b]">100 crédits / sem</td>
-                        <td class="p-3.5 text-right"><button class="text-slate-400 hover:text-slate-600 font-semibold">Modifier</button></td>
-                    </tr>
-                    <tr>
-                        <td class="p-3.5 font-bold text-slate-800">Alex Rivera</td>
-                        <td class="p-3.5 text-slate-600">alex.rivera@fecc.ma</td>
-                        <td class="p-3.5 text-slate-500 font-mono">STU-98241 (Bât. Omar, Ch. 214)</td>
-                        <td class="p-3.5"><span class="px-2.5 py-0.5 rounded bg-blue-100 text-blue-800 font-bold text-[10px]">Étudiant</span></td>
-                        <td class="p-3.5 font-bold text-emerald-600">${state.user.weeklyUsed}h / ${state.weeklyLimit}h utilisées (${state.weeklyLimit - state.user.weeklyUsed}h restantes)</td>
-                        <td class="p-3.5 text-right space-x-2"><a href="/reset-quota" class="text-[#00897b] hover:underline font-semibold">Réinitialiser quota (8h)</a></td>
-                    </tr>
-                    <tr>
-                        <td class="p-3.5 font-bold text-slate-800">Sara Bennani</td>
-                        <td class="p-3.5 text-slate-600">sara.bennani@fecc.ma</td>
-                        <td class="p-3.5 text-slate-500 font-mono">STU-88219 (Bât. Petit, Ch. 108)</td>
-                        <td class="p-3.5"><span class="px-2.5 py-0.5 rounded bg-blue-100 text-blue-800 font-bold text-[10px]">Étudiant</span></td>
-                        <td class="p-3.5 font-bold text-amber-600">3h / 8h utilisées (5h restantes)</td>
-                        <td class="p-3.5 text-right space-x-2"><button class="text-[#00897b] hover:underline font-semibold">Réinitialiser quota (8h)</button></td>
-                    </tr>
-                </tbody>
-            </table>
+        <div class="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
+            <!-- Mobile User Cards (< sm) -->
+            <div class="sm:hidden p-3 space-y-3">
+                ${mobileCards}
+            </div>
+
+            <!-- Desktop Table (>= sm) -->
+            <div class="hidden sm:block overflow-x-auto">
+                <table class="w-full text-left text-xs min-w-[620px]">
+                    <thead class="bg-[#00897b] text-white font-bold">
+                        <tr>
+                            <th class="p-3.5">Nom</th>
+                            <th class="p-3.5">Email</th>
+                            <th class="p-3.5">Identifiant / Chambre</th>
+                            <th class="p-3.5">Rôle</th>
+                            <th class="p-3.5">Quota Hebdomadaire</th>
+                            <th class="p-3.5 text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                        ${desktopRows}
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>`;
 }
@@ -1480,7 +1782,7 @@ function renderLoginPage(flashMessage = '') {
     let html = fs.readFileSync(path.join(__dirname, 'resources/views/auth/login.blade.php'), 'utf8')
         .replace("@vite(['resources/css/app.css', 'resources/js/app.js'])", `<link rel="stylesheet" href="/build/${getAssets().cssFile}"><script defer src="/build/${getAssets().jsFile}"></script>`)
         .replace("{{ route('login') }}", "/login")
-        .replace("{{ route('register') }}", "/login")
+        .replaceAll("{{ route('register') }}", "/register")
         .replace("{{ route('password.request') }}", "/forgot-password")
         .replace("{{ old('email', 'admin@fecc.ma') }}", "admin@fecc.ma")
         .replace("@csrf", "");
@@ -1530,23 +1832,180 @@ function renderResetPasswordPage(token = 'demo-token', email = '') {
         .replace("{{ $token }}", token)
         .replace("{{ old('email', $email) }}", email)
         .replace("@csrf", "");
-
-    html = html.replace(/@if \(\$errors->any\(\)\)[\s\S]*?@endif/g, '');
     return html;
 }
+
+// Register Page (Centrale Casablanca Design with Email notification)
+function renderRegisterPage(flashMessage = '', errorMessage = '') {
+    const assets = getAssets();
+    return `<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Créer un compte - Buanderie Centrale Casablanca</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap">
+    <link rel="stylesheet" href="/build/${assets.cssFile}">
+    <script defer src="/build/${assets.jsFile}"></script>
+</head>
+<body class="min-h-screen login-bg flex items-center justify-center p-4">
+    <!-- Split Register Card -->
+    <div class="w-full max-w-4xl bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col md:flex-row min-h-[580px]">
+        
+        <!-- Left Side: Registration Form -->
+        <div class="w-full md:w-1/2 p-6 md:p-10 flex flex-col justify-center items-center">
+            
+            <!-- Centrale Casablanca Logo -->
+            <div class="flex flex-col items-center mb-5">
+                <div class="w-12 h-9 relative flex items-center justify-center">
+                    <svg aria-hidden="true" viewBox="0 0 100 70" class="w-12 h-9 text-[#00897b]" fill="currentColor">
+                        <path d="M 50 10 C 25 10 15 25 15 40 C 15 55 30 65 60 65 C 75 65 85 58 85 58 L 80 50 C 80 50 72 55 60 55 C 38 55 27 47 27 38 C 27 28 35 20 50 20 C 65 20 78 27 82 32 L 88 24 C 82 17 68 10 50 10 Z"/>
+                        <path d="M 45 4 C 65 4 80 14 85 20 L 78 26 C 74 21 62 13 45 13 Z" fill="#2e7d32"/>
+                    </svg>
+                </div>
+                <div class="text-center mt-1">
+                    <span class="text-sm font-bold text-slate-700 tracking-tight block">Centrale</span>
+                    <span class="text-[8px] uppercase tracking-widest text-slate-500 font-semibold block -mt-1">Casablanca</span>
+                </div>
+            </div>
+
+            <!-- Title -->
+            <h1 class="text-xl font-extrabold text-slate-900 mb-1 text-center tracking-tight">
+                Créer un compte étudiant
+            </h1>
+            <p class="text-xs text-slate-500 mb-4 text-center">Un e-mail de confirmation vous sera envoyé dès l'inscription</p>
+
+            ${errorMessage ? `
+                <div class="w-full max-w-sm p-3 mb-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-center space-x-2">
+                    <svg class="w-4 h-4 text-rose-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    <span>${errorMessage}</span>
+                </div>` : ''}
+
+            ${flashMessage ? `
+                <div class="w-full max-w-sm p-3 mb-3 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-center space-x-2">
+                    <svg class="w-4 h-4 text-emerald-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                    <span>${flashMessage}</span>
+                </div>` : ''}
+
+            <!-- Form -->
+            <form method="POST" action="/register" class="w-full max-w-sm space-y-3">
+                <div>
+                    <label for="name" class="block text-[11px] font-bold text-slate-600 mb-1">Nom complet</label>
+                    <input type="text" id="name" name="name" placeholder="Ex: Jordan Miller" required autofocus
+                           class="w-full px-3.5 py-2.5 rounded-md bg-[#f1f3f4] text-slate-800 placeholder-slate-400 text-xs border border-transparent focus:border-[#00b4a7] focus:bg-white focus:outline-none transition-all">
+                </div>
+
+                <div>
+                    <label for="email" class="block text-[11px] font-bold text-slate-600 mb-1">Email Institutionnel (@fecc.ma)</label>
+                    <input type="email" id="email" name="email" placeholder="etudiant@fecc.ma" required
+                           class="w-full px-3.5 py-2.5 rounded-md bg-[#f1f3f4] text-slate-800 placeholder-slate-400 text-xs border border-transparent focus:border-[#00b4a7] focus:bg-white focus:outline-none transition-all">
+                </div>
+
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label for="student_id" class="block text-[11px] font-bold text-slate-600 mb-1">Identifiant Étudiant</label>
+                        <input type="text" id="student_id" name="student_id" placeholder="STU-99120" required
+                               class="w-full px-3.5 py-2.5 rounded-md bg-[#f1f3f4] text-slate-800 placeholder-slate-400 text-xs border border-transparent focus:border-[#00b4a7] focus:bg-white focus:outline-none transition-all">
+                    </div>
+                    <div>
+                        <label for="room_number" class="block text-[11px] font-bold text-slate-600 mb-1">Bâtiment / Chambre</label>
+                        <input type="text" id="room_number" name="room_number" placeholder="Bât. Omar, Ch. 102" required
+                               class="w-full px-3.5 py-2.5 rounded-md bg-[#f1f3f4] text-slate-800 placeholder-slate-400 text-xs border border-transparent focus:border-[#00b4a7] focus:bg-white focus:outline-none transition-all">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label for="password" class="block text-[11px] font-bold text-slate-600 mb-1">Mot de passe</label>
+                        <input type="password" id="password" name="password" placeholder="Min. 8 car." required
+                               class="w-full px-3.5 py-2.5 rounded-md bg-[#f1f3f4] text-slate-800 placeholder-slate-400 text-xs border border-transparent focus:border-[#00b4a7] focus:bg-white focus:outline-none transition-all">
+                    </div>
+                    <div>
+                        <label for="password_confirmation" class="block text-[11px] font-bold text-slate-600 mb-1">Confirmation</label>
+                        <input type="password" id="password_confirmation" name="password_confirmation" placeholder="Confirmer" required
+                               class="w-full px-3.5 py-2.5 rounded-md bg-[#f1f3f4] text-slate-800 placeholder-slate-400 text-xs border border-transparent focus:border-[#00b4a7] focus:bg-white focus:outline-none transition-all">
+                    </div>
+                </div>
+
+                <div class="pt-2">
+                    <button type="submit" class="w-full py-3 rounded-full bg-[#00b4a7] hover:bg-[#009b8f] text-white font-bold text-xs uppercase tracking-wider shadow-md hover:shadow-lg transition-all active:scale-[0.98]">
+                        Créer mon compte (Envoi email)
+                    </button>
+                </div>
+
+                <div class="text-center pt-2">
+                    <p class="text-xs text-slate-500">
+                        Déjà inscrit ? 
+                        <a href="/login" class="font-bold text-[#00897b] hover:underline">Se connecter</a>
+                    </p>
+                </div>
+            </form>
+        </div>
+
+        <!-- Right Side: Welcome Banner -->
+        <div class="hidden md:flex md:w-1/2 p-8 md:p-12 bg-gradient-to-br from-[#2e7d32] via-[#00897b] to-[#00695c] flex-col items-center justify-center text-white text-center">
+            <h2 class="text-2xl font-extrabold mb-3 tracking-tight">
+                Rejoignez la Buanderie
+            </h2>
+            <p class="text-xs text-white/90 mb-6 max-w-xs font-medium">
+                Accédez au calendrier en temps réel et réservez vos machines à laver et sèche-linges sans attente.
+            </p>
+
+            <div class="w-28 h-32 bg-white rounded-2xl shadow-xl p-3 flex flex-col justify-between mb-6 relative">
+                <div class="flex items-center justify-between border-b border-slate-200 pb-1 px-1">
+                    <div class="flex space-x-1">
+                        <span class="w-1.5 h-1.5 rounded-full bg-slate-300"></span>
+                        <span class="w-1.5 h-1.5 rounded-full bg-slate-300"></span>
+                    </div>
+                    <span class="w-3 h-3 rounded-full bg-slate-400"></span>
+                </div>
+                <div class="w-16 h-16 mx-auto rounded-full bg-slate-200 p-1 flex items-center justify-center shadow-inner">
+                    <div class="w-full h-full rounded-full bg-gradient-to-tr from-[#0288d1] via-[#29b6f6] to-[#039be5] relative overflow-hidden flex items-center justify-center border-2 border-slate-300">
+                        <div class="absolute inset-0 bg-slate-800/30"></div>
+                        <div class="w-5 h-5 rounded-full bg-white/20"></div>
+                    </div>
+                </div>
+                <div class="flex justify-between px-2">
+                    <span class="w-2 h-1 bg-slate-400 rounded-b"></span>
+                    <span class="w-2 h-1 bg-slate-400 rounded-b"></span>
+                </div>
+            </div>
+
+            <p class="text-xs text-white/90 mb-4 font-semibold">
+                8 heures de réservation gratuites par semaine
+            </p>
+
+            <a href="/login" class="px-8 py-2 rounded-full border border-white text-white hover:bg-white/10 font-bold text-xs uppercase tracking-wider transition-all">
+                Se connecter
+            </a>
+        </div>
+    </div>
+</body>
+</html>`;
+}
+
 
 const server = http.createServer((req, res) => {
     const urlObj = new URL(req.url, `http://${req.headers.host}`);
     const pathname = urlObj.pathname;
 
-    // Static compiled assets
+    // Static compiled assets with compression and long-term caching
     if (pathname.startsWith('/build/')) {
         const filePath = path.join(__dirname, 'public', pathname);
         if (fs.existsSync(filePath)) {
             const ext = path.extname(filePath);
             const contentType = ext === '.css' ? 'text/css' : ext === '.js' ? 'application/javascript' : 'application/octet-stream';
-            res.writeHead(200, { 'Content-Type': contentType });
-            return res.end(fs.readFileSync(filePath));
+            let content = staticCache.get(filePath);
+            if (!content) {
+                content = fs.readFileSync(filePath);
+                staticCache.set(filePath, content);
+            }
+            return sendCompressedResponse(req, res, 200, {
+                'Content-Type': contentType,
+                'Cache-Control': 'public, max-age=31536000, immutable'
+            }, content);
         }
     }
 
@@ -1573,8 +2032,7 @@ const server = http.createServer((req, res) => {
             return res.end();
         }
         const flash = urlObj.searchParams.get('flash') || '';
-        res.writeHead(200, { 'Content-Type': 'text/html' });
-        return res.end(renderLoginPage(flash));
+        return sendCompressedResponse(req, res, 200, { 'Content-Type': 'text/html; charset=utf-8' }, renderLoginPage(flash));
     }
 
     // Forgot Password Flow (Sends simulated email with token)
@@ -1598,8 +2056,7 @@ const server = http.createServer((req, res) => {
             return;
         }
         const status = urlObj.searchParams.get('status') || '';
-        res.writeHead(200, { 'Content-Type': 'text/html' });
-        return res.end(renderForgotPasswordPage(status));
+        return sendCompressedResponse(req, res, 200, { 'Content-Type': 'text/html; charset=utf-8' }, renderForgotPasswordPage(status));
     }
 
     // Reset Password Submission & Form
@@ -1619,20 +2076,115 @@ const server = http.createServer((req, res) => {
         }
         const email = urlObj.searchParams.get('email') || '';
         const token = pathname.split('/')[2] || 'demo-token';
-        res.writeHead(200, { 'Content-Type': 'text/html' });
-        return res.end(renderResetPasswordPage(token, email));
+        return sendCompressedResponse(req, res, 200, { 'Content-Type': 'text/html; charset=utf-8' }, renderResetPasswordPage(token, email));
     }
 
-    // Logout
+    // Register Student Account Flow (Creates user in DB and sends confirmation email)
+    if (pathname === '/register') {
+        if (req.method === 'POST') {
+            let body = '';
+            req.on('data', chunk => body += chunk);
+            req.on('end', () => {
+                const params = new URLSearchParams(body);
+                const name = (params.get('name') || '').trim();
+                const email = (params.get('email') || '').trim();
+                const studentId = (params.get('student_id') || '').trim() || `STU-${Math.floor(10000 + Math.random() * 90000)}`;
+                const roomNumber = (params.get('room_number') || '').trim() || 'Bât. Omar, Ch. 101';
+                const password = params.get('password') || '';
+
+                if (!email || !name) {
+                    const msg = encodeURIComponent("Veuillez renseigner votre nom et votre adresse email institutionnelle.");
+                    res.writeHead(302, { 'Location': `/register?error=${msg}` });
+                    return res.end();
+                }
+
+                // Check if email already registered
+                const exists = state.users.find(u => u.email.toLowerCase() === email.toLowerCase());
+                if (exists) {
+                    const msg = encodeURIComponent(`Un compte associé à l'adresse email ${email} existe déjà.`);
+                    res.writeHead(302, { 'Location': `/register?error=${msg}` });
+                    return res.end();
+                }
+
+                // Create new student in database
+                const nextId = state.users.length > 0 ? Math.max(...state.users.map(u => u.id || 0)) + 1 : 1;
+                const newUser = {
+                    id: nextId,
+                    name: name,
+                    email: email,
+                    role: 'student',
+                    student_id: studentId,
+                    room_number: roomNumber,
+                    weeklyUsed: 0,
+                    weeklyLimit: 8,
+                    credits: 8
+                };
+
+                state.users.push(newUser);
+                saveUsersToDb(state.users);
+
+                // EMAIL CONFIRMATION DISPATCH (Simulated Mailer logging)
+                console.log(`\n======================================================================`);
+                console.log(`📧 [EMAIL DE CONFIRMATION ENVOYÉ: CRÉATION DE COMPTE BUANDERIE]`);
+                console.log(`======================================================================`);
+                console.log(`De: no-reply@ecclaundry.edu (École Centrale Casablanca - Buanderie)`);
+                console.log(`À: ${email}`);
+                console.log(`Objet: Bienvenue sur le portail Buanderie - Centrale Casablanca`);
+                console.log(`Date: ${new Date().toISOString()}`);
+                console.log(`----------------------------------------------------------------------`);
+                console.log(`Bonjour ${name},`);
+                console.log(`\nFélicitations ! Votre compte buanderie a été créé avec succès sur le portail officiel.`);
+                console.log(`Informations de votre profil étudiant :`);
+                console.log(`  • Nom complet         : ${name}`);
+                console.log(`  • Email institutionnel: ${email}`);
+                console.log(`  • Numéro Étudiant     : ${studentId}`);
+                console.log(`  • Résidence / Chambre : ${roomNumber}`);
+                console.log(`  • Quota de bienvenue  : 8 heures de réservation par semaine (1h = 1 crédit)`);
+                console.log(`  • Statut              : Compte Actif et Prêt à l'emploi`);
+                console.log(`\nVous pouvez dès à présent vous connecter et réserver vos créneaux en ligne.`);
+                console.log(`Lien de connexion : http://localhost:${PORT}/login`);
+                console.log(`======================================================================\n`);
+
+                const successMsg = encodeURIComponent(`Votre compte a été créé avec succès ! Un e-mail de confirmation et de bienvenue a été envoyé à ${email}.`);
+                res.writeHead(302, { 'Location': `/login?flash=${successMsg}` });
+                return res.end();
+            });
+            return;
+        }
+        const error = urlObj.searchParams.get('error') || '';
+        const flash = urlObj.searchParams.get('flash') || '';
+        return sendCompressedResponse(req, res, 200, { 'Content-Type': 'text/html; charset=utf-8' }, renderRegisterPage(flash, error));
+    }
+
+    // Logout Action (Clears authentication session and redirects with feedback)
     if (pathname === '/logout') {
         state.isAuthenticated = false;
-        res.writeHead(302, { 'Location': '/login' });
+        console.log(`\n🚪 [DÉCONNEXION RÉUSSIE] Session utilisateur clôturée.`);
+        const msg = encodeURIComponent('Vous avez été déconnecté avec succès. À bientôt !');
+        res.writeHead(302, { 'Location': `/login?flash=${msg}` });
         return res.end();
     }
 
     // MANDATORY REQUIREMENT: IF NOT AUTHENTICATED, FIRST THING SHOWN IS LOGIN!
     if (!state.isAuthenticated) {
         res.writeHead(302, { 'Location': '/login' });
+        return res.end();
+    }
+
+    // Reset User Quota Action (Admin only)
+    if (pathname === '/reset-user-quota') {
+        const id = parseInt(urlObj.searchParams.get('id'), 10);
+        const targetUser = state.users.find(u => u.id === id);
+        if (targetUser) {
+            targetUser.weeklyUsed = 0;
+            targetUser.credits = targetUser.weeklyLimit || 8;
+            saveUsersToDb(state.users);
+            console.log(`\n🔄 [QUOTA RÉINITIALISÉ] ${targetUser.name} (${targetUser.email}) -> Quota remis à zéro (8h disponibles).`);
+            const msg = encodeURIComponent(`Quota hebdomadaire réinitialisé avec succès pour ${targetUser.name}.`);
+            res.writeHead(302, { 'Location': `/utilisateurs?flash=${msg}` });
+            return res.end();
+        }
+        res.writeHead(302, { 'Location': '/utilisateurs' });
         return res.end();
     }
 
@@ -1706,26 +2258,23 @@ const server = http.createServer((req, res) => {
         let preselectedMachine = urlObj.searchParams.get('machine') || urlObj.searchParams.get('machine_id') || 'ML1-OM';
         const found = state.machines.find(m => String(m.id) === String(preselectedMachine) || m.code === preselectedMachine);
         if (found) preselectedMachine = found.code;
-        res.writeHead(200, { 'Content-Type': 'text/html' });
-        return res.end(renderLayout('Réserver une machine', renderDedicatedReservationPage(preselectedMachine), '/reserver'));
+        return sendCompressedResponse(req, res, 200, { 'Content-Type': 'text/html; charset=utf-8' }, renderLayout('Réserver une machine', renderDedicatedReservationPage(preselectedMachine), '/reserver'));
     }
 
     // Authenticated Routes:
     if (pathname === '/' || pathname === '/calendrier' || pathname === '/admin/reservation/calendrier') {
         const flash = urlObj.searchParams.get('flash') || '';
         const date = urlObj.searchParams.get('date') || '2026-09-30';
-        res.writeHead(200, { 'Content-Type': 'text/html' });
-        return res.end(renderLayout('Calendrier des réservations', renderCalendarPage(date), '/calendrier', flash));
+        return sendCompressedResponse(req, res, 200, { 'Content-Type': 'text/html; charset=utf-8' }, renderLayout('Calendrier des réservations', renderCalendarPage(date), '/calendrier', flash));
     }
 
     if (pathname === '/dashboard') {
-        res.writeHead(200, { 'Content-Type': 'text/html' });
-        return res.end(renderLayout('Tableau de bord', renderDashboardPage(), '/dashboard'));
+        return sendCompressedResponse(req, res, 200, { 'Content-Type': 'text/html; charset=utf-8' }, renderLayout('Tableau de bord', renderDashboardPage(), '/dashboard'));
     }
 
     if (pathname === '/utilisateurs') {
-        res.writeHead(200, { 'Content-Type': 'text/html' });
-        return res.end(renderLayout('Gestion des utilisateurs', renderUsersPage(), '/utilisateurs'));
+        const flash = urlObj.searchParams.get('flash') || '';
+        return sendCompressedResponse(req, res, 200, { 'Content-Type': 'text/html; charset=utf-8' }, renderLayout('Gestion des utilisateurs', renderUsersPage(flash), '/utilisateurs', flash));
     }
 
     // Removed sections: redirect to dashboard

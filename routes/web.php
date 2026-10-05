@@ -36,7 +36,7 @@ Route::middleware('guest')->group(function () {
 });
 
 Route::middleware('auth')->group(function () {
-    Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+    Route::match(['get', 'post'], '/logout', [AuthController::class, 'logout'])->name('logout');
 
     // Tableau de bord & Calendrier des réservations
     Route::get('/dashboard', [DashboardController::class, 'dashboard'])->name('dashboard');
@@ -53,7 +53,8 @@ Route::middleware('auth')->group(function () {
 
     // Gestion des Utilisateurs (Admin)
     Route::get('/utilisateurs', function () {
-        return view('admin.users');
+        $users = \App\Models\User::orderBy('name')->get();
+        return view('admin.users', compact('users'));
     })->name('admin.users');
 
     // Sections retirées (Réservations, Machines, Réclamations, Paramètres) -> Redirection vers Tableau de bord

@@ -4,9 +4,15 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Connexion - Laundry Centrale Casablanca</title>
+    <!-- Google Fonts Optimized (Non-blocking with dns-prefetch) -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="dns-prefetch" href="https://fonts.googleapis.com">
+    <link rel="dns-prefetch" href="https://fonts.gstatic.com">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" media="print" onload="this.media='all'">
+    <noscript>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap">
+    </noscript>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="min-h-screen login-bg flex items-center justify-center p-4">
@@ -77,14 +83,21 @@
                     </a>
                 </div>
 
-                <button type="submit" class="w-full py-2.5 rounded-full bg-[#00b4a7] hover:bg-[#009b8f] text-white font-bold text-xs uppercase tracking-wider shadow-md hover:shadow-lg transition-all active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-[#00b4a7]/50 focus-visible:outline-none">
+                <button type="submit" class="w-full py-3 min-h-[46px] rounded-full bg-[#00b4a7] hover:bg-[#009b8f] text-white font-bold text-xs uppercase tracking-wider shadow-md hover:shadow-lg transition-all active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-[#00b4a7]/50 focus-visible:outline-none">
                     Se connecter
                 </button>
+
+                <div class="text-center pt-2 md:hidden">
+                    <p class="text-xs text-slate-500">
+                        Pas encore inscrit ? 
+                        <a href="{{ route('register') }}" class="font-bold text-[#00897b] hover:underline">S'inscrire</a>
+                    </p>
+                </div>
             </form>
         </div>
 
-        <!-- Right Side: Welcome Banner (Green to Teal Gradient) -->
-        <div class="w-full md:w-1/2 p-8 md:p-12 bg-gradient-to-br from-[#2e7d32] via-[#00897b] to-[#00695c] flex flex-col items-center justify-center text-white text-center">
+        <!-- Right Side: Welcome Banner (Desktop only) -->
+        <div class="hidden md:flex md:w-1/2 p-8 md:p-12 bg-gradient-to-br from-[#2e7d32] via-[#00897b] to-[#00695c] flex-col items-center justify-center text-white text-center">
             
             <h2 class="text-3xl font-extrabold mb-6 tracking-tight">
                 Bienvenue !

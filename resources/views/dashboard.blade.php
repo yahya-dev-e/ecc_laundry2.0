@@ -131,7 +131,48 @@
                 </a>
             </div>
         @else
-            <div class="overflow-x-auto">
+            <!-- Mobile Reservation Cards (Visible on mobile screens < sm) -->
+            <div class="sm:hidden p-3 space-y-3">
+                @foreach($userReservations as $res)
+                    @php
+                        $machine = $res->machine;
+                        $durationHours = max(1, round(($res->end_time->diffInMinutes($res->start_time)) / 60));
+                        $machineColor = $machine?->color ?? '#4338ca';
+                    @endphp
+                    <div class="bg-white border border-slate-200 rounded-xl p-3.5 space-y-2.5 shadow-2xs">
+                        <div class="flex items-center justify-between">
+                            <span style="background-color: {{ $machineColor }};" class="px-2.5 py-1 rounded text-xs font-mono font-bold text-white shadow-xs">
+                                {{ $machine?->name ?? 'Machine' }}
+                            </span>
+                            <span class="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold text-[10px] inline-flex items-center space-x-1">
+                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
+                                <span>Confirmé</span>
+                            </span>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2 text-xs pt-1">
+                            <div class="flex items-center space-x-1.5 text-slate-700">
+                                <svg class="w-3.5 h-3.5 text-slate-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                                <span class="font-medium">{{ $res->start_time->format('d/m/Y') }}</span>
+                            </div>
+                            <div class="flex items-center space-x-1.5 text-slate-800 font-mono font-bold">
+                                <svg class="w-3.5 h-3.5 text-slate-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                <span>{{ $res->start_time->format('H:i') }} - {{ $res->end_time->format('H:i') }}</span>
+                            </div>
+                        </div>
+                        <div class="flex items-center justify-between pt-2 border-t border-slate-100">
+                            <span class="text-[11px] text-slate-600 font-semibold">
+                                {{ $durationHours }} h ({{ $durationHours }} crédit{{ $durationHours > 1 ? 's' : '' }})
+                            </span>
+                            <a href="{{ route('calendrier') }}?date={{ $res->start_time->toDateString() }}&machine_id={{ $res->machine_id }}" class="px-3 py-1.5 text-xs font-semibold text-[#00897b] bg-emerald-50 hover:bg-emerald-100 rounded-lg border border-emerald-200 transition-colors">
+                                Voir au calendrier &rarr;
+                            </a>
+                        </div>
+                    </div>
+                @endforeach
+            </div>
+
+            <!-- Desktop Table View (Visible on >= sm) -->
+            <div class="hidden sm:block overflow-x-auto">
                 <table class="w-full text-left text-xs">
                     <thead class="bg-slate-100/75 text-slate-700 font-bold border-b border-slate-200">
                         <tr>

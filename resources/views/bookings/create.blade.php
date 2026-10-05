@@ -57,12 +57,12 @@
 
 <div class="max-w-3xl mx-auto space-y-6" x-data="bookingApp({{ $defaultMachineId }})">
 
-    <div class="flex items-center justify-between">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
         <div>
             <h1 class="text-xl font-bold text-slate-800 tracking-tight">Réserver une machine</h1>
             <p class="text-xs text-slate-500">Planification des créneaux horaires disponibles par machine (24h/24)</p>
         </div>
-        <a href="{{ route('calendrier') }}" class="text-xs text-[#00897b] hover:underline font-semibold flex items-center space-x-1">
+        <a href="{{ route('calendrier') }}" class="text-xs text-[#00897b] hover:underline font-semibold flex items-center space-x-1 self-start sm:self-auto">
             <span>&larr;</span>
             <span>Retour au calendrier</span>
         </a>
@@ -144,10 +144,10 @@
                 <div x-show="availableSlots.length > 0" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5 max-h-72 overflow-y-auto p-2 border border-slate-200 rounded-lg bg-slate-50/50">
                     <template x-for="slot in availableSlots" :key="slot">
                         <label :class="{'border-[#00897b] bg-[#e0f2f1] text-[#00695c] font-bold shadow-xs': isSelected(slot), 'border-slate-200 bg-white text-slate-700 hover:border-[#00897b]': !isSelected(slot)}"
-                               class="flex items-center justify-between p-2.5 rounded border transition-all cursor-pointer select-none text-xs"
+                               class="flex items-center justify-between p-3 min-h-[46px] rounded-lg border transition-all cursor-pointer select-none text-xs active:scale-[0.98]"
                                @click.prevent="toggleSlot(slot)">
-                            <span class="font-mono" x-text="slot"></span>
-                            <span class="w-4 h-4 rounded-full border flex items-center justify-center text-[10px]"
+                            <span class="font-mono text-xs font-semibold" x-text="slot"></span>
+                            <span class="w-4 h-4 rounded-full border flex items-center justify-center text-[10px] shrink-0 ml-1.5"
                                   :class="{'bg-[#00897b] border-[#00897b] text-white': isSelected(slot), 'border-slate-300': !isSelected(slot)}">
                                 <svg aria-hidden="true" x-show="isSelected(slot)" class="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
                             </span>
@@ -218,6 +218,26 @@
                     <span x-show="selectedSlots.length > 0 && (selectedSlots.length > remainingHours)">Quota insuffisant</span>
                     <span x-show="selectedSlots.length > 0 && (selectedSlots.length <= remainingHours)"
                           x-text="'Confirmer la réservation (' + selectedSlots.length + 'h • ' + selectedSlots.length + ' crédit' + (selectedSlots.length > 1 ? 's' : '') + ')'"></span>
+                </button>
+            </div>
+
+            <!-- Sticky Mobile Bottom Bar (Visible on mobile screens < sm) -->
+            <div x-show="selectedSlots.length > 0" 
+                 x-transition:enter="transition ease-out duration-200"
+                 x-transition:enter-start="translate-y-full opacity-0"
+                 x-transition:enter-end="translate-y-0 opacity-100"
+                 x-transition:leave="transition ease-in duration-150"
+                 x-transition:leave-start="translate-y-0 opacity-100"
+                 x-transition:leave-end="translate-y-full opacity-0"
+                 class="sm:hidden fixed bottom-0 inset-x-0 bg-white/95 backdrop-blur-md border-t border-slate-200 px-4 py-3 shadow-2xl z-40 flex items-center justify-between safe-pb">
+                <div>
+                    <div class="text-xs font-bold text-slate-800" x-text="selectedSlots.length + ' créneau' + (selectedSlots.length > 1 ? 'x' : '')"></div>
+                    <div class="text-[11px] text-[#00897b] font-semibold font-mono" x-text="selectedSlots.length + ' crédit' + (selectedSlots.length > 1 ? 's' : '')"></div>
+                </div>
+                <button type="submit" 
+                        :disabled="selectedSlots.length === 0 || (selectedSlots.length > remainingHours)"
+                        class="px-5 py-2.5 bg-[#00897b] hover:bg-[#00796b] text-white text-xs font-bold rounded-lg shadow-md transition-all active:scale-95">
+                    Confirmer
                 </button>
             </div>
         </form>

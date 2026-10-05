@@ -97,35 +97,35 @@
         </div>
 
         <!-- Matrix Content -->
-        <div class="grid grid-cols-2 divide-x divide-slate-200 p-4">
+        <div class="grid grid-cols-2 divide-x divide-slate-200 p-3 sm:p-4">
             
             <!-- Column 1: Machine à laver (Washers) -->
-            <div class="grid grid-cols-3 gap-2 pr-3">
+            <div class="grid grid-cols-2 sm:grid-cols-3 gap-1.5 sm:gap-2 pr-2 sm:pr-3">
                 @forelse($washers as $machine)
                     @php
                         $mColor = $machineColorPalette[$machine->name ?? ''] ?? $machine->color ?? '#4338ca';
                     @endphp
                     <button type="button" @click="selectMachine('{{ $machine->name }}', {{ $machine->id }})" 
-                            :class="{'ring-3 ring-slate-900 scale-105 shadow-md': selectedMachineId === {{ $machine->id }}}"
+                            :class="{'ring-2 ring-slate-900 scale-105 shadow-md': selectedMachineId === {{ $machine->id }}}"
                             style="background-color: {{ $mColor }};"
-                            class="badge-machine text-white hover:opacity-90">
+                            class="badge-machine text-white hover:opacity-90 py-1.5 px-2 sm:px-3 text-[11px] sm:text-xs justify-center text-center">
                         <span class="truncate">{{ $machine->name }}</span>
                     </button>
                 @empty
-                    <p class="text-xs text-slate-400 col-span-3 text-center py-2">Aucun lave-linge</p>
+                    <p class="text-xs text-slate-400 col-span-2 sm:col-span-3 text-center py-2">Aucun lave-linge</p>
                 @endforelse
             </div>
 
             <!-- Column 2: Sèche-linge (Dryers) -->
-            <div class="grid grid-cols-2 gap-2 pl-3">
+            <div class="grid grid-cols-2 sm:grid-cols-2 gap-1.5 sm:gap-2 pl-2 sm:pl-3">
                 @forelse($dryers as $machine)
                     @php
                         $mColor = $machineColorPalette[$machine->name ?? ''] ?? $machine->color ?? '#b45309';
                     @endphp
                     <button type="button" @click="selectMachine('{{ $machine->name }}', {{ $machine->id }})"
-                            :class="{'ring-3 ring-slate-900 scale-105 shadow-md': selectedMachineId === {{ $machine->id }}}"
+                            :class="{'ring-2 ring-slate-900 scale-105 shadow-md': selectedMachineId === {{ $machine->id }}}"
                             style="background-color: {{ $mColor }};"
-                            class="badge-machine text-white hover:opacity-90">
+                            class="badge-machine text-white hover:opacity-90 py-1.5 px-2 sm:px-3 text-[11px] sm:text-xs justify-center text-center">
                         <span class="truncate">{{ $machine->name }}</span>
                     </button>
                 @empty
@@ -152,9 +152,9 @@
 
     <!-- Date Title & Working Navigation Controls (Aujourd'hui, Précédent, Suivant, All Days) -->
     <div class="space-y-3 pt-4 border-t border-slate-200">
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div class="flex items-center space-x-3">
-                <h2 class="text-xl font-normal text-slate-700 capitalize">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div class="flex flex-wrap items-center gap-2">
+                <h2 class="text-base sm:text-xl font-bold text-slate-800 capitalize">
                     {{ $dayName }}, {{ $dateFormatted }}
                 </h2>
 
@@ -168,19 +168,19 @@
             </div>
 
             <!-- Navigation Buttons: Aujourd'hui, Précédent (Hier), Suivant (Demain) -->
-            <div class="inline-flex rounded shadow-xs text-xs">
+            <div class="inline-flex rounded shadow-xs text-xs self-start sm:self-auto">
                 <a :href="'{{ route('calendrier') }}?date={{ $todayDate }}&machine_id=' + selectedMachineId" 
-                   class="px-3.5 py-1.5 {{ $selectedDate === $todayDate ? 'bg-[#00897b] text-white font-bold' : 'bg-[#546e7a] hover:bg-[#455a64] text-white font-medium' }} rounded-l transition-colors flex items-center">
+                   class="px-3.5 py-2 {{ $selectedDate === $todayDate ? 'bg-[#00897b] text-white font-bold' : 'bg-[#546e7a] hover:bg-[#455a64] text-white font-medium' }} rounded-l transition-colors flex items-center">
                     Aujourd'hui
                 </a>
                 <a :href="'{{ route('calendrier') }}?date={{ $prevDate }}&machine_id=' + selectedMachineId" 
-                   class="px-3.5 py-1.5 bg-[#37474f] hover:bg-[#263238] text-white font-medium transition-colors flex items-center space-x-1"
+                   class="px-3 py-2 bg-[#37474f] hover:bg-[#263238] text-white font-medium transition-colors flex items-center space-x-1"
                    title="Jour précédent ({{ $prevDate }})">
                     <span>&larr;</span>
                     <span>Précédent</span>
                 </a>
                 <a :href="'{{ route('calendrier') }}?date={{ $nextDate }}&machine_id=' + selectedMachineId" 
-                   class="px-3.5 py-1.5 bg-[#263238] hover:bg-black text-white font-medium rounded-r transition-colors flex items-center space-x-1"
+                   class="px-3 py-2 bg-[#263238] hover:bg-black text-white font-medium rounded-r transition-colors flex items-center space-x-1"
                    title="Jour suivant ({{ $nextDate }})">
                     <span>Suivant</span>
                     <span>&rarr;</span>
@@ -193,7 +193,7 @@
             <div class="grid grid-cols-7 gap-1 sm:gap-2 p-1.5 bg-white rounded-lg border border-slate-200 shadow-xs">
                 @foreach($weekDays as $wDay)
                     <a :href="'{{ route('calendrier') }}?date={{ $wDay['date'] }}&machine_id=' + selectedMachineId"
-                       class="py-2 px-1 text-center rounded transition-all flex flex-col items-center justify-center {{ $wDay['isSelected'] ? 'bg-[#00897b] text-white font-bold shadow-xs scale-102' : 'hover:bg-slate-100 text-slate-700' }}">
+                       class="py-2.5 px-1 text-center rounded transition-all flex flex-col items-center justify-center min-h-[48px] {{ $wDay['isSelected'] ? 'bg-[#00897b] text-white font-bold shadow-xs scale-102' : 'hover:bg-slate-100 text-slate-700' }}">
                         <span class="text-[10px] uppercase font-semibold {{ $wDay['isSelected'] ? 'text-emerald-100' : 'text-slate-400' }}">
                             {{ $wDay['shortName'] }}
                         </span>
@@ -211,11 +211,17 @@
         @endif
     </div>
 
+    <!-- Mobile Horizontal Scroll Cue -->
+    <div class="sm:hidden flex items-center justify-end space-x-1.5 text-[11px] text-slate-500 px-1 -mb-2 select-none">
+        <svg class="w-3.5 h-3.5 text-[#00897b]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+        <span class="font-medium">Glissez vers la droite pour voir les machines</span>
+    </div>
+
     <!-- Timetable / Calendar Timeline Grid with Continuous Blocks & Limitor Lines -->
     <div class="bg-white rounded-lg border border-slate-300 shadow-xs overflow-hidden">
         
         <div class="flex border-b border-slate-300 bg-[#f9f9e8] text-xs font-semibold text-slate-700">
-            <div class="w-16 sm:w-20 p-2.5 text-center border-r border-slate-300 text-[11px] text-slate-500 font-semibold tracking-tight">
+            <div class="w-14 sm:w-20 p-2 sm:p-2.5 text-center border-r border-slate-300 text-[10px] sm:text-[11px] text-slate-500 font-semibold tracking-tight sticky left-0 z-30 bg-[#f9f9e8] shadow-xs">
                 Horaires
             </div>
             <div class="flex-1 p-2.5 text-center font-bold text-slate-800 capitalize flex items-center justify-center space-x-2">
@@ -231,15 +237,15 @@
         <div class="relative overflow-x-auto">
             <div class="flex min-w-[620px] relative select-none">
                 
-                <!-- Left Axis: Hours of the Day directly ON the line as limitor indicators -->
-                <div class="w-16 sm:w-20 shrink-0 border-r border-slate-300 bg-slate-50/70 relative select-none" style="height: {{ 24 * 52 }}px;">
+                <!-- Left Axis: Hours of the Day directly ON the line as limitor indicators (sticky on mobile horizontal scroll) -->
+                <div class="w-14 sm:w-20 shrink-0 border-r border-slate-300 bg-slate-50/95 sticky left-0 z-30 shadow-xs select-none" style="height: {{ 24 * 52 }}px;">
                     @for ($h = 0; $h <= 24; $h++)
                         @php
                             $top = $h * 52;
                             $hourLabel = sprintf('%02d:00', $h === 24 ? 24 : $h);
                         @endphp
-                        <div class="absolute right-0 pr-3 flex items-center -translate-y-1/2 pointer-events-none" style="top: {{ $top }}px;">
-                            <span class="text-[11px] font-bold text-slate-500 font-mono tracking-tight">{{ $hourLabel }}</span>
+                        <div class="absolute right-0 pr-1.5 sm:pr-3 flex items-center -translate-y-1/2 pointer-events-none" style="top: {{ $top }}px;">
+                            <span class="text-[10px] sm:text-[11px] font-bold text-slate-500 font-mono tracking-tight">{{ $hourLabel }}</span>
                         </div>
                     @endfor
                 </div>
