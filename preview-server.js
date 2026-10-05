@@ -862,12 +862,16 @@ function renderCalendarPage(selectedDateStr = '2026-09-30') {
                             };
                             const machineType = mach.type === 'dryer' ? 'Sèche-linge' : 'Machine à laver';
                             const durationStr = block.durationFormatted || (block.durationMinutes ? `${block.durationMinutes / 60} h` : '1 h');
+                            const foundUser = state.users.find(u => u.name && u.name.toLowerCase() === (block.user || '').toLowerCase()) ||
+                                              state.users.find(u => u.email && u.email.toLowerCase() === (block.user || '').toLowerCase());
+                            const userEmail = block.email || (foundUser ? foundUser.email : (block.user ? `${block.user.toLowerCase().replace(/[^a-z0-9]/g, '.')}@fecc.ma` : 'etudiant@fecc.ma'));
                             const resData = {
                                 code: block.code,
                                 type: machineType,
                                 bg: machineColor,
                                 textColor: block.textColor || 'text-white',
-                                user: block.user || 'Occupé',
+                                user: userEmail,
+                                email: userEmail,
                                 date: selectedDateStr,
                                 dateFormatted: `${dayName}, ${dateFormatted}`,
                                 time: block.time,
@@ -947,7 +951,7 @@ function renderCalendarPage(selectedDateStr = '2026-09-30') {
                         </div>
                         <div class="flex-1 min-w-0">
                             <span class="text-[10px] uppercase font-bold tracking-wider text-slate-400 block">Utilisateur bénéficiaire</span>
-                            <h4 id="resModalUserName" class="text-sm font-bold text-slate-800 truncate"></h4>
+                            <h4 id="resModalUserName" class="text-sm font-bold text-slate-800 truncate font-mono"></h4>
                         </div>
                     </div>
 
@@ -1000,10 +1004,11 @@ function renderCalendarPage(selectedDateStr = '2026-09-30') {
                 document.getElementById('resModalMachineName').textContent = data.code;
                 document.getElementById('resModalMachineType').textContent = data.type || (data.code.startsWith('SL') ? 'Sèche-linge' : 'Machine à laver');
                 
-                const initial = (data.user || 'U').charAt(0).toUpperCase();
+                const userEmail = data.email || data.user || 'etudiant@fecc.ma';
+                const initial = userEmail.charAt(0).toUpperCase();
                 const avatar = document.getElementById('resModalUserAvatar');
                 if (avatar) avatar.textContent = initial;
-                document.getElementById('resModalUserName').textContent = data.user || 'Occupé';
+                document.getElementById('resModalUserName').textContent = userEmail;
 
                 document.getElementById('resModalDate').textContent = data.dateFormatted || data.date;
                 document.getElementById('resModalTime').textContent = data.time || '';

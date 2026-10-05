@@ -325,7 +325,7 @@
                             $machineColor = $machineColorPalette[$block['machine']->name ?? ''] ?? $block['machine']->color ?? '#4338ca';
                             $mName = $block['machine']->name ?? 'Machine';
                             $mTypeStr = ($block['machine']->type instanceof \App\Enums\MachineType ? $block['machine']->type->value : (string)($block['machine']->type ?? '')) === 'dryer' ? 'Sèche-linge' : 'Machine à laver';
-                            $uName = $block['user']?->name ?? 'Réservé';
+                            $uEmail = $block['user']?->email ?? ($block['user']?->name ? strtolower(str_replace(' ', '.', $block['user']->name)) . '@fecc.ma' : 'etudiant@fecc.ma');
                         @endphp
                         <div style="background-color: {{ $machineColor }}; top: {{ $block['top'] + 1 }}px; height: {{ $block['height'] - 2 }}px; left: calc({{ $block['leftPct'] }}% + 4px); width: calc({{ $block['widthPct'] }}% - 8px);"
                              class="absolute rounded-md text-white overflow-hidden transition-all cursor-pointer border border-white/20 select-none shadow-sm hover:shadow-md hover:scale-[1.01] hover:brightness-105 z-20"
@@ -334,7 +334,8 @@
                                  type: '{{ addslashes($mTypeStr) }}',
                                  bg: '{{ $machineColor }}',
                                  machine_id: {{ $block['machine_id'] ?? 1 }},
-                                 user: '{{ addslashes($uName) }}',
+                                 user: '{{ addslashes($uEmail) }}',
+                                 email: '{{ addslashes($uEmail) }}',
                                  date: '{{ $selectedDate }}',
                                  time: '{{ $block['timeFormatted'] }}',
                                  duration: '{{ $block['durationFormatted'] }}'
@@ -415,7 +416,7 @@
                     </div>
                     <div class="flex-1 min-w-0">
                         <span class="text-[10px] uppercase font-bold tracking-wider text-slate-400 block">Utilisateur bénéficiaire</span>
-                        <h4 class="text-sm font-bold text-slate-800 truncate" x-text="resModalData?.user"></h4>
+                        <h4 class="text-sm font-bold text-slate-800 truncate font-mono" x-text="resModalData?.email || resModalData?.user"></h4>
                     </div>
                 </div>
 
