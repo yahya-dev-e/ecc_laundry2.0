@@ -121,6 +121,13 @@
             </div>
         @endif
 
+        @if (session('error'))
+            <div role="alert" aria-live="assertive" class="mx-3 sm:mx-6 mt-3 sm:mt-4 p-3.5 rounded bg-rose-50 border-l-4 border-rose-500 text-rose-800 text-xs flex justify-between items-center shadow-xs">
+                <span>{{ session('error') }}</span>
+                <button type="button" aria-label="Fermer la notification" onclick="this.parentElement.remove()" class="text-rose-600 hover:text-rose-800 font-bold focus-visible:ring-2 focus-visible:ring-rose-500 rounded p-1">&times;</button>
+            </div>
+        @endif
+
         <!-- Page View Body -->
         <main class="p-3 sm:p-6 md:p-8 flex-1 w-full max-w-full overflow-x-hidden">
             @yield('content')

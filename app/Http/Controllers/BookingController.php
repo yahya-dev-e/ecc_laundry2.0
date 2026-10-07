@@ -188,19 +188,63 @@ class BookingController extends Controller
      */
     public function cancel(Request $request, Reservation $booking): RedirectResponse
     {
-        if ($booking->user_id !== $request->user()->id && !$request->user()->isAdmin()) {
-            abort(403, 'Unauthorized action.');
+        $currentUser = $request->user();
+        if (!$currentUser) {
+            return redirect()->route('login');
         }
 
-        $reason = $request->input('reason', 'Cancelled by user');
+        $reservationIds = $request->input('reservation_ids');
+        if (!empty($reservationIds) && is_array($reservationIds)) {
+            $bookings = Reservation::whereIn('id', $reservationIds)->get();
+            $cancelledCount = 0;
+            foreach ($bookings as $b) {
+                if ($b->user_id === $currentUser->id || $currentUser->isAdmin()) {
+                    try {
+                        $this->bookingService->cancelBooking($b, 'Cancelled by user', $currentUser->isAdmin());
+                        $cancelledCount++;
+                    } catch (\Exception $e) {}
+                }
+            }
+
+            $message = $cancelledCount > 1
+                ? "{$cancelledCount} créneaux de réservation ont été annulés avec succès. Vos crédits ont été restitués."
+                : "La réservation a été annulée avec succès. Votre crédit a été restitué.";
+
+            $redirectTarget = $request->input('redirect_to');
+            if ($redirectTarget) {
+                return redirect($redirectTarget)->with('success', $message);
+            }
+
+            return redirect()->route('dashboard')->with('success', $message);
+        }
+
+        if ($booking->user_id !== $currentUser->id && !$currentUser->isAdmin()) {
+            abort(403, 'Action non autorisée.');
+        }
+
+        $reason = $request->input('reason', 'Annulé par ' . ($currentUser->isAdmin() ? 'administrateur' : 'utilisateur'));
 
         try {
-            $this->bookingService->cancelBooking($booking, $reason);
+            $this->bookingService->cancelBooking($booking, $reason, $currentUser->isAdmin());
 
-            return redirect()->route('bookings.index')
-                ->with('success', "Reservation #{$booking->id} cancelled successfully.");
+            $message = "La réservation #{$booking->id} a été annulée avec succès. Votre crédit vous a été restitué.";
+
+            $redirectTarget = $request->input('redirect_to');
+            if ($redirectTarget) {
+                return redirect($redirectTarget)->with('success', $message);
+            }
+
+            return redirect()->route('bookings.index')->with('success', $message);
         } catch (InvalidArgumentException $e) {
             return back()->with('error', $e->getMessage());
         }
+    }
+
+    /**
+     * Remove / destroy an existing reservation.
+     */
+    public function destroy(Request $request, Reservation $booking): RedirectResponse
+    {
+        return $this->cancel($request, $booking);
     }
 }

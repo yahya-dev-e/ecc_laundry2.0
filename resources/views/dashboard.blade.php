@@ -138,16 +138,29 @@
                         $machine = $res->machine;
                         $durationHours = max(1, round(($res->end_time->diffInMinutes($res->start_time)) / 60));
                         $machineColor = $machine?->color ?? '#4338ca';
+                        $resStatus = $res->status;
+                        $canCancel = ($resStatus === 'upcoming') || $isAdmin;
                     @endphp
                     <div class="bg-white border border-slate-200 rounded-xl p-3.5 space-y-2.5 shadow-2xs">
                         <div class="flex items-center justify-between">
                             <span style="background-color: {{ $machineColor }};" class="px-2.5 py-1 rounded text-xs font-mono font-bold text-white shadow-xs">
                                 {{ $machine?->name ?? 'Machine' }}
                             </span>
-                            <span class="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold text-[10px] inline-flex items-center space-x-1">
-                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
-                                <span>Confirmé</span>
-                            </span>
+                            @if($resStatus === 'upcoming')
+                                <span class="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold text-[10px] inline-flex items-center space-x-1">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
+                                    <span>Confirmé</span>
+                                </span>
+                            @elseif($resStatus === 'in_progress')
+                                <span class="px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 font-bold text-[10px] inline-flex items-center space-x-1">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-amber-600 animate-pulse"></span>
+                                    <span>En cours</span>
+                                </span>
+                            @else
+                                <span class="px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600 font-bold text-[10px] inline-flex items-center space-x-1">
+                                    <span>Terminé</span>
+                                </span>
+                            @endif
                         </div>
                         <div class="grid grid-cols-2 gap-2 text-xs pt-1">
                             <div class="flex items-center space-x-1.5 text-slate-700">
@@ -163,9 +176,21 @@
                             <span class="text-[11px] text-slate-600 font-semibold">
                                 {{ $durationHours }} h ({{ $durationHours }} crédit{{ $durationHours > 1 ? 's' : '' }})
                             </span>
-                            <a href="{{ route('calendrier') }}?date={{ $res->start_time->toDateString() }}&machine_id={{ $res->machine_id }}" class="px-3 py-1.5 text-xs font-semibold text-[#00897b] bg-emerald-50 hover:bg-emerald-100 rounded-lg border border-emerald-200 transition-colors">
-                                Voir au calendrier &rarr;
-                            </a>
+                            <div class="flex items-center space-x-1.5">
+                                <a href="{{ route('calendrier') }}?date={{ $res->start_time->toDateString() }}&machine_id={{ $res->machine_id }}" class="px-2.5 py-1 text-xs font-semibold text-[#00897b] bg-emerald-50 hover:bg-emerald-100 rounded-lg border border-emerald-200 transition-colors">
+                                    Voir
+                                </a>
+                                @if($canCancel)
+                                    <form method="POST" action="{{ route('bookings.cancel', $res) }}" onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer cette réservation ? Votre crédit sera restitué.');" class="inline">
+                                        @csrf
+                                        <input type="hidden" name="redirect_to" value="{{ route('dashboard') }}">
+                                        <button type="submit" class="px-2.5 py-1 text-xs font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 rounded-lg border border-rose-200 transition-colors inline-flex items-center space-x-1">
+                                            <svg class="w-3 h-3 text-rose-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                            <span>Annuler</span>
+                                        </button>
+                                    </form>
+                                @endif
+                            </div>
                         </div>
                     </div>
                 @endforeach
@@ -181,7 +206,7 @@
                             <th class="py-3 px-4">Créneau horaire</th>
                             <th class="py-3 px-4">Durée & Crédits</th>
                             <th class="py-3 px-4">Statut</th>
-                            <th class="py-3 px-4 text-right">Calendrier</th>
+                            <th class="py-3 px-4 text-right">Actions</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-100">
@@ -190,6 +215,8 @@
                                 $machine = $res->machine;
                                 $durationHours = max(1, round(($res->end_time->diffInMinutes($res->start_time)) / 60));
                                 $machineColor = $machine?->color ?? '#4338ca';
+                                $resStatus = $res->status;
+                                $canCancel = ($resStatus === 'upcoming') || $isAdmin;
                             @endphp
                             <tr class="hover:bg-slate-50/70 transition-colors">
                                 <td class="py-3 px-4">
@@ -207,15 +234,38 @@
                                     {{ $durationHours }} h ({{ $durationHours }} crédit{{ $durationHours > 1 ? 's' : '' }})
                                 </td>
                                 <td class="py-3 px-4">
-                                    <span class="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 font-bold text-[10px] inline-flex items-center space-x-1">
-                                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
-                                        <span>Confirmé</span>
-                                    </span>
+                                    @if($resStatus === 'upcoming')
+                                        <span class="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 font-bold text-[10px] inline-flex items-center space-x-1">
+                                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
+                                            <span>Confirmé</span>
+                                        </span>
+                                    @elseif($resStatus === 'in_progress')
+                                        <span class="px-2.5 py-1 rounded-full bg-amber-100 text-amber-800 font-bold text-[10px] inline-flex items-center space-x-1">
+                                            <span class="w-1.5 h-1.5 rounded-full bg-amber-600 animate-pulse"></span>
+                                            <span>En cours</span>
+                                        </span>
+                                    @else
+                                        <span class="px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 font-bold text-[10px] inline-flex items-center space-x-1">
+                                            <span>Terminé</span>
+                                        </span>
+                                    @endif
                                 </td>
                                 <td class="py-3 px-4 text-right">
-                                    <a href="{{ route('calendrier') }}?date={{ $res->start_time->toDateString() }}&machine_id={{ $res->machine_id }}" class="px-2.5 py-1 text-[11px] font-semibold text-[#00897b] hover:bg-emerald-50 rounded border border-emerald-200 transition-colors inline-block">
-                                        Voir au calendrier &rarr;
-                                    </a>
+                                    <div class="inline-flex items-center space-x-1.5">
+                                        <a href="{{ route('calendrier') }}?date={{ $res->start_time->toDateString() }}&machine_id={{ $res->machine_id }}" class="px-2.5 py-1 text-[11px] font-semibold text-[#00897b] hover:bg-emerald-50 rounded border border-emerald-200 transition-colors inline-block" title="Voir sur le calendrier">
+                                            Voir au calendrier &rarr;
+                                        </a>
+                                        @if($canCancel)
+                                            <form method="POST" action="{{ route('bookings.cancel', $res) }}" onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer cette réservation ? Votre crédit sera restitué.');" class="inline">
+                                                @csrf
+                                                <input type="hidden" name="redirect_to" value="{{ route('dashboard') }}">
+                                                <button type="submit" class="px-2.5 py-1 text-[11px] font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 hover:border-rose-300 rounded border border-rose-200 transition-colors inline-flex items-center space-x-1" title="Annuler cette réservation">
+                                                    <svg class="w-3 h-3 text-rose-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                                    <span>Annuler</span>
+                                                </button>
+                                            </form>
+                                        @endif
+                                    </div>
                                 </td>
                             </tr>
                         @endforeach

@@ -50,6 +50,8 @@ Route::middleware('auth')->group(function () {
     Route::post('/reserver', [BookingController::class, 'store']);
     Route::post('/bookings/{booking}/start', [BookingController::class, 'start'])->name('bookings.start');
     Route::post('/bookings/{booking}/cancel', [BookingController::class, 'cancel'])->name('bookings.cancel');
+    Route::delete('/bookings/{booking}', [BookingController::class, 'destroy'])->name('bookings.destroy');
+    Route::post('/bookings/{booking}/delete', [BookingController::class, 'destroy']);
 
     // Gestion des Utilisateurs (Admin)
     Route::get('/utilisateurs', function () {

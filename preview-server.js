@@ -493,6 +493,7 @@ function renderLayout(title, content, currentPath = '/', flash = '') {
 
 // 1. Calendrier Page (Image 2) with date navigation
 function renderCalendarPage(selectedDateStr = '2026-09-30') {
+    const currentUserName = state.isAdmin ? 'El Omari' : 'Alex Rivera';
     const washers = state.machines.filter(m => m.type === 'washer');
     const dryers = state.machines.filter(m => m.type === 'dryer');
     const hours = ['00 h', '01 h', '02 h', '03 h', '04 h', '05 h', '06 h', '07 h', '08 h', '09 h', '10 h', '11 h', '12 h', '13 h', '14 h', '15 h', '16 h', '17 h', '18 h', '19 h', '20 h', '21 h', '22 h', '23 h'];
@@ -976,14 +977,30 @@ function renderCalendarPage(selectedDateStr = '2026-09-30') {
                 </div>
 
                 <!-- Modal Footer -->
-                <div class="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-end space-x-2">
-                    <button type="button" onclick="closeReservationModal()" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-bold rounded-lg transition-colors">
-                        Fermer
-                    </button>
-                    <a id="resModalBookMachineLink" href="/reserver" class="px-4 py-2 bg-[#00897b] hover:bg-[#00796b] text-white text-xs font-bold rounded-lg shadow-sm transition-colors flex items-center space-x-1.5">
-                        <span>Réserver cette machine</span>
-                        <span>&rarr;</span>
-                    </a>
+                <div class="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
+                    <div>
+                        <form id="resModalDeleteForm" method="POST" action="/bookings/cancel" onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer cette réservation ? Votre quota vous sera restitué.');" class="inline">
+                            <input type="hidden" id="resModalDelDate" name="date" value="">
+                            <input type="hidden" id="resModalDelCode" name="code" value="">
+                            <input type="hidden" id="resModalDelTime" name="time" value="">
+                            <input type="hidden" id="resModalDelRedirect" name="redirect_to" value="">
+                            <button type="submit" id="resModalDeleteBtn" class="px-3.5 py-2 bg-rose-50 hover:bg-rose-600 text-rose-700 hover:text-white border border-rose-200 hover:border-rose-600 text-xs font-bold rounded-lg transition-colors flex items-center space-x-1.5 shadow-xs cursor-pointer">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                </svg>
+                                <span>Supprimer la réservation</span>
+                            </button>
+                        </form>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <button type="button" onclick="closeReservationModal()" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-bold rounded-lg transition-colors">
+                            Fermer
+                        </button>
+                        <a id="resModalBookMachineLink" href="/reserver" class="px-4 py-2 bg-[#00897b] hover:bg-[#00796b] text-white text-xs font-bold rounded-lg shadow-sm transition-colors flex items-center space-x-1.5">
+                            <span>Réserver cette machine</span>
+                            <span>&rarr;</span>
+                        </a>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1016,6 +1033,16 @@ function renderCalendarPage(selectedDateStr = '2026-09-30') {
 
                 const bookLink = document.getElementById('resModalBookMachineLink');
                 if (bookLink) bookLink.href = '/reserver?machine=' + encodeURIComponent(data.code) + '&date=' + encodeURIComponent(data.date);
+
+                const deleteForm = document.getElementById('resModalDeleteForm');
+                const canCancel = (data.user === '${currentUserName}' || ${state.isAdmin});
+                if (deleteForm) {
+                    deleteForm.style.display = canCancel ? 'inline' : 'none';
+                    document.getElementById('resModalDelDate').value = data.date || '';
+                    document.getElementById('resModalDelCode').value = data.code || '';
+                    document.getElementById('resModalDelTime').value = data.time || '';
+                    document.getElementById('resModalDelRedirect').value = '/calendrier?date=' + encodeURIComponent(data.date);
+                }
 
                 const modal = document.getElementById('reservationDetailsModal');
                 if (modal) modal.classList.remove('hidden');
@@ -1543,9 +1570,21 @@ function renderDashboardPage() {
                                 <span class="text-[11px] text-slate-600 font-semibold">
                                     ${res.durationHours} h (${res.durationHours} crédit${res.durationHours > 1 ? 's' : ''})
                                 </span>
-                                <a href="/calendrier?date=${res.date}" class="px-3 py-1.5 text-xs font-semibold text-[#00897b] bg-emerald-50 hover:bg-emerald-100 rounded-lg border border-emerald-200 transition-colors">
-                                    Voir au calendrier &rarr;
-                                </a>
+                                <div class="flex items-center space-x-1.5">
+                                    <a href="/calendrier?date=${res.date}" class="px-2.5 py-1 text-xs font-semibold text-[#00897b] bg-emerald-50 hover:bg-emerald-100 rounded-lg border border-emerald-200 transition-colors">
+                                        Voir
+                                    </a>
+                                    <form method="POST" action="/bookings/cancel" onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer cette réservation ? Votre quota vous sera restitué.');" class="inline">
+                                        <input type="hidden" name="date" value="${res.date}">
+                                        <input type="hidden" name="code" value="${res.code}">
+                                        <input type="hidden" name="time" value="${res.time}">
+                                        <input type="hidden" name="redirect_to" value="/dashboard">
+                                        <button type="submit" class="px-2.5 py-1 text-xs font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 rounded-lg border border-rose-200 transition-colors inline-flex items-center space-x-1" title="Annuler cette réservation">
+                                            <svg class="w-3 h-3 text-rose-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                            <span>Annuler</span>
+                                        </button>
+                                    </form>
+                                </div>
                             </div>
                         </div>
                     `).join('')}
@@ -1561,7 +1600,7 @@ function renderDashboardPage() {
                                 <th class="py-3 px-4">Créneau horaire</th>
                                 <th class="py-3 px-4">Durée & Crédits</th>
                                 <th class="py-3 px-4">Statut</th>
-                                <th class="py-3 px-4 text-right">Calendrier</th>
+                                <th class="py-3 px-4 text-right">Actions</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-slate-100">
@@ -1588,9 +1627,21 @@ function renderDashboardPage() {
                                         </span>
                                     </td>
                                     <td class="py-3 px-4 text-right">
-                                        <a href="/calendrier?date=${res.date}" class="px-2.5 py-1 text-[11px] font-semibold text-[#00897b] hover:bg-emerald-50 rounded border border-emerald-200 transition-colors inline-block">
-                                            Voir au calendrier &rarr;
-                                        </a>
+                                        <div class="inline-flex items-center space-x-1.5">
+                                            <a href="/calendrier?date=${res.date}" class="px-2.5 py-1 text-[11px] font-semibold text-[#00897b] hover:bg-emerald-50 rounded border border-emerald-200 transition-colors inline-block" title="Voir sur le calendrier">
+                                                Voir au calendrier &rarr;
+                                            </a>
+                                            <form method="POST" action="/bookings/cancel" onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer cette réservation ? Votre quota vous sera restitué.');" class="inline">
+                                                <input type="hidden" name="date" value="${res.date}">
+                                                <input type="hidden" name="code" value="${res.code}">
+                                                <input type="hidden" name="time" value="${res.time}">
+                                                <input type="hidden" name="redirect_to" value="/dashboard">
+                                                <button type="submit" class="px-2 py-1 text-[11px] font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 hover:border-rose-300 rounded border border-rose-200 transition-colors inline-flex items-center space-x-1" title="Annuler cette réservation">
+                                                    <svg class="w-3 h-3 text-rose-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                                    <span>Annuler</span>
+                                                </button>
+                                            </form>
+                                        </div>
                                     </td>
                                 </tr>
                             `).join('')}
@@ -2613,6 +2664,40 @@ const server = http.createServer((req, res) => {
         return sendCompressedResponse(req, res, 200, { 'Content-Type': 'text/html; charset=utf-8' }, renderLayout('Réserver une machine', renderDedicatedReservationPage(preselectedMachine), '/reserver'));
     }
 
+    // Cancel / Remove reservation action
+    if ((pathname === '/bookings/cancel' || (pathname.startsWith('/bookings/') && pathname.endsWith('/cancel')) || (pathname.startsWith('/bookings/') && pathname.endsWith('/delete')) || pathname === '/reservations/cancel') && req.method === 'POST') {
+        let body = '';
+        req.on('data', chunk => body += chunk);
+        req.on('end', () => {
+            const params = new URLSearchParams(body);
+            const bookingDate = params.get('date');
+            const bookingCode = params.get('code');
+            const bookingTime = params.get('time');
+            const redirectTo = params.get('redirect_to') || '/dashboard';
+
+            // Find matching reservation in state.reservations
+            let refundedHours = 1;
+            const idx = state.reservations.findIndex(r => {
+                if (bookingDate && r.date !== bookingDate) return false;
+                if (bookingCode && r.code !== bookingCode) return false;
+                if (bookingTime && r.time !== bookingTime) return false;
+                return true;
+            });
+
+            if (idx !== -1) {
+                const removed = state.reservations.splice(idx, 1)[0];
+                refundedHours = removed.durationHours || 1;
+                state.user.weeklyUsed = Math.max(0, state.user.weeklyUsed - refundedHours);
+            }
+
+            const msg = encodeURIComponent(`La réservation a été supprimée avec succès. Votre quota a été restitué (+${refundedHours} crédit${refundedHours > 1 ? 's' : ''}).`);
+            const targetUrl = redirectTo.includes('?') ? `${redirectTo}&flash=${msg}` : `${redirectTo}?flash=${msg}`;
+            res.writeHead(302, { 'Location': targetUrl });
+            return res.end();
+        });
+        return;
+    }
+
     // Authenticated Routes:
     if (pathname === '/' || pathname === '/calendrier' || pathname === '/admin/reservation/calendrier') {
         const flash = urlObj.searchParams.get('flash') || '';
@@ -2621,7 +2706,8 @@ const server = http.createServer((req, res) => {
     }
 
     if (pathname === '/dashboard') {
-        return sendCompressedResponse(req, res, 200, { 'Content-Type': 'text/html; charset=utf-8' }, renderLayout('Tableau de bord', renderDashboardPage(), '/dashboard'));
+        const flash = urlObj.searchParams.get('flash') || '';
+        return sendCompressedResponse(req, res, 200, { 'Content-Type': 'text/html; charset=utf-8' }, renderLayout('Tableau de bord', renderDashboardPage(), '/dashboard', flash));
     }
 
     if (pathname === '/utilisateurs') {

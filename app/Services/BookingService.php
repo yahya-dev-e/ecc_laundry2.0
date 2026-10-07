@@ -120,27 +120,30 @@ class BookingService
     /**
      * Cancel an existing reservation and release slot.
      */
-    public function cancelBooking(Reservation $booking, string $reason = 'Cancelled by user'): void
+    public function cancelBooking(Reservation $booking, string $reason = 'Cancelled by user', bool $isAdmin = false): void
     {
-        if (!$booking->canBeCancelled()) {
-            throw new InvalidArgumentException("Cannot cancel this reservation.");
+        if (!$isAdmin && !$booking->canBeCancelled()) {
+            throw new InvalidArgumentException("Cette réservation ne peut pas être annulée car elle est déjà terminée ou en cours.");
         }
 
         DB::transaction(function () use ($booking) {
             $machine = $booking->machine;
+            $user = $booking->user;
             $creditsToRefund = $booking->credits_spent;
 
             // Delete the reservation row to release the time slot
             $booking->delete();
 
-            // Refund credits
-            $booking->user->addCredits(
-                $creditsToRefund,
-                "Refund for cancelled reservation on {$machine->name}"
-            );
+            // Refund credits to user
+            if ($user) {
+                $user->addCredits(
+                    $creditsToRefund,
+                    "Remboursement pour annulation de réservation sur " . ($machine?->name ?? 'machine')
+                );
+            }
 
-            // Revert machine status to available if it was reserved
-            if ($machine && $machine->status === MachineStatus::RESERVED) {
+            // Revert machine status to available if it was reserved or in use
+            if ($machine && ($machine->status === MachineStatus::RESERVED || $machine->status === MachineStatus::IN_USE)) {
                 $machine->update(['status' => MachineStatus::AVAILABLE]);
             }
         });

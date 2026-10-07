@@ -326,10 +326,13 @@
                             $mName = $block['machine']->name ?? 'Machine';
                             $mTypeStr = ($block['machine']->type instanceof \App\Enums\MachineType ? $block['machine']->type->value : (string)($block['machine']->type ?? '')) === 'dryer' ? 'Sèche-linge' : 'Machine à laver';
                             $uEmail = $block['user']?->email ?? ($block['user']?->name ? strtolower(str_replace(' ', '.', $block['user']->name)) . '@fecc.ma' : 'etudiant@fecc.ma');
+                            $canCancelBlock = auth()->check() && (auth()->id() === ($block['user_id'] ?? null) || auth()->user()->isAdmin());
                         @endphp
                         <div style="background-color: {{ $machineColor }}; top: {{ $block['top'] + 1 }}px; height: {{ $block['height'] - 2 }}px; left: calc({{ $block['leftPct'] }}% + 4px); width: calc({{ $block['widthPct'] }}% - 8px);"
                              class="absolute rounded-md text-white overflow-hidden transition-all cursor-pointer border border-white/20 select-none shadow-sm hover:shadow-md hover:scale-[1.01] hover:brightness-105 z-20"
                              @click.stop="openReservationModal({
+                                 id: {{ $block['id'] ?? 0 }},
+                                 reservation_ids: {{ json_encode($block['reservation_ids'] ?? [$block['id']]) }},
                                  code: '{{ addslashes($mName) }}',
                                  type: '{{ addslashes($mTypeStr) }}',
                                  bg: '{{ $machineColor }}',
@@ -338,7 +341,8 @@
                                  email: '{{ addslashes($uEmail) }}',
                                  date: '{{ $selectedDate }}',
                                  time: '{{ $block['timeFormatted'] }}',
-                                 duration: '{{ $block['durationFormatted'] }}'
+                                 duration: '{{ $block['durationFormatted'] }}',
+                                 can_cancel: {{ $canCancelBlock ? 'true' : 'false' }}
                              })"
                              title="{{ $mName }} • {{ $block['timeFormatted'] }} - Cliquer pour voir les détails">
                             
@@ -441,15 +445,37 @@
             </div>
 
             <!-- Modal Footer -->
-            <div class="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-end space-x-2">
-                <button type="button" @click="closeReservationModal()" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-bold rounded-lg transition-colors">
-                    Fermer
-                </button>
-                <a :href="'{{ route('bookings.create') }}?machine_id=' + (resModalData?.machine_id || selectedMachineId) + '&date=' + (resModalData?.date || selectedDate)" 
-                   class="px-4 py-2 bg-[#00897b] hover:bg-[#00796b] text-white text-xs font-bold rounded-lg shadow-sm transition-colors flex items-center space-x-1.5">
-                    <span>Réserver cette machine</span>
-                    <span>&rarr;</span>
-                </a>
+            <div class="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
+                <div>
+                    <template x-if="resModalData?.can_cancel">
+                        <form method="POST" :action="'/bookings/' + resModalData.id + '/cancel'" 
+                              onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer cette réservation ? Votre quota vous sera restitué.');" 
+                              class="inline">
+                            @csrf
+                            <input type="hidden" name="redirect_to" :value="'{{ route('calendrier') }}?date=' + selectedDate + '&machine_id=' + selectedMachineId">
+                            <template x-for="rId in (resModalData.reservation_ids || [resModalData.id])" :key="rId">
+                                <input type="hidden" name="reservation_ids[]" :value="rId">
+                            </template>
+                            <button type="submit" 
+                                    class="px-3 py-2 bg-rose-50 hover:bg-rose-600 text-rose-700 hover:text-white border border-rose-200 hover:border-rose-600 text-xs font-bold rounded-lg transition-colors flex items-center space-x-1.5 shadow-xs cursor-pointer">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                </svg>
+                                <span>Supprimer la réservation</span>
+                            </button>
+                        </form>
+                    </template>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <button type="button" @click="closeReservationModal()" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-bold rounded-lg transition-colors">
+                        Fermer
+                    </button>
+                    <a :href="'{{ route('bookings.create') }}?machine_id=' + (resModalData?.machine_id || selectedMachineId) + '&date=' + (resModalData?.date || selectedDate)" 
+                       class="px-4 py-2 bg-[#00897b] hover:bg-[#00796b] text-white text-xs font-bold rounded-lg shadow-sm transition-colors flex items-center space-x-1.5">
+                        <span>Réserver cette machine</span>
+                        <span>&rarr;</span>
+                    </a>
+                </div>
             </div>
         </div>
     </div>
