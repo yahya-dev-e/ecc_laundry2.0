@@ -1,0 +1,9 @@
+{
+  "exitCode": 0,
+  "output": "Two notifications sent to localhost SMTP capture only.\n",
+  "messageCount": 2,
+  "allRecipientsSynthetic": true,
+  "welcomeContainsDashboardLink": true,
+  "resetContainsTokenLink": true,
+  "deliveryScope": "localhost SMTP capture; no external inbox or deliverability tested"
+}

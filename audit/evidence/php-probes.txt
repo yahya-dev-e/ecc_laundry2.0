@@ -1,0 +1,30 @@
+PHPUnit 11.5.56 by Sebastian Bergmann and contributors.
+
+Runtime:       PHP 8.3.33
+
+...................                                               19 / 19 (100%)
+
+Time: 00:08.108, Memory: 50.00 MB
+
+Audit Probe
+ ✔ Student can promote self to admin
+ ✔ Student can read admin directory
+ ✔ Actual edit form payload fails required fields
+ ✔ Failed logins have no rate limit after twenty attempts
+ ✔ Welcome notification and registration
+ ✔ Reset notification is generated and reset keeps remember token
+ ✔ Reset expiry is enforced
+ ✔ Final weekly credit cannot be spent
+ ✔ Booking charge ledger is missing
+ ✔ Future booking can start machine in maintenance
+ ✔ Reset mail failure exposes server error
+ ✔ Welcome mail failure still claims email was sent
+ ✔ Multi slot error keeps earlier booking
+ ✔ Future cancellation frees other active cycle
+ ✔ Cancellation accepts external redirect
+ ✔ Quota reset does not reset displayed quota
+ ✔ Admin update duplicate email returns server error
+ ✔ Reset link uses untrusted request host
+ ✔ Seed fails on missing bookings foreign key table
+
+OK (19 tests, 69 assertions)

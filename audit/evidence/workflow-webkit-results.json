@@ -1,0 +1,56 @@
+[
+  {
+    "engine": "webkit",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "steps": [
+      {
+        "name": "create actual account",
+        "ok": true,
+        "authenticatedAfterCreation": true
+      },
+      {
+        "name": "logout and login created account",
+        "ok": true,
+        "loggedIn": true
+      },
+      {
+        "name": "select slot and book with mobile button",
+        "ok": true,
+        "slot": "16:00 - 17:00",
+        "isKeyboardFocusable": false,
+        "booked": true
+      },
+      {
+        "name": "calendar details and cancel booking",
+        "ok": true,
+        "opened": true,
+        "dialogSemantics": 0,
+        "cancelMessage": false
+      },
+      {
+        "name": "admin add-user link",
+        "ok": true,
+        "destination": "/dashboard"
+      },
+      {
+        "name": "admin edit-user modal and save",
+        "ok": true,
+        "submittedFields": [
+          "_token",
+          "id",
+          "name",
+          "email",
+          "role",
+          "weeklyLimit",
+          "weeklyUsed"
+        ],
+        "successMessage": false,
+        "visibleValidationError": false
+      }
+    ],
+    "errors": []
+  }
+]

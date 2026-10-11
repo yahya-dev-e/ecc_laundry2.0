@@ -1,0 +1,21 @@
+{
+  "viewport": "844x390 touch emulation",
+  "before": {
+    "scrollY": 0,
+    "documentHeight": 702,
+    "viewportHeight": 437,
+    "submitTop": 423.75,
+    "submitBottom": 469.75,
+    "bodyOverflow": "hidden"
+  },
+  "afterWheel": {
+    "scrollY": 0,
+    "documentHeight": 702,
+    "viewportHeight": 437,
+    "submitTop": 423.75,
+    "submitBottom": 469.75,
+    "bodyOverflow": "hidden"
+  },
+  "submitInitiallyClipped": true,
+  "wheelCouldScroll": false
+}

@@ -1,0 +1,1010 @@
+[
+  {
+    "engine": "firefox",
+    "viewport": {
+      "width": 1440,
+      "height": 900
+    },
+    "version": "153.0",
+    "steps": [
+      {
+        "name": "login page and password toggle",
+        "ok": true,
+        "status": 200,
+        "prefilledPassword": "present",
+        "toggleType": "text",
+        "url": "/login",
+        "title": "Connexion - Laundry Centrale Casablanca",
+        "horizontalOverflow": true,
+        "bodyScrollHeight": 1050,
+        "viewport": {
+          "width": 1440,
+          "height": 900
+        },
+        "inputs": [
+          {
+            "name": "email",
+            "type": "email",
+            "fontSize": "12px",
+            "autocomplete": "",
+            "label": true
+          },
+          {
+            "name": "password",
+            "type": "text",
+            "fontSize": "12px",
+            "autocomplete": "",
+            "label": true
+          }
+        ],
+        "unnamedButtons": 0,
+        "smallButtons": 2
+      },
+      {
+        "name": "forgot password unknown address",
+        "ok": true,
+        "genericMessage": true,
+        "url": "/forgot-password",
+        "title": "Mot de passe oublié - Laundry Centrale Casablanca",
+        "horizontalOverflow": true,
+        "bodyScrollHeight": 1050,
+        "viewport": {
+          "width": 1440,
+          "height": 900
+        },
+        "inputs": [
+          {
+            "name": "email",
+            "type": "email",
+            "fontSize": "12px",
+            "autocomplete": "",
+            "label": true
+          }
+        ],
+        "unnamedButtons": 0,
+        "smallButtons": 1
+      },
+      {
+        "name": "registration validation feedback",
+        "ok": true,
+        "fakeAdminSidebar": false,
+        "visibleValidationError": false,
+        "url": "/register",
+        "title": "PanneauAdmin - Centrale Casablanca Laundry",
+        "horizontalOverflow": false,
+        "bodyScrollHeight": 900,
+        "viewport": {
+          "width": 1440,
+          "height": 900
+        },
+        "inputs": [
+          {
+            "name": "name",
+            "type": "text",
+            "fontSize": "14px",
+            "autocomplete": "",
+            "label": true
+          },
+          {
+            "name": "email",
+            "type": "email",
+            "fontSize": "14px",
+            "autocomplete": "",
+            "label": true
+          },
+          {
+            "name": "student_id",
+            "type": "text",
+            "fontSize": "14px",
+            "autocomplete": "",
+            "label": true
+          },
+          {
+            "name": "room_number",
+            "type": "text",
+            "fontSize": "14px",
+            "autocomplete": "",
+            "label": true
+          },
+          {
+            "name": "password",
+            "type": "password",
+            "fontSize": "14px",
+            "autocomplete": "",
+            "label": true
+          },
+          {
+            "name": "password_confirmation",
+            "type": "password",
+            "fontSize": "14px",
+            "autocomplete": "",
+            "label": true
+          }
+        ],
+        "unnamedButtons": 0,
+        "smallButtons": 1
+      },
+      {
+        "name": "student login",
+        "ok": true,
+        "url": "/dashboard",
+        "title": "PanneauAdmin - Centrale Casablanca Laundry",
+        "horizontalOverflow": false,
+        "bodyScrollHeight": 900,
+        "viewport": {
+          "width": 1440,
+          "height": 900
+        },
+        "inputs": [],
+        "unnamedButtons": 0,
+        "smallButtons": 3
+      },
+      {
+        "name": "/dashboard",
+        "ok": true,
+        "status": 200,
+        "url": "/dashboard",
+        "title": "PanneauAdmin - Centrale Casablanca Laundry",
+        "horizontalOverflow": false,
+        "bodyScrollHeight": 900,
+        "viewport": {
+          "width": 1440,
+          "height": 900
+        },
+        "inputs": [],
+        "unnamedButtons": 0,
+        "smallButtons": 2
+      },
+      {
+        "name": "/bookings/create",
+        "ok": true,
+        "status": 200,
+        "url": "/bookings/create",
+        "title": "PanneauAdmin - Centrale Casablanca Laundry",
+        "horizontalOverflow": false,
+        "bodyScrollHeight": 914,
+        "viewport": {
+          "width": 1440,
+          "height": 900
+        },
+        "inputs": [
+          {
+            "name": "machine_id",
+            "type": "select-one",
+            "fontSize": "12px",
+            "autocomplete": "",
+            "label": true
+          },
+          {
+            "name": "date",
+            "type": "date",
+            "fontSize": "12px",
+            "autocomplete": "",
+            "label": true
+          }
+        ],
+        "unnamedButtons": 0,
+        "smallButtons": 1,
+        "slotLabelCount": 10
+      },
+      {
+        "name": "/calendrier",
+        "ok": true,
+        "status": 200,
+        "url": "/calendrier",
+        "title": "PanneauAdmin - Centrale Casablanca Laundry",
+        "horizontalOverflow": false,
+        "bodyScrollHeight": 1921,
+        "viewport": {
+          "width": 1440,
+          "height": 900
+        },
+        "inputs": [
+          {
+            "name": "",
+            "type": "text",
+            "fontSize": "12px",
+            "autocomplete": "off",
+            "label": true
+          },
+          {
+            "name": "",
+            "type": "date",
+            "fontSize": "12px",
+            "autocomplete": "",
+            "label": true
+          }
+        ],
+        "unnamedButtons": 0,
+        "smallButtons": 0
+      },
+      {
+        "name": "/utilisateurs",
+        "ok": true,
+        "status": 200,
+        "url": "/utilisateurs",
+        "title": "PanneauAdmin - Centrale Casablanca Laundry",
+        "horizontalOverflow": false,
+        "bodyScrollHeight": 900,
+        "viewport": {
+          "width": 1440,
+          "height": 900
+        },
+        "inputs": [
+          {
+            "name": "",
+            "type": "text",
+            "fontSize": "12px",
+            "autocomplete": "",
+            "label": false
+          }
+        ],
+        "unnamedButtons": 0,
+        "smallButtons": 3
+      },
+      {
+        "name": "logout",
+        "ok": true,
+        "returnedToLogin": true
+      }
+    ],
+    "errors": []
+  },
+  {
+    "engine": "firefox",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "version": "153.0",
+    "steps": [
+      {
+        "name": "login page and password toggle",
+        "ok": true,
+        "status": 200,
+        "prefilledPassword": "present",
+        "toggleType": "text",
+        "url": "/login",
+        "title": "Connexion - Laundry Centrale Casablanca",
+        "horizontalOverflow": true,
+        "bodyScrollHeight": 994,
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "inputs": [
+          {
+            "name": "email",
+            "type": "email",
+            "fontSize": "16px",
+            "autocomplete": "",
+            "label": true
+          },
+          {
+            "name": "password",
+            "type": "text",
+            "fontSize": "16px",
+            "autocomplete": "",
+            "label": true
+          }
+        ],
+        "unnamedButtons": 0,
+        "smallButtons": 3
+      },
+      {
+        "name": "forgot password unknown address",
+        "ok": true,
+        "genericMessage": true,
+        "url": "/forgot-password",
+        "title": "Mot de passe oublié - Laundry Centrale Casablanca",
+        "horizontalOverflow": true,
+        "bodyScrollHeight": 994,
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "inputs": [
+          {
+            "name": "email",
+            "type": "email",
+            "fontSize": "16px",
+            "autocomplete": "",
+            "label": true
+          }
+        ],
+        "unnamedButtons": 0,
+        "smallButtons": 1
+      },
+      {
+        "name": "registration validation feedback",
+        "ok": true,
+        "fakeAdminSidebar": false,
+        "visibleValidationError": false,
+        "url": "/register",
+        "title": "PanneauAdmin - Centrale Casablanca Laundry",
+        "horizontalOverflow": false,
+        "bodyScrollHeight": 844,
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "inputs": [
+          {
+            "name": "name",
+            "type": "text",
+            "fontSize": "16px",
+            "autocomplete": "",
+            "label": true
+          },
+          {
+            "name": "email",
+            "type": "email",
+            "fontSize": "16px",
+            "autocomplete": "",
+            "label": true
+          },
+          {
+            "name": "student_id",
+            "type": "text",
+            "fontSize": "16px",
+            "autocomplete": "",
+            "label": true
+          },
+          {
+            "name": "room_number",
+            "type": "text",
+            "fontSize": "16px",
+            "autocomplete": "",
+            "label": true
+          },
+          {
+            "name": "password",
+            "type": "password",
+            "fontSize": "16px",
+            "autocomplete": "",
+            "label": true
+          },
+          {
+            "name": "password_confirmation",
+            "type": "password",
+            "fontSize": "16px",
+            "autocomplete": "",
+            "label": true
+          }
+        ],
+        "unnamedButtons": 0,
+        "smallButtons": 1
+      },
+      {
+        "name": "student login",
+        "ok": true,
+        "url": "/dashboard",
+        "title": "PanneauAdmin - Centrale Casablanca Laundry",
+        "horizontalOverflow": false,
+        "bodyScrollHeight": 1268,
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "inputs": [],
+        "unnamedButtons": 0,
+        "smallButtons": 3
+      },
+      {
+        "name": "/dashboard",
+        "ok": true,
+        "status": 200,
+        "url": "/dashboard",
+        "title": "PanneauAdmin - Centrale Casablanca Laundry",
+        "horizontalOverflow": false,
+        "bodyScrollHeight": 1204,
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "inputs": [],
+        "unnamedButtons": 0,
+        "smallButtons": 2,
+        "menuOpened": false,
+        "menuStillVisibleAfterEscape": true
+      },
+      {
+        "name": "/bookings/create",
+        "ok": true,
+        "status": 200,
+        "url": "/bookings/create",
+        "title": "PanneauAdmin - Centrale Casablanca Laundry",
+        "horizontalOverflow": false,
+        "bodyScrollHeight": 1286,
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "inputs": [
+          {
+            "name": "machine_id",
+            "type": "select-one",
+            "fontSize": "16px",
+            "autocomplete": "",
+            "label": true
+          },
+          {
+            "name": "date",
+            "type": "date",
+            "fontSize": "16px",
+            "autocomplete": "",
+            "label": true
+          }
+        ],
+        "unnamedButtons": 0,
+        "smallButtons": 1,
+        "slotLabelCount": 10
+      },
+      {
+        "name": "/calendrier",
+        "ok": true,
+        "status": 200,
+        "url": "/calendrier",
+        "title": "PanneauAdmin - Centrale Casablanca Laundry",
+        "horizontalOverflow": false,
+        "bodyScrollHeight": 2046,
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "inputs": [
+          {
+            "name": "",
+            "type": "text",
+            "fontSize": "16px",
+            "autocomplete": "off",
+            "label": true
+          },
+          {
+            "name": "",
+            "type": "date",
+            "fontSize": "16px",
+            "autocomplete": "",
+            "label": true
+          }
+        ],
+        "unnamedButtons": 0,
+        "smallButtons": 0
+      },
+      {
+        "name": "/utilisateurs",
+        "ok": true,
+        "status": 200,
+        "url": "/utilisateurs",
+        "title": "PanneauAdmin - Centrale Casablanca Laundry",
+        "horizontalOverflow": false,
+        "bodyScrollHeight": 844,
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "inputs": [
+          {
+            "name": "",
+            "type": "text",
+            "fontSize": "16px",
+            "autocomplete": "",
+            "label": false
+          }
+        ],
+        "unnamedButtons": 0,
+        "smallButtons": 0
+      },
+      {
+        "name": "logout",
+        "ok": true,
+        "returnedToLogin": true
+      }
+    ],
+    "errors": []
+  },
+  {
+    "engine": "edge",
+    "viewport": {
+      "width": 1440,
+      "height": 900
+    },
+    "version": "155.0.4283.45",
+    "steps": [
+      {
+        "name": "login page and password toggle",
+        "ok": true,
+        "status": 200,
+        "prefilledPassword": "present",
+        "toggleType": "text",
+        "url": "/login",
+        "title": "Connexion - Laundry Centrale Casablanca",
+        "horizontalOverflow": true,
+        "bodyScrollHeight": 1050,
+        "viewport": {
+          "width": 1440,
+          "height": 900
+        },
+        "inputs": [
+          {
+            "name": "email",
+            "type": "email",
+            "fontSize": "12px",
+            "autocomplete": "email",
+            "label": true
+          },
+          {
+            "name": "password",
+            "type": "text",
+            "fontSize": "12px",
+            "autocomplete": "current-password",
+            "label": true
+          }
+        ],
+        "unnamedButtons": 0,
+        "smallButtons": 2
+      },
+      {
+        "name": "forgot password unknown address",
+        "ok": true,
+        "genericMessage": true,
+        "url": "/forgot-password",
+        "title": "Mot de passe oublié - Laundry Centrale Casablanca",
+        "horizontalOverflow": true,
+        "bodyScrollHeight": 1050,
+        "viewport": {
+          "width": 1440,
+          "height": 900
+        },
+        "inputs": [
+          {
+            "name": "email",
+            "type": "email",
+            "fontSize": "12px",
+            "autocomplete": "email",
+            "label": true
+          }
+        ],
+        "unnamedButtons": 0,
+        "smallButtons": 1
+      },
+      {
+        "name": "registration validation feedback",
+        "ok": true,
+        "fakeAdminSidebar": false,
+        "visibleValidationError": false,
+        "url": "/register",
+        "title": "PanneauAdmin - Centrale Casablanca Laundry",
+        "horizontalOverflow": false,
+        "bodyScrollHeight": 900,
+        "viewport": {
+          "width": 1440,
+          "height": 900
+        },
+        "inputs": [
+          {
+            "name": "name",
+            "type": "text",
+            "fontSize": "14px",
+            "autocomplete": "",
+            "label": true
+          },
+          {
+            "name": "email",
+            "type": "email",
+            "fontSize": "14px",
+            "autocomplete": "",
+            "label": true
+          },
+          {
+            "name": "student_id",
+            "type": "text",
+            "fontSize": "14px",
+            "autocomplete": "",
+            "label": true
+          },
+          {
+            "name": "room_number",
+            "type": "text",
+            "fontSize": "14px",
+            "autocomplete": "",
+            "label": true
+          },
+          {
+            "name": "password",
+            "type": "password",
+            "fontSize": "14px",
+            "autocomplete": "",
+            "label": true
+          },
+          {
+            "name": "password_confirmation",
+            "type": "password",
+            "fontSize": "14px",
+            "autocomplete": "",
+            "label": true
+          }
+        ],
+        "unnamedButtons": 0,
+        "smallButtons": 1
+      },
+      {
+        "name": "student login",
+        "ok": true,
+        "url": "/dashboard",
+        "title": "PanneauAdmin - Centrale Casablanca Laundry",
+        "horizontalOverflow": false,
+        "bodyScrollHeight": 900,
+        "viewport": {
+          "width": 1440,
+          "height": 900
+        },
+        "inputs": [],
+        "unnamedButtons": 0,
+        "smallButtons": 3
+      },
+      {
+        "name": "/dashboard",
+        "ok": true,
+        "status": 200,
+        "url": "/dashboard",
+        "title": "PanneauAdmin - Centrale Casablanca Laundry",
+        "horizontalOverflow": false,
+        "bodyScrollHeight": 900,
+        "viewport": {
+          "width": 1440,
+          "height": 900
+        },
+        "inputs": [],
+        "unnamedButtons": 0,
+        "smallButtons": 2
+      },
+      {
+        "name": "/bookings/create",
+        "ok": true,
+        "status": 200,
+        "url": "/bookings/create",
+        "title": "PanneauAdmin - Centrale Casablanca Laundry",
+        "horizontalOverflow": false,
+        "bodyScrollHeight": 916,
+        "viewport": {
+          "width": 1440,
+          "height": 900
+        },
+        "inputs": [
+          {
+            "name": "machine_id",
+            "type": "select-one",
+            "fontSize": "12px",
+            "autocomplete": "",
+            "label": true
+          },
+          {
+            "name": "date",
+            "type": "date",
+            "fontSize": "12px",
+            "autocomplete": "",
+            "label": true
+          }
+        ],
+        "unnamedButtons": 0,
+        "smallButtons": 1,
+        "slotLabelCount": 11
+      },
+      {
+        "name": "/calendrier",
+        "ok": true,
+        "status": 200,
+        "url": "/calendrier",
+        "title": "PanneauAdmin - Centrale Casablanca Laundry",
+        "horizontalOverflow": false,
+        "bodyScrollHeight": 1921,
+        "viewport": {
+          "width": 1440,
+          "height": 900
+        },
+        "inputs": [
+          {
+            "name": "",
+            "type": "text",
+            "fontSize": "12px",
+            "autocomplete": "off",
+            "label": true
+          },
+          {
+            "name": "",
+            "type": "date",
+            "fontSize": "12px",
+            "autocomplete": "",
+            "label": true
+          }
+        ],
+        "unnamedButtons": 0,
+        "smallButtons": 0
+      },
+      {
+        "name": "/utilisateurs",
+        "ok": true,
+        "status": 200,
+        "url": "/utilisateurs",
+        "title": "PanneauAdmin - Centrale Casablanca Laundry",
+        "horizontalOverflow": false,
+        "bodyScrollHeight": 900,
+        "viewport": {
+          "width": 1440,
+          "height": 900
+        },
+        "inputs": [
+          {
+            "name": "",
+            "type": "text",
+            "fontSize": "12px",
+            "autocomplete": "",
+            "label": false
+          }
+        ],
+        "unnamedButtons": 0,
+        "smallButtons": 3
+      },
+      {
+        "name": "logout",
+        "ok": true,
+        "returnedToLogin": true
+      }
+    ],
+    "errors": []
+  },
+  {
+    "engine": "edge",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "version": "155.0.4283.45",
+    "steps": [
+      {
+        "name": "login page and password toggle",
+        "ok": true,
+        "status": 200,
+        "prefilledPassword": "present",
+        "toggleType": "text",
+        "url": "/login",
+        "title": "Connexion - Laundry Centrale Casablanca",
+        "horizontalOverflow": false,
+        "bodyScrollHeight": 994,
+        "viewport": {
+          "width": 600,
+          "height": 1299
+        },
+        "inputs": [
+          {
+            "name": "email",
+            "type": "email",
+            "fontSize": "16px",
+            "autocomplete": "email",
+            "label": true
+          },
+          {
+            "name": "password",
+            "type": "text",
+            "fontSize": "16px",
+            "autocomplete": "current-password",
+            "label": true
+          }
+        ],
+        "unnamedButtons": 0,
+        "smallButtons": 3
+      },
+      {
+        "name": "forgot password unknown address",
+        "ok": true,
+        "genericMessage": true,
+        "url": "/forgot-password",
+        "title": "Mot de passe oublié - Laundry Centrale Casablanca",
+        "horizontalOverflow": false,
+        "bodyScrollHeight": 994,
+        "viewport": {
+          "width": 600,
+          "height": 1299
+        },
+        "inputs": [
+          {
+            "name": "email",
+            "type": "email",
+            "fontSize": "16px",
+            "autocomplete": "email",
+            "label": true
+          }
+        ],
+        "unnamedButtons": 0,
+        "smallButtons": 1
+      },
+      {
+        "name": "registration validation feedback",
+        "ok": true,
+        "fakeAdminSidebar": false,
+        "visibleValidationError": false,
+        "url": "/register",
+        "title": "PanneauAdmin - Centrale Casablanca Laundry",
+        "horizontalOverflow": false,
+        "bodyScrollHeight": 844,
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "inputs": [
+          {
+            "name": "name",
+            "type": "text",
+            "fontSize": "16px",
+            "autocomplete": "",
+            "label": true
+          },
+          {
+            "name": "email",
+            "type": "email",
+            "fontSize": "16px",
+            "autocomplete": "",
+            "label": true
+          },
+          {
+            "name": "student_id",
+            "type": "text",
+            "fontSize": "16px",
+            "autocomplete": "",
+            "label": true
+          },
+          {
+            "name": "room_number",
+            "type": "text",
+            "fontSize": "16px",
+            "autocomplete": "",
+            "label": true
+          },
+          {
+            "name": "password",
+            "type": "password",
+            "fontSize": "16px",
+            "autocomplete": "",
+            "label": true
+          },
+          {
+            "name": "password_confirmation",
+            "type": "password",
+            "fontSize": "16px",
+            "autocomplete": "",
+            "label": true
+          }
+        ],
+        "unnamedButtons": 0,
+        "smallButtons": 1
+      },
+      {
+        "name": "student login",
+        "ok": true,
+        "url": "/dashboard",
+        "title": "PanneauAdmin - Centrale Casablanca Laundry",
+        "horizontalOverflow": false,
+        "bodyScrollHeight": 1218,
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "inputs": [],
+        "unnamedButtons": 0,
+        "smallButtons": 3
+      },
+      {
+        "name": "/dashboard",
+        "ok": true,
+        "status": 200,
+        "url": "/dashboard",
+        "title": "PanneauAdmin - Centrale Casablanca Laundry",
+        "horizontalOverflow": false,
+        "bodyScrollHeight": 1204,
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "inputs": [],
+        "unnamedButtons": 0,
+        "smallButtons": 2,
+        "menuOpened": false,
+        "menuStillVisibleAfterEscape": true
+      },
+      {
+        "name": "/bookings/create",
+        "ok": true,
+        "status": 200,
+        "url": "/bookings/create",
+        "title": "PanneauAdmin - Centrale Casablanca Laundry",
+        "horizontalOverflow": false,
+        "bodyScrollHeight": 1288,
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "inputs": [
+          {
+            "name": "machine_id",
+            "type": "select-one",
+            "fontSize": "16px",
+            "autocomplete": "",
+            "label": true
+          },
+          {
+            "name": "date",
+            "type": "date",
+            "fontSize": "16px",
+            "autocomplete": "",
+            "label": true
+          }
+        ],
+        "unnamedButtons": 0,
+        "smallButtons": 1,
+        "slotLabelCount": 11
+      },
+      {
+        "name": "/calendrier",
+        "ok": true,
+        "status": 200,
+        "url": "/calendrier",
+        "title": "PanneauAdmin - Centrale Casablanca Laundry",
+        "horizontalOverflow": false,
+        "bodyScrollHeight": 2046,
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "inputs": [
+          {
+            "name": "",
+            "type": "text",
+            "fontSize": "16px",
+            "autocomplete": "off",
+            "label": true
+          },
+          {
+            "name": "",
+            "type": "date",
+            "fontSize": "16px",
+            "autocomplete": "",
+            "label": true
+          }
+        ],
+        "unnamedButtons": 0,
+        "smallButtons": 0
+      },
+      {
+        "name": "/utilisateurs",
+        "ok": true,
+        "status": 200,
+        "url": "/utilisateurs",
+        "title": "PanneauAdmin - Centrale Casablanca Laundry",
+        "horizontalOverflow": false,
+        "bodyScrollHeight": 844,
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "inputs": [
+          {
+            "name": "",
+            "type": "text",
+            "fontSize": "16px",
+            "autocomplete": "",
+            "label": false
+          }
+        ],
+        "unnamedButtons": 0,
+        "smallButtons": 0
+      },
+      {
+        "name": "logout",
+        "ok": true,
+        "returnedToLogin": true
+      }
+    ],
+    "errors": []
+  }
+]

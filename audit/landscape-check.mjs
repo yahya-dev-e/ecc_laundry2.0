@@ -1,0 +1,11 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import {createRequire} from 'node:module';
+const require=createRequire(path.join(process.env.PLAYWRIGHT_MODULE_DIR,'playwright','package.json'));
+const {chromium}=require('playwright');const browser=await chromium.launch({headless:true});
+const context=await browser.newContext({viewport:{width:844,height:390},isMobile:true,hasTouch:true});
+await context.route('https://fonts.**',r=>r.abort());const page=await context.newPage();await page.goto('http://127.0.0.1:8765/login');
+const measure=()=>page.evaluate(()=>{const r=document.querySelector('button[type=submit]').getBoundingClientRect();return {scrollY,documentHeight:document.documentElement.scrollHeight,viewportHeight:innerHeight,submitTop:r.top,submitBottom:r.bottom,bodyOverflow:getComputedStyle(document.body).overflow}});
+const before=await measure();await page.mouse.wheel(0,650);await page.waitForTimeout(300);const after=await measure();
+const result={viewport:'844x390 touch emulation',before,afterWheel:after,submitInitiallyClipped:before.submitBottom>before.viewportHeight,wheelCouldScroll:after.scrollY>before.scrollY};
+fs.writeFileSync(new URL('./evidence/landscape-results.json',import.meta.url),JSON.stringify(result,null,2));console.log(JSON.stringify(result,null,2));await browser.close();

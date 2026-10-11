@@ -1,0 +1,113 @@
+PHPUnit 11.5.56 by Sebastian Bergmann and contributors.
+
+Runtime:       PHP 8.3.33
+Configuration: <AUDIT_ROOT>\phpunit.xml
+
+EEEEEEEEEEEE                                                      12 / 12 (100%)
+
+Time: 00:00.398, Memory: 38.00 MB
+
+Booking (Tests\Feature\Booking)
+ ✘ Authenticated user can view bookings page
+   │
+   │ Error: Class "Database\Factories\UserFactory" not found
+   │
+   │ <AUDIT_ROOT>\vendor\laravel\framework\src\Illuminate\Database\Eloquent\Factories\Factory.php:871
+   │ <AUDIT_ROOT>\vendor\laravel\framework\src\Illuminate\Database\Eloquent\Factories\HasFactory.php:21
+   │ <AUDIT_ROOT>\tests\Feature\BookingTest.php:19
+   │
+ ✘ User can reserve an available machine
+   │
+   │ Error: Class "Database\Factories\UserFactory" not found
+   │
+   │ <AUDIT_ROOT>\vendor\laravel\framework\src\Illuminate\Database\Eloquent\Factories\Factory.php:871
+   │ <AUDIT_ROOT>\vendor\laravel\framework\src\Illuminate\Database\Eloquent\Factories\HasFactory.php:21
+   │ <AUDIT_ROOT>\tests\Feature\BookingTest.php:29
+   │
+ ✘ User cannot reserve machine with insufficient credits
+   │
+   │ Error: Class "Database\Factories\UserFactory" not found
+   │
+   │ <AUDIT_ROOT>\vendor\laravel\framework\src\Illuminate\Database\Eloquent\Factories\Factory.php:871
+   │ <AUDIT_ROOT>\vendor\laravel\framework\src\Illuminate\Database\Eloquent\Factories\HasFactory.php:21
+   │ <AUDIT_ROOT>\tests\Feature\BookingTest.php:52
+   │
+ ✘ User can cancel booking and get refund
+   │
+   │ Error: Class "Database\Factories\UserFactory" not found
+   │
+   │ <AUDIT_ROOT>\vendor\laravel\framework\src\Illuminate\Database\Eloquent\Factories\Factory.php:871
+   │ <AUDIT_ROOT>\vendor\laravel\framework\src\Illuminate\Database\Eloquent\Factories\HasFactory.php:21
+   │ <AUDIT_ROOT>\tests\Feature\BookingTest.php:73
+   │
+ ✘ User can start cycle on confirmed booking
+   │
+   │ Error: Class "Database\Factories\UserFactory" not found
+   │
+   │ <AUDIT_ROOT>\vendor\laravel\framework\src\Illuminate\Database\Eloquent\Factories\Factory.php:871
+   │ <AUDIT_ROOT>\vendor\laravel\framework\src\Illuminate\Database\Eloquent\Factories\HasFactory.php:21
+   │ <AUDIT_ROOT>\tests\Feature\BookingTest.php:91
+   │
+
+Booking Service (Tests\Unit\BookingService)
+ ✘ Booking creation deducts credits and sets confirmed status
+   │
+   │ Error: Class "Database\Factories\UserFactory" not found
+   │
+   │ <AUDIT_ROOT>\vendor\laravel\framework\src\Illuminate\Database\Eloquent\Factories\Factory.php:871
+   │ <AUDIT_ROOT>\vendor\laravel\framework\src\Illuminate\Database\Eloquent\Factories\HasFactory.php:21
+   │ <AUDIT_ROOT>\tests\Unit\BookingServiceTest.php:35
+   │
+ ✘ Cannot book when slot has conflict
+   │
+   │ Error: Class "Database\Factories\UserFactory" not found
+   │
+   │ <AUDIT_ROOT>\vendor\laravel\framework\src\Illuminate\Database\Eloquent\Factories\Factory.php:871
+   │ <AUDIT_ROOT>\vendor\laravel\framework\src\Illuminate\Database\Eloquent\Factories\HasFactory.php:21
+   │ <AUDIT_ROOT>\tests\Unit\BookingServiceTest.php:50
+   │
+ ✘ Starting cycle updates machine and dispatches event
+   │
+   │ Error: Class "Database\Factories\UserFactory" not found
+   │
+   │ <AUDIT_ROOT>\vendor\laravel\framework\src\Illuminate\Database\Eloquent\Factories\Factory.php:871
+   │ <AUDIT_ROOT>\vendor\laravel\framework\src\Illuminate\Database\Eloquent\Factories\HasFactory.php:21
+   │ <AUDIT_ROOT>\tests\Unit\BookingServiceTest.php:64
+   │
+ ✘ Completing cycle frees machine and dispatches event
+   │
+   │ Error: Class "Database\Factories\UserFactory" not found
+   │
+   │ <AUDIT_ROOT>\vendor\laravel\framework\src\Illuminate\Database\Eloquent\Factories\Factory.php:871
+   │ <AUDIT_ROOT>\vendor\laravel\framework\src\Illuminate\Database\Eloquent\Factories\HasFactory.php:21
+   │ <AUDIT_ROOT>\tests\Unit\BookingServiceTest.php:84
+   │
+
+Machine Availability (Tests\Feature\MachineAvailability)
+ ✘ Machine slots endpoint returns json schedule
+   │
+   │ Error: Class "Database\Factories\UserFactory" not found
+   │
+   │ <AUDIT_ROOT>\vendor\laravel\framework\src\Illuminate\Database\Eloquent\Factories\Factory.php:871
+   │ <AUDIT_ROOT>\vendor\laravel\framework\src\Illuminate\Database\Eloquent\Factories\HasFactory.php:21
+   │ <AUDIT_ROOT>\tests\Feature\MachineAvailabilityTest.php:19
+   │
+ ✘ Conflicting slot is marked unavailable
+   │
+   │ Error: Class "Database\Factories\UserFactory" not found
+   │
+   │ <AUDIT_ROOT>\vendor\laravel\framework\src\Illuminate\Database\Eloquent\Factories\Factory.php:871
+   │ <AUDIT_ROOT>\vendor\laravel\framework\src\Illuminate\Database\Eloquent\Factories\HasFactory.php:21
+   │ <AUDIT_ROOT>\tests\Feature\MachineAvailabilityTest.php:43
+   │
+ ✘ Admin can update machine operational status
+   │
+   │ Error: Class "Database\Factories\UserFactory" not found
+   │
+   │ <AUDIT_ROOT>\vendor\laravel\framework\src\Illuminate\Database\Eloquent\Factories\Factory.php:871
+   │ <AUDIT_ROOT>\vendor\laravel\framework\src\Illuminate\Database\Eloquent\Factories\HasFactory.php:21
+   │ <AUDIT_ROOT>\tests\Feature\MachineAvailabilityTest.php:73
+   │
+
+ERRORS!
+Tests: 12, Assertions: 0, Errors: 12.
