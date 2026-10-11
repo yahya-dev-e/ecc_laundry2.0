@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\EnsureUserHasCredits;
+use App\Http\Middleware\PrivateTestAccess;
 use App\Http\Middleware\RequireAdmin;
 use App\Http\Middleware\RequireCanonicalHost;
 use App\Http\Middleware\ValidateSessionVersion;
@@ -18,6 +19,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withEvents(discover: false)
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->prepend(RequireCanonicalHost::class);
+        $middleware->web(append: [PrivateTestAccess::class]);
         $middleware->alias([
             'admin' => RequireAdmin::class,
             'session.version' => ValidateSessionVersion::class,

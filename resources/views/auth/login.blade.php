@@ -87,12 +87,14 @@
                     Se connecter
                 </button>
 
+                @unless(config('private_test.enabled'))
                 <div class="text-center pt-2 md:hidden">
                     <p class="text-xs text-slate-500">
                         Pas encore inscrit ? 
                         <a href="{{ route('register') }}" class="font-bold text-[#00897b] hover:underline">S'inscrire</a>
                     </p>
                 </div>
+                @endunless
             </form>
         </div>
 
@@ -131,6 +133,7 @@
                 </div>
             </div>
 
+            @unless(config('private_test.enabled'))
             <p class="text-xs text-white/90 mb-5 font-medium">
                 Inscrivez-vous et réservez !
             </p>
@@ -138,6 +141,9 @@
             <a href="{{ route('register') }}" class="px-8 py-2 rounded-full border border-white text-white hover:bg-white/10 font-bold text-xs uppercase tracking-wider transition-all">
                 S'inscrire
             </a>
+            @else
+            <p class="text-sm text-white/90">Site de test privé — réservations de démonstration uniquement.</p>
+            @endunless
 
         </div>
 
