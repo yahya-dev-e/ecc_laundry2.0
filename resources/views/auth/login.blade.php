@@ -62,14 +62,14 @@
                 @csrf
 
                 <div>
-                    <input type="email" id="email" name="email" value="{{ old('email', 'admin@fecc.ma') }}" placeholder="Email" autocomplete="email" aria-label="Adresse email" required autofocus
+                    <input type="email" id="email" name="email" value="{{ old('email') }}" placeholder="Email" autocomplete="email" autocapitalize="none" spellcheck="false" aria-label="Adresse email" required
                            class="w-full px-4 py-3 rounded-md bg-[#f1f3f4] text-slate-800 placeholder-slate-400 text-xs border border-transparent focus:border-[#00b4a7] focus:bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00b4a7]/40 transition-all">
                 </div>
 
                 <div class="relative" x-data="{ show: false }">
-                    <input :type="show ? 'text' : 'password'" id="password" name="password" value="admin123" placeholder="Mot de passe" autocomplete="current-password" aria-label="Mot de passe" required
+                    <input type="password" :type="show ? 'text' : 'password'" id="password" name="password" placeholder="Mot de passe" autocomplete="current-password" aria-label="Mot de passe" required
                            class="w-full px-4 py-3 rounded-md bg-[#f1f3f4] text-slate-800 placeholder-slate-400 text-xs border border-transparent focus:border-[#00b4a7] focus:bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00b4a7]/40 transition-all pr-10">
-                    <button type="button" @click="show = !show" aria-label="Afficher ou masquer le mot de passe" class="absolute right-3 top-3.5 text-slate-400 hover:text-slate-600 focus-visible:ring-2 focus-visible:ring-[#00b4a7]/40 focus-visible:outline-none rounded">
+                    <button type="button" @click="show = !show" :aria-pressed="show" aria-label="Afficher ou masquer le mot de passe" class="absolute right-0 top-0 w-11 h-11 flex items-center justify-center text-slate-500 hover:text-slate-600 focus-visible:ring-2 focus-visible:ring-[#00b4a7]/40 focus-visible:outline-none rounded">
                         <svg aria-hidden="true" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>

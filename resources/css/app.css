@@ -1,6 +1,5 @@
-@import 'tailwindcss/base';
-@import 'tailwindcss/components';
-@import 'tailwindcss/utilities';
+@import 'tailwindcss';
+@config '../../tailwind.config.js';
 
 @layer base {
     :root {
@@ -60,32 +59,12 @@
 .login-bg {
     background: radial-gradient(circle at 10% 20%, #0097a7 0%, #00796b 40%, #004d40 100%);
     position: relative;
-    overflow: hidden;
+    overflow-x: clip;
+    overflow-y: visible;
 }
 
-.login-bg::before {
-    content: '';
-    position: absolute;
-    width: 800px;
-    height: 800px;
-    border-radius: 50%;
-    border: 80px solid rgba(255, 255, 255, 0.05);
-    top: -200px;
-    left: -200px;
-    pointer-events: none;
-}
-
-.login-bg::after {
-    content: '';
-    position: absolute;
-    width: 600px;
-    height: 600px;
-    border-radius: 50%;
-    border: 60px solid rgba(255, 255, 255, 0.04);
-    bottom: -150px;
-    right: -100px;
-    pointer-events: none;
-}
+/* Paint decoration without off-screen elements that expand mobile viewports. */
+.login-bg::before, .login-bg::after { display: none; }
 
 /* Sidebar styling matching Image 2 */
 .admin-sidebar {
@@ -113,4 +92,16 @@
 
 .timeline-hour {
     @apply border-b border-r border-slate-300 bg-slate-50 text-[11px] font-medium text-slate-600 px-2 py-1 text-center w-14 shrink-0;
+}
+
+@layer components {
+    .btn-primary { @apply inline-flex items-center justify-center rounded-lg bg-[#00796b] px-4 py-2.5 font-semibold text-white; min-height: 44px; }
+    .btn-primary:hover { @apply bg-[#00695c]; }
+    .btn-primary:disabled { @apply opacity-50 cursor-not-allowed; }
+}
+input, select, textarea { font-size: 16px !important; max-width: 100%; }
+button, a, input, select, textarea { scroll-margin: 5rem; }
+:focus-visible { outline: 3px solid #00897b; outline-offset: 3px; }
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
 }

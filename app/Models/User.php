@@ -2,92 +2,24 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Support\Facades\Schema;
 
 class User extends Authenticatable
 {
     use HasFactory, Notifiable;
 
-    protected static ?bool $hasCreditsColumn = null;
-    protected static ?bool $hasTransactionsTable = null;
+    protected $fillable = ['name', 'email', 'password', 'role', 'student_id', 'room_number'];
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var array<int, string>
-     */
-    protected $fillable = [
-        'name',
-        'email',
-        'password',
-        'role',
-        'student_id',
-        'room_number',
-    ];
+    protected $hidden = ['password', 'remember_token', 'session_version'];
 
-    /**
-     * The attributes that should be hidden for serialization.
-     *
-     * @var array<int, string>
-     */
-    protected $hidden = [
-        'password',
-        'remember_token',
-    ];
-
-    /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
-     */
     protected function casts(): array
     {
-        return [
-            'email_verified_at' => 'datetime',
-            'password' => 'hashed',
-        ];
-    }
-
-    /**
-     * Send the password reset notification.
-     */
-    public function sendPasswordResetNotification($token): void
-    {
-        $this->notify(new \App\Notifications\ResetPasswordNotification($token));
-    }
-
-    public static function hasCreditsColumn(): bool
-    {
-        if (static::$hasCreditsColumn === null) {
-            try {
-                static::$hasCreditsColumn = Schema::hasColumn((new static)->getTable(), 'credits');
-            } catch (\Throwable $e) {
-                static::$hasCreditsColumn = false;
-            }
-        }
-        return static::$hasCreditsColumn;
-    }
-
-    public static function hasTransactionsTable(): bool
-    {
-        if (static::$hasTransactionsTable === null) {
-            try {
-                static::$hasTransactionsTable = Schema::hasTable('transactions');
-            } catch (\Throwable $e) {
-                static::$hasTransactionsTable = false;
-            }
-        }
-        return static::$hasTransactionsTable;
-    }
-
-    public function bookings(): HasMany
-    {
-        return $this->hasMany(Reservation::class);
+        return ['email_verified_at' => 'datetime', 'password' => 'hashed', 'session_version' => 'integer',
+            'weekly_limit_minutes' => 'integer'];
     }
 
     public function reservations(): HasMany
@@ -95,22 +27,9 @@ class User extends Authenticatable
         return $this->hasMany(Reservation::class);
     }
 
-    public function weeklyLimit(): int
+    public function bookings(): HasMany
     {
-        return $this->isAdmin() ? (int) config('laundry.admin_weekly_hours_limit', 100) : (int) config('laundry.weekly_hours_limit', 8);
-    }
-
-    public function weeklyRemainingLimit(): int
-    {
-        $startOfWeek = \Carbon\Carbon::now()->startOfWeek();
-        $endOfWeek = \Carbon\Carbon::now()->endOfWeek();
-
-        $usedCount = $this->reservations()
-            ->where('start_time', '>=', $startOfWeek)
-            ->where('start_time', '<=', $endOfWeek)
-            ->count();
-
-        return max(0, $this->weeklyLimit() - $usedCount);
+        return $this->reservations();
     }
 
     public function transactions(): HasMany
@@ -118,74 +37,68 @@ class User extends Authenticatable
         return $this->hasMany(Transaction::class);
     }
 
-    public function getCreditsAttribute($value): int
+    public function isAdmin(): bool
+    {
+        return $this->role === 'admin';
+    }
+
+    public static function hasCreditsColumn(): bool
+    {
+        return true;
+    }
+
+    public static function hasTransactionsTable(): bool
+    {
+        return true;
+    }
+
+    public function scopeWithWeeklyUsage($query)
+    {
+        return $query->withSum(['reservations as reserved_minutes' => fn ($q) => $q
+            ->whereNull('cancelled_at')->whereNull('released_at')->where('quota_waived', false)
+            ->where('start_time', '>=', now()->startOfWeek())
+            ->where('start_time', '<', now()->startOfWeek()->addWeek())], 'quota_minutes');
+    }
+
+    public function weeklyLimitMinutes(): int
+    {
+        return $this->weekly_limit_minutes ?? (int) (config($this->isAdmin()
+            ? 'laundry.admin_weekly_hours_limit' : 'laundry.weekly_hours_limit', $this->isAdmin() ? 100 : 8) * 60);
+    }
+
+    public function weeklyLimit(): float
+    {
+        return $this->weeklyLimitMinutes() / 60;
+    }
+
+    public function weeklyUsedMinutes(?CarbonInterface $date = null): int
+    {
+        $week = ($date ?? now())->copy()->startOfWeek();
+        $reserved = array_key_exists('reserved_minutes', $this->attributes) && $week->equalTo(now()->startOfWeek())
+            ? $this->attributes['reserved_minutes'] : $this->reservations()->whereNull('cancelled_at')
+                ->whereNull('released_at')->where('quota_waived', false)->where('start_time', '>=', $week)
+                ->where('start_time', '<', $week->copy()->addWeek())->sum('quota_minutes');
+
+        return max(0, (int) $reserved);
+    }
+
+    public function weeklyRemainingMinutes(?CarbonInterface $date = null): int
+    {
+        return max(0, $this->weeklyLimitMinutes() - $this->weeklyUsedMinutes($date));
+    }
+
+    public function weeklyRemainingLimit(): float
+    {
+        return round($this->weeklyRemainingMinutes() / 60, 2);
+    }
+
+    public function getCreditsAttribute($value): float
     {
         return $this->weeklyRemainingLimit();
     }
 
-    public function hasCredits(int $amount): bool
+    public function hasCredits(float $amount): bool
     {
-        return $this->weeklyRemainingLimit() >= $amount;
-    }
-
-    public function deductCredits(int $amount, string $description, ?int $bookingId = null): ?Transaction
-    {
-        if (!$this->hasCredits($amount)) {
-            throw new \InvalidArgumentException('Crédits insuffisants.');
-        }
-
-        if (static::hasCreditsColumn()) {
-            try {
-                $this->decrement('credits', $amount);
-            } catch (\Throwable $e) {
-                // Ignore if column is missing from real DB
-            }
-        }
-
-        if (static::hasTransactionsTable()) {
-            try {
-                return $this->transactions()->create([
-                    'amount' => -$amount,
-                    'type' => 'booking_charge',
-                    'description' => $description,
-                    'booking_id' => $bookingId,
-                ]);
-            } catch (\Throwable $e) {
-                // Ignore if transactions table schema differs or doesn't exist
-            }
-        }
-
-        return null;
-    }
-
-    public function addCredits(int $amount, string $description, ?int $bookingId = null): ?Transaction
-    {
-        if (static::hasCreditsColumn()) {
-            try {
-                $this->increment('credits', $amount);
-            } catch (\Throwable $e) {
-                // Ignore if column is missing from real DB
-            }
-        }
-
-        if (static::hasTransactionsTable()) {
-            try {
-                return $this->transactions()->create([
-                    'amount' => $amount,
-                    'type' => 'refund',
-                    'description' => $description,
-                    'booking_id' => $bookingId,
-                ]);
-            } catch (\Throwable $e) {
-                // Ignore
-            }
-        }
-
-        return null;
-    }
-
-    public function isAdmin(): bool
-    {
-        return $this->role === 'admin';
+        return $this->weeklyRemainingMinutes() >= (int) ceil($amount * 60);
     }
 }

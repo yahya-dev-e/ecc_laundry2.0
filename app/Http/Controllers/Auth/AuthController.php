@@ -4,103 +4,69 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
-use Illuminate\Http\RedirectResponse;
+use App\Notifications\WelcomeNotification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rules\Password;
-use Illuminate\View\View;
 
 class AuthController extends Controller
 {
-    /**
-     * Show login view.
-     */
-    public function showLogin(): View
+    public function showLogin()
     {
         return view('auth.login');
     }
 
-    /**
-     * Handle authentication attempt.
-     */
-    public function login(Request $request): RedirectResponse
-    {
-        $credentials = $request->validate([
-            'email' => ['required', 'email'],
-            'password' => ['required', 'string'],
-        ]);
-
-        if (Auth::attempt($credentials, $request->boolean('remember'))) {
-            $request->session()->regenerate();
-
-            return redirect()->intended(route('dashboard'))
-                ->with('success', 'Welcome back to ECC Laundry!');
-        }
-
-        return back()->withErrors([
-            'email' => 'The provided credentials do not match our records.',
-        ])->onlyInput('email');
-    }
-
-    /**
-     * Show registration view.
-     */
-    public function showRegister(): View
+    public function showRegister()
     {
         return view('auth.register');
     }
 
-    /**
-     * Handle student registration.
-     */
-    public function register(Request $request): RedirectResponse
+    public function login(Request $request)
     {
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class],
-            'student_id' => ['required', 'string', 'max:50', 'unique:'.User::class],
-            'room_number' => ['required', 'string', 'max:50'],
-            'password' => ['required', 'confirmed', Password::defaults()],
-        ]);
-
-        $userData = [
-            'name' => $validated['name'],
-            'email' => $validated['email'],
-            'student_id' => $validated['student_id'],
-            'room_number' => $validated['room_number'],
-            'password' => Hash::make($validated['password']),
-            'role' => 'student',
-        ];
-        if (User::hasCreditsColumn()) {
-            $userData['credits'] = config('laundry.starting_user_credits', 10);
+        $request->merge(['email' => strtolower(trim((string) $request->input('email')))]);
+        $credentials = $request->validate(['email' => ['required', 'email'], 'password' => ['required', 'string']]);
+        if (! Auth::attempt($credentials, $request->boolean('remember'))) {
+            return back()->withErrors(['email' => 'Les identifiants ne correspondent pas à nos données.'])->onlyInput('email');
         }
-        $user = User::create($userData);
+        $request->session()->regenerate();
+        $request->session()->put('auth_version', Auth::user()->session_version);
 
-        // Envoi de l'e-mail de bienvenue et confirmation
-        try {
-            $user->notify(new \App\Notifications\WelcomeNotification());
-        } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::warning('Welcome notification email failed to send: ' . $e->getMessage());
-        }
-
-        Auth::login($user);
-
-        return redirect()->route('dashboard')
-            ->with('success', "Votre compte a été créé avec succès ! Un e-mail de confirmation et de bienvenue a été envoyé à {$user->email}.");
+        return redirect()->intended(route('dashboard'));
     }
 
-    /**
-     * Log out the current user session.
-     */
-    public function logout(Request $request): RedirectResponse
+    public function register(Request $request)
+    {
+        $request->merge(['email' => strtolower(trim((string) $request->input('email')))]);
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'email', 'max:255', 'unique:users,email'],
+            'student_id' => ['required', 'string', 'max:50', 'unique:users,student_id'],
+            'room_number' => ['required', 'string', 'max:50'],
+            'password' => ['required', 'confirmed', Password::min(8)],
+        ]);
+        $user = DB::transaction(fn () => User::create([
+            ...collect($validated)->except('password_confirmation')->all(), 'role' => 'student',
+        ]));
+        $user->refresh();
+        try {
+            $user->notify((new WelcomeNotification)->afterCommit());
+        } catch (\Throwable $e) {
+            report($e);
+        }
+        Auth::login($user);
+        $request->session()->regenerate();
+        $request->session()->put('auth_version', $user->session_version);
+
+        return redirect()->route('dashboard')->with('success', 'Votre compte a été créé. Un message de bienvenue sera envoyé dès que possible.');
+    }
+
+    public function logout(Request $request)
     {
         Auth::logout();
-
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        return redirect()->route('login')
-            ->with('success', 'You have been safely logged out.');
+        return redirect()->route('login');
     }
 }

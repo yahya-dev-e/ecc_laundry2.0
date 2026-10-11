@@ -2,91 +2,46 @@
 
 namespace App\Services;
 
-use App\Enums\MachineStatus;
 use App\Models\Machine;
 use App\Models\Reservation;
 use Carbon\Carbon;
-use Illuminate\Support\Collection;
 
 class MachineSchedulerService
 {
-    /**
-     * Determine if a machine is free from conflicting reservations during [start, end].
-     * PURELY TIME-BASED (NO 'status' COLUMN QUERIES!)
-     */
     public function isMachineAvailableForSlot(Machine $machine, Carbon $startTime, Carbon $endTime, ?int $excludeBookingId = null): bool
     {
-        $query = Reservation::where('machine_id', $machine->id)
-            ->where(function ($q) use ($startTime, $endTime) {
-                $q->where('start_time', '<', $endTime)
-                  ->where('end_time', '>', $startTime);
-            });
-
-        if ($excludeBookingId) {
-            $query->where('id', '!=', $excludeBookingId);
-        }
-
-        return !$query->exists();
+        return ! Reservation::occupying()->where('machine_id', $machine->id)
+            ->where('start_time', '<', $endTime)->where('end_time', '>', $startTime)
+            ->when($excludeBookingId, fn ($q) => $q->where('id', '!=', $excludeBookingId))->exists();
     }
 
-    /**
-     * Generate list of available time slots for a specific machine on a given date.
-     */
     public function getAvailableSlots(Machine $machine, Carbon $date): array
     {
-        $duration = $machine->default_duration_minutes;
-        $cursor = (clone $date)->startOfDay();
-        $closingTime = (clone $date)->startOfDay()->addDay();
-
+        $date = $date->copy()->setTimezone(config('app.timezone'))->startOfDay();
+        $max = config('laundry.restrict_to_current_week', true)
+            ? now()->startOfWeek()->addWeek() : now()->addDays(config('laundry.max_advance_booking_days', 7))->endOfDay();
+        $reservations = Reservation::occupying()->where('machine_id', $machine->id)
+            ->where('start_time', '<', $date->copy()->addDay())->where('end_time', '>', $date)->get(['start_time', 'end_time']);
         $slots = [];
-
-        while ((clone $cursor)->addMinutes($duration)->lessThanOrEqualTo($closingTime)) {
-            $slotEnd = (clone $cursor)->addMinutes($duration);
-
-            $isPast = $cursor->isPast();
-            $isFree = !$isPast && $this->isMachineAvailableForSlot($machine, $cursor, $slotEnd);
-
-            $slots[] = [
-                'start_time' => $cursor->format('H:i'),
-                'end_time'   => $slotEnd->format('H:i'),
-                'datetime'   => $cursor->toIso8601String(),
-                'is_available' => $isFree,
-                'is_past'    => $isPast,
-            ];
-
-            // Buffer between slots
-            $cursor->addMinutes($duration);
+        for ($hour = 0; $hour < 24; $hour++) {
+            $start = $date->copy()->addHours($hour);
+            $end = $start->copy()->addHour();
+            $past = $start->lt(now());
+            $free = $machine->status->isOperable() && ! $past && $end->lte($max)
+                && ! $reservations->contains(fn ($r) => $r->start_time->lt($end) && $r->end_time->gt($start));
+            $slots[] = ['start_time' => $start->format('H:i'), 'end_time' => $hour === 23 ? '24:00' : $end->format('H:i'),
+                'datetime' => $start->toIso8601String(), 'is_available' => $free, 'is_past' => $past];
         }
 
         return $slots;
     }
 
-    /**
-     * Retrieve system-wide machine status metrics.
-     */
     public function getMachineMetrics(): array
     {
-        $counts = Machine::query()
-            ->selectRaw('status, count(*) as count')
-            ->groupBy('status')
-            ->pluck('count', 'status')
-            ->toArray();
+        $counts = Machine::selectRaw('status, count(*) as count')->groupBy('status')->pluck('count', 'status')->all();
 
-        $totalWashers = Machine::where('type', 'washing-machine')->count();
-        $totalDryers = Machine::where('type', 'dryer')->count();
-
-        $activeWashers = Machine::where('type', 'washing-machine')->where('status', MachineStatus::AVAILABLE)->count();
-        $activeDryers = Machine::where('type', 'dryer')->where('status', MachineStatus::AVAILABLE)->count();
-
-        return [
-            'total' => array_sum($counts),
-            'available' => $counts[MachineStatus::AVAILABLE->value] ?? 0,
-            'in_use' => $counts[MachineStatus::IN_USE->value] ?? 0,
-            'reserved' => $counts[MachineStatus::RESERVED->value] ?? 0,
-            'under_maintenance' => $counts[MachineStatus::UNDER_MAINTENANCE->value] ?? 0,
-            'out_of_order' => $counts[MachineStatus::OUT_OF_ORDER->value] ?? 0,
-            'washers_available_ratio' => "{$activeWashers}/{$totalWashers}",
-            'dryers_available_ratio' => "{$activeDryers}/{$totalDryers}",
-        ];
+        return ['total' => array_sum($counts), 'available' => $counts['available'] ?? 0,
+            'in_use' => $counts['in-use'] ?? 0, 'reserved' => $counts['reserved'] ?? 0,
+            'under_maintenance' => $counts['under maintenance'] ?? 0, 'out_of_order' => $counts['out of order'] ?? 0];
     }
 }

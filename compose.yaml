@@ -1,85 +1,57 @@
+# Local integration stack. Use a TLS proxy and private secrets for production.
+x-app: &app
+  image: ecc-laundry:local
+  build:
+    context: .
+    dockerfile: .docker/8.3/Dockerfile
+  env_file: .env
+  environment:
+    DB_CONNECTION: mysql
+    DB_HOST: mysql
+    DB_DATABASE: ecc_laundry
+    DB_USERNAME: laundry
+    DB_PASSWORD: ${DB_PASSWORD:?Set a private DB_PASSWORD in .env}
+    QUEUE_CONNECTION: database
+    CACHE_STORE: database
+    SESSION_DRIVER: database
+    MAIL_MAILER: smtp
+    MAIL_HOST: mailpit
+    MAIL_PORT: 1025
+  volumes:
+    - app-storage:/var/www/html/storage
+  depends_on:
+    mysql:
+      condition: service_healthy
 services:
-  ecc-laundry.test:
-    image: sail-8.3/app
-    build:
-      context: ./.docker/8.3
-      dockerfile: Dockerfile
-      args:
-        WWWGROUP: '${WWWGROUP:-1000}'
-    extra_hosts:
-      - 'host.docker.internal:host-gateway'
-    ports:
-      - '${APP_PORT:-8000}:80'
-      - '${VITE_PORT:-5173}:${VITE_PORT:-5173}'
-    environment:
-      WWWUSER: '${WWWUSER:-1000}'
-      LARAVEL_SAIL: 1
-      XDEBUG_MODE: '${SAIL_XDEBUG_MODE:-off}'
-      XDEBUG_CONFIG: '${SAIL_XDEBUG_CONFIG:-client_host=host.docker.internal}'
-      IGNITION_LOCAL_SITES_PATH: '${PWD}'
-    volumes:
-      - '.:/var/www/html'
-    networks:
-      - sail
-    depends_on:
-      - mysql
-      - redis
-      - mailpit
-
+  app:
+    <<: *app
+    ports: ["127.0.0.1:${APP_PORT:-8000}:80"]
+  worker:
+    <<: *app
+    user: www-data
+    command: ["php", "artisan", "queue:work", "--sleep=1", "--tries=3", "--timeout=60", "--max-time=3600"]
+    restart: unless-stopped
+  scheduler:
+    <<: *app
+    user: www-data
+    command: ["php", "artisan", "schedule:work"]
+    restart: unless-stopped
   mysql:
-    image: 'mysql/mysql-server:8.0'
-    ports:
-      - '${FORWARD_DB_PORT:-3306}:3306'
+    image: mysql:8.4
     environment:
-      MYSQL_ROOT_PASSWORD: '${DB_PASSWORD:-secret}'
-      MYSQL_ROOT_HOST: '%'
-      MYSQL_DATABASE: '${DB_DATABASE:-ecc_laundry}'
-      MYSQL_USER: '${DB_USERNAME:-sail}'
-      MYSQL_PASSWORD: '${DB_PASSWORD:-secret}'
-      MYSQL_ALLOW_EMPTY_PASSWORD: 1
-    volumes:
-      - 'sail-mysql:/var/lib/mysql'
-    networks:
-      - sail
+      MYSQL_DATABASE: ecc_laundry
+      MYSQL_USER: laundry
+      MYSQL_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:?Set a different private DB_ROOT_PASSWORD}
+    volumes: ["mysql-data:/var/lib/mysql"]
     healthcheck:
-      test:
-        - CMD
-        - mysqladmin
-        - ping
-        - '-p${DB_PASSWORD:-secret}'
-      retries: 3
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -p$$MYSQL_ROOT_PASSWORD"]
+      interval: 5s
       timeout: 5s
-
-  redis:
-    image: 'redis:alpine'
-    ports:
-      - '${FORWARD_REDIS_PORT:-6379}:6379'
-    volumes:
-      - 'sail-redis:/data'
-    networks:
-      - sail
-    healthcheck:
-      test:
-        - CMD
-        - redis-cli
-        - ping
-      retries: 3
-      timeout: 5s
-
+      retries: 20
   mailpit:
-    image: 'axllent/mailpit:latest'
-    ports:
-      - '${FORWARD_MAILPIT_PORT:-1025}:1025'
-      - '${FORWARD_MAILPIT_DASHBOARD_PORT:-8025}:8025'
-    networks:
-      - sail
-
-networks:
-  sail:
-    driver: bridge
-
+    image: axllent/mailpit:v1.27
+    ports: ["127.0.0.1:8025:8025"]
 volumes:
-  sail-mysql:
-    driver: local
-  sail-redis:
-    driver: local
+  app-storage:
+  mysql-data:

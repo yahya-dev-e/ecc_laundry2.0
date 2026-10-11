@@ -2,11 +2,9 @@
 
 namespace Tests\Feature;
 
-use App\Enums\MachineStatus;
-use App\Models\Booking;
 use App\Models\Machine;
 use App\Models\User;
-use Carbon\Carbon;
+use App\Services\BookingService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -14,70 +12,21 @@ class MachineAvailabilityTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_machine_slots_endpoint_returns_json_schedule(): void
-    {
-        $user = User::factory()->create();
-        $machine = Machine::factory()->create([
-            'status' => MachineStatus::AVAILABLE,
-        ]);
-
-        $today = Carbon::today()->toDateString();
-        $response = $this->actingAs($user)->getJson(route('machines.slots', [
-            'machine' => $machine->id,
-            'date' => $today,
-        ]));
-
-        $response->assertStatus(200);
-        $response->assertJsonStructure([
-            'machine_id',
-            'name',
-            'date',
-            'slots' => [
-                '*' => ['start_time', 'end_time', 'datetime', 'is_available', 'is_past'],
-            ],
-        ]);
-    }
-
-    public function test_conflicting_slot_is_marked_unavailable(): void
+    public function test_conflict_disappears_after_cancellation_and_revision_changes(): void
     {
         $user = User::factory()->create();
         $machine = Machine::factory()->create();
-
-        $tomorrowTenAm = Carbon::tomorrow()->setTime(10, 0, 0);
-        $tomorrowTenFortyFive = Carbon::tomorrow()->setTime(10, 45, 0);
-
-        Booking::create([
-            'user_id' => $user->id,
-            'machine_id' => $machine->id,
-            'start_time' => $tomorrowTenAm,
-            'end_time' => $tomorrowTenFortyFive,
-            'notified_start' => false,
-            'notified_end' => false,
-            'weekly_session_limit_remaining' => 8,
-        ]);
-
-        $response = $this->actingAs($user)->getJson(route('machines.slots', [
-            'machine' => $machine->id,
-            'date' => Carbon::tomorrow()->toDateString(),
-        ]));
-
-        $slots = collect($response->json('slots'));
-        $bookedSlot = $slots->firstWhere('start_time', '10:00');
-
-        $this->assertNotNull($bookedSlot);
-        $this->assertFalse($bookedSlot['is_available']);
-    }
-
-    public function test_admin_can_update_machine_operational_status(): void
-    {
-        $admin = User::factory()->create(['role' => 'admin']);
-        $machine = Machine::factory()->create(['status' => MachineStatus::AVAILABLE]);
-
-        $response = $this->actingAs($admin)->patch(route('machines.update-status', $machine), [
-            'status' => MachineStatus::UNDER_MAINTENANCE->value,
-        ]);
-
-        $response->assertSessionHasNoErrors();
-        $this->assertEquals(MachineStatus::UNDER_MAINTENANCE, $machine->fresh()->status);
+        $this->actingAs($user);
+        $before = $this->getJson('/calendar-revision')->json('revision');
+        $booking = app(BookingService::class)->createBooking($user, $machine, now()->setTime(11, 0));
+        $occupied = $this->getJson('/calendar-revision')->json('revision');
+        $this->assertNotSame($before, $occupied);
+        $slots = collect($this->getJson('/machines/'.$machine->id.'/slots?date='.now()->toDateString())->assertOk()->json('slots'));
+        $this->assertFalse($slots->firstWhere('start_time', '11:00')['is_available']);
+        app(BookingService::class)->cancelBooking($booking);
+        $this->assertNotSame($occupied, $this->getJson('/calendar-revision')->json('revision'));
+        $slots = collect($this->getJson('/machines/'.$machine->id.'/slots?date='.now()->toDateString())->json('slots'));
+        $this->assertTrue($slots->firstWhere('start_time', '11:00')['is_available']);
+        $this->getJson('/machines/'.$machine->id.'/slots?date=invalid')->assertUnprocessable();
     }
 }

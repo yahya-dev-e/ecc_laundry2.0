@@ -1,4 +1,53 @@
 import Alpine from 'alpinejs';
+import focus from '@alpinejs/focus';
+
+Alpine.plugin(focus);
+
+Alpine.data('bookingForm', (machineId, selectedDate) => ({
+    machineId, selectedDate, slots: [], selectedTimes: [], remainingMinutes: 0, maxNewBookings: 0,
+    loading: false, submitting: false, error: '', message: '', timer: null, requestId: 0,
+    get overQuota() { return this.selectedTimes.length * 60 > this.remainingMinutes || this.selectedTimes.length > this.maxNewBookings; },
+    init() {
+        this.loadSlots();
+        this.timer = setInterval(() => { if (!document.hidden && !this.submitting) this.loadSlots(); }, 30000);
+    },
+    destroy() { clearInterval(this.timer); this.requestId++; },
+    toggle(time) {
+        this.selectedTimes = this.selectedTimes.includes(time) ? this.selectedTimes.filter(t => t !== time) : [...this.selectedTimes, time];
+    },
+    async loadSlots() {
+        if (!this.machineId || !this.selectedDate) return;
+        const id = ++this.requestId;
+        this.loading = true; this.error = '';
+        try {
+            const response = await fetch('/machines/' + encodeURIComponent(this.machineId) + '/slots?date=' + encodeURIComponent(this.selectedDate), { cache: 'no-store', headers: { Accept: 'application/json' } });
+            if (!response.ok) throw new Error(response.status === 401 ? 'Votre session a expiré. Reconnectez-vous.' : 'Impossible de charger les créneaux.');
+            const data = await response.json();
+            if (id !== this.requestId) return;
+            this.slots = data.slots.filter(s => s.is_available);
+            const previousCount = this.selectedTimes.length;
+            this.selectedTimes = this.selectedTimes.filter(t => this.slots.some(s => s.datetime === t));
+            this.remainingMinutes = data.remaining_minutes; this.maxNewBookings = data.max_new_bookings;
+            this.message = previousCount !== this.selectedTimes.length ? 'Un créneau choisi n’est plus disponible. Vérifiez votre sélection.' : this.slots.length + ' créneaux disponibles';
+        } catch (e) { if (id === this.requestId) { this.error = e.message; this.slots = []; } }
+        finally { if (id === this.requestId) this.loading = false; }
+    }
+}));
+
+Alpine.data('liveRevision', () => ({
+    revision: null, changed: false, timer: null,
+    init() { this.check(); this.timer = setInterval(() => { if (!document.hidden) this.check(); }, 30000); },
+    destroy() { clearInterval(this.timer); },
+    async check() {
+        try {
+            const response = await fetch('/calendar-revision', { cache: 'no-store', headers: { Accept: 'application/json' } });
+            if (!response.ok) return;
+            const data = await response.json();
+            if (this.revision !== null && this.revision !== data.revision) this.changed = true;
+            this.revision = data.revision;
+        } catch (_) { /* Retain the current view while offline. */ }
+    }
+}));
 
 window.Alpine = Alpine;
 
@@ -38,30 +87,6 @@ Alpine.data('countdown', (endsAtTimestamp) => ({
 
     destroy() {
         if (this.timer) clearInterval(this.timer);
-    }
-}));
-
-// Quick slot picker Alpine component
-Alpine.data('slotPicker', (initialMachineId = null) => ({
-    selectedMachine: initialMachineId,
-    selectedDate: new Date().toISOString().split('T')[0],
-    selectedSlot: null,
-    slots: [],
-    loading: false,
-
-    async fetchSlots() {
-        if (!this.selectedMachine) return;
-        this.loading = true;
-        try {
-            const res = await fetch(`/machines/${this.selectedMachine}/slots?date=${this.selectedDate}`);
-            const data = await res.json();
-            this.slots = data.slots || [];
-        } catch (e) {
-            console.error('Error fetching slots:', e);
-            this.slots = [];
-        } finally {
-            this.loading = false;
-        }
     }
 }));
 
@@ -109,46 +134,25 @@ export function serverClock(serverIsoString, timeZone = 'UTC') {
     };
 }
 
-// Local System Hour Pointer component for Calendar timeline
-export function systemTimePointer(selectedDateStr, serverTodayStr = '') {
+// Campus clock drives the calendar even when the browser is in another timezone.
+export function systemTimePointer(selectedDateStr, serverIsoString, timeZone) {
     return {
-        isVisible: false,
-        topPx: 0,
-        timeFormatted: '',
-        timer: null,
-
-        init() {
-            this.update();
-            this.timer = setInterval(() => this.update(), 1000);
-        },
-
+        base: new Date(serverIsoString).getTime(), clientBase: Date.now(),
+        isVisible: false, topPx: 0, timeFormatted: '', timer: null,
+        init() { this.update(); this.timer = setInterval(() => this.update(), 1000); },
         update() {
-            const now = new Date();
-            const y = now.getFullYear();
-            const m = String(now.getMonth() + 1).padStart(2, '0');
-            const d = String(now.getDate()).padStart(2, '0');
-            const localDateStr = `${y}-${m}-${d}`;
-
-            // Show pointer when viewing today's schedule (either matching local system date or server today)
-            this.isVisible = (selectedDateStr === localDateStr || (serverTodayStr && selectedDateStr === serverTodayStr));
-            if (!this.isVisible) return;
-
-            const hours = now.getHours();
-            const minutes = now.getMinutes();
-            const seconds = now.getSeconds();
-            const totalMinutes = (hours * 60) + minutes + (seconds / 60);
-
-            // 52px height per hour in calendar timeline
-            this.topPx = Math.min(24 * 52, Math.max(0, (totalMinutes / 60) * 52));
-            this.timeFormatted = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+            const now = new Date(this.base + Date.now() - this.clientBase);
+            const parts = Object.fromEntries(new Intl.DateTimeFormat('en-GB', {
+                timeZone, year: 'numeric', month: '2-digit', day: '2-digit',
+                hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23'
+            }).formatToParts(now).map(p => [p.type, p.value]));
+            this.isVisible = selectedDateStr === parts.year + '-' + parts.month + '-' + parts.day;
+            this.topPx = (Number(parts.hour) + Number(parts.minute) / 60 + Number(parts.second) / 3600) * 52;
+            this.timeFormatted = parts.hour + ':' + parts.minute;
         },
-
-        destroy() {
-            if (this.timer) clearInterval(this.timer);
-        }
+        destroy() { clearInterval(this.timer); }
     };
 }
-
 window.serverClock = serverClock;
 window.systemTimePointer = systemTimePointer;
 

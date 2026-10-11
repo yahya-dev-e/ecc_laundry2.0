@@ -1,148 +1,72 @@
-# ECC Laundry 2.0 - Smart Campus Laundry Management
+# ECC Laundry
 
-An enterprise-ready Laravel 11 web application for campus laundry reservation, IoT machine cycle tracking, credit management, and student facility scheduling.
+A Laravel 12 reservation application for campus laundry. Blade, Alpine.js and Tailwind render the web UI; the SQL database owns users, reservations and the minute-based quota ledger. Start/completion currently update application state: physical machine control requires a separate verified hardware integration.
 
----
+The original audit is in [audit/REPORT.md](audit/REPORT.md). The fixes and remaining release checks are mapped in [FIXES.md](FIXES.md). This branch is not a production deployment.
 
-## 🏗️ Architecture
+## Local installation
 
-```
-ecc-laundry/
-├── .env.example
-├── compose.yaml
-├── composer.json
-├── package.json
-├── vite.config.js
-├── tailwind.config.js
-├── artisan
-├── bootstrap/
-│   ├── app.php
-│   └── providers.php
-├── config/
-│   ├── app.php
-│   ├── database.php
-│   └── laundry.php
-├── app/
-│   ├── Enums/
-│   │   ├── MachineStatus.php
-│   │   ├── MachineType.php
-│   │   └── BookingStatus.php
-│   ├── Models/
-│   │   ├── User.php
-│   │   ├── Machine.php
-│   │   ├── Booking.php
-│   │   └── Transaction.php
-│   ├── Http/
-│   │   ├── Controllers/
-│   │   │   ├── Auth/
-│   │   │   │   └── AuthController.php
-│   │   │   ├── MachineController.php
-│   │   │   ├── BookingController.php
-│   │   │   └── DashboardController.php
-│   │   ├── Requests/
-│   │   │   ├── StoreBookingRequest.php
-│   │   │   └── UpdateMachineStatusRequest.php
-│   │   └── Middleware/
-│   │       └── EnsureUserHasCredits.php
-│   ├── Services/
-│   │   ├── BookingService.php
-│   │   └── MachineSchedulerService.php
-│   ├── Events/
-│   │   ├── CycleStarted.php
-│   │   └── CycleCompleted.php
-│   ├── Listeners/
-│   │   └── SendCycleAlertNotification.php
-│   └── Jobs/
-│       ├── AutoReleaseExpiredBookings.php
-│       └── CheckActiveCycles.php
-├── database/
-│   ├── migrations/
-│   │   ├── 0001_01_01_000000_create_users_table.php
-│   │   ├── 2026_01_01_000001_create_machines_table.php
-│   │   ├── 2026_01_01_000002_create_bookings_table.php
-│   │   └── 2026_01_01_000003_create_transactions_table.php
-│   ├── seeders/
-│   │   ├── DatabaseSeeder.php
-│   │   └── MachineSeeder.php
-│   └── factories/
-│       ├── MachineFactory.php
-│       └── BookingFactory.php
-├── resources/
-│   ├── css/
-│   │   └── app.css
-│   ├── js/
-│   │   └── app.js
-│   └── views/
-│       ├── layouts/
-│       │   ├── app.blade.php
-│       │   └── navigation.blade.php
-│       ├── components/
-│       │   ├── machine-card.blade.php
-│       │   ├── status-badge.blade.php
-│       │   └── countdown-timer.blade.php
-│       ├── bookings/
-│       │   ├── index.blade.php
-│       │   └── create.blade.php
-│       └── dashboard.blade.php
-├── routes/
-│   ├── web.php
-│   ├── console.php
-│   └── channels.php
-└── tests/
-    ├── Feature/
-    │   ├── BookingTest.php
-    │   └── MachineAvailabilityTest.php
-    └── Unit/
-        └── BookingServiceTest.php
-```
+Use PHP 8.3+ with PDO SQLite or PDO MySQL, mbstring, OpenSSL, fileinfo, intl and ZIP; Composer 2; Node.js 22. Dependencies are locked.
 
----
+1. Copy .env.example to .env. Generate your own key with php artisan key:generate after composer install.
+2. Run composer install and npm ci --ignore-scripts.
+3. Create database/database.sqlite as an empty file, or configure a private MySQL database in .env. Leave DB_DATABASE unset for the default SQLite path.
+4. Run php artisan migrate --seed and npm run build.
+5. Run php artisan laundry:create-admin to create a private initial administrator.
+6. Run php artisan serve --host=127.0.0.1, php artisan queue:work --tries=3 --timeout=60, and php artisan schedule:work in separate terminals.
 
-## ⚡ Quick Start
+The normal seeder creates machine inventory only and preserves existing machine states. Demo users require DEMO_SEED_ENABLED=true, a private DEMO_PASSWORD of at least 12 characters, and a local/testing environment. There are no public default passwords. The optional node preview-server.js command launches this same Laravel backend on loopback; it no longer provides separate simulated accounts or reservations.
 
-### 1. Requirements
-- Docker & Docker Compose **or** PHP 8.2+ with Composer & Node.js 18+
+MAIL_MAILER=log records mail locally; it does not deliver to an inbox. Configure SMTP before claiming external delivery.
 
-### 2. Environment Setup
-```bash
-cp .env.example .env
-npm install
-```
+## Rules
 
-### 3. Running with Docker Compose (Laravel Sail)
-```bash
-docker compose up -d
-docker compose exec ecc-laundry.test composer install
-docker compose exec ecc-laundry.test php artisan key:generate
-docker compose exec ecc-laundry.test php artisan migrate --seed
-npm run dev
-```
+- Campus timezone defaults to Africa/Casablanca; the server decides available slots.
+- Default booking window: today through Sunday, including the Sunday 23:00–Monday 00:00 slot. This is not a same-day-only restriction.
+- Students receive eight hours per Monday–Sunday week; administrators receive a finite 100 hours. An administrator can set an individual limit.
+- Browser bookings are one hour. Validated API/form requests can specify 20–120 minutes, charged in exact integer minutes.
+- At most three active/upcoming reservations per account by default. A multi-slot request either commits all reservations and charges or none.
+- A cycle starts only during its reserved start window, with 15 minutes of grace, on an operable machine without another active cycle.
+- Future unstarted reservations can be cancelled. Cancellations and no-shows retain history and refund once. Completed cycles remain counted.
+- Admin quota reset exempts existing reservations for the current week; new reservations still count, including after an exempt reservation is cancelled.
+- Rolling advance booking is optional through LAUNDRY_RESTRICT_CURRENT_WEEK=false. Quota is checked against each reservation's target week.
 
-### 4. Running Locally (Direct PHP)
-```bash
-composer install
-php artisan key:generate
-touch database/database.sqlite
-php artisan migrate --seed
-npm run dev
-php artisan serve
-```
+## Existing installations
 
----
+Back up the database and test the upgrade on a copy first. Do not run migrate:fresh on existing data.
 
-## 🔑 Demo Credentials
+Run php artisan migrate --force, then php artisan laundry:reconcile-ledger to inspect missing or ambiguous historical accounting. The command is dry-run by default. Review its output before using --apply; it adds only unambiguous missing charge/refund entries and is repeatable. Duplicate/mismatched/orphan entries need manual review. Historical cancellations deleted by old versions cannot be reconstructed.
 
-| Role | Email | Password | Starting Credits |
-|---|---|---|---|
-| **Student** | `student@ecc.edu` | `password123` | 18 Credits |
-| **Admin** | `admin@ecc.edu` | `admin123` | 100 Credits |
+Legacy ledger amounts are converted from credit units to minutes. The migration corrects the reservation foreign key, normalizes email casing (refusing collisions), preserves identifiable active cycles, and keeps past legacy reservations classified as completed without issuing retroactive absence refunds. That historical classification is inherited data, not proof a physical cycle ran.
 
----
+The upgrade intentionally refuses automatic rollback: use a reviewed backup/restore plan. Older reset links expire during the transition to the new reset-link store. Existing sessions without a session version must log in again. Stored legacy credits are not the quota source of truth.
 
-## 🧪 Running Automated Tests
-```bash
-php artisan test
-```
-- `tests/Feature/BookingTest.php` - Booking reservations, double booking prevention, balance deductions, cancellations
-- `tests/Feature/MachineAvailabilityTest.php` - Slot scheduling, conflicting reservations, admin machine status controls
-- `tests/Unit/BookingServiceTest.php` - Machine lifecycle transitions, credit calculations, event broadcasting
+## Container integration stack
+
+Set private APP_KEY, DB_PASSWORD and a different DB_ROOT_PASSWORD in .env; use APP_URL=http://localhost:8000 for the local stack.
+
+Run docker compose build, docker compose run --rm app php artisan migrate --seed --force, then docker compose up -d. Create the administrator with docker compose exec app php artisan laundry:create-admin. The worker and scheduler are separate services. MySQL is private to the compose network; the app and Mailpit UI bind loopback.
+
+For production, configure APP_ENV=production, APP_DEBUG=false, a canonical HTTPS APP_URL, secure cookies, private SMTP credentials and a shared persistent APP_KEY for app/worker/scheduler. Terminate TLS at a correctly configured proxy, restrict accepted hostnames there too, and explicitly configure trusted proxies for that infrastructure. Do not broadly trust arbitrary forwarded headers. Mailpit is a local integration capture, not production email.
+
+Run queue workers under a supervisor, restart them when deploying code, monitor failed_jobs, retry failures after resolving the cause, and run the scheduler continuously. Queued email retries three times. SMTP acceptance and database commits cannot provide exactly-once external delivery after an ambiguous transport failure.
+
+## Verification
+
+    composer audit --locked
+    npm audit --audit-level=moderate
+    npm run build
+    php vendor/phpunit/phpunit/phpunit --fail-on-warning
+    php tests/integration/upgrade.php
+    php tests/integration/concurrency.php
+    node tests/integration/smtp.mjs
+    npx playwright install chromium firefox webkit
+    node tests/browser/run.mjs
+
+Browser tests create their own SQLite database, use synthetic example.test accounts, and exercise the real public/index.php with CSRF enabled. The fixed clock exists only in the test router. Set BROWSER_ENGINES=chromium,firefox,edge,webkit to include an installed Edge. Optional TEST_PHP_INI and PLAYWRIGHT_MODULE_DIR support external test runtimes.
+
+The concurrency test uses separate PHP processes. It normally creates an isolated SQLite file. MySQL runs require LAUNDRY_TEST_DB=mysql and an explicitly configured disposable database whose name ends in _test; that database is reset.
+
+ci/audit-fixes.yml.example contains a ready-to-enable workflow for Windows/macOS/Linux browser and backend checks, MySQL tests and a container build. Move it into .github/workflows/ with an account/token allowed to edit workflows. The current GitHub token has repo access but no workflow scope, so this template is not activated and no remote result is claimed. Current local results and compatibility limitations are in FIXES.md.
+
+Settings and complaints are not implemented features and are not linked as working pages. Availability polls every 30 seconds; dashboards/calendars offer a refresh notice rather than claiming a clock is real-time data synchronization.

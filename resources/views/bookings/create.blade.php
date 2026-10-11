@@ -1,364 +1,57 @@
 @extends('layouts.app')
-
 @section('content')
-@php
-    $rawWashers = $machines->filter(fn($m) => in_array($m->type instanceof \App\Enums\MachineType ? $m->type->value : (string)$m->type, ['washing-machine', 'washer']));
-    $rawDryers = $machines->filter(fn($m) => in_array($m->type instanceof \App\Enums\MachineType ? $m->type->value : (string)$m->type, ['dryer']));
-
-    // Standard inventory to guarantee all 7 washers (including ML3-PE and ML4-PE) and 6 dryers are available to book
-    $standardWashers = [
-        'ML1-OM' => (object)['id' => 1, 'name' => 'ML1-OM', 'type' => 'washing-machine', 'color' => '#4338ca'],
-        'ML1-PE' => (object)['id' => 3, 'name' => 'ML1-PE', 'type' => 'washing-machine', 'color' => '#2563eb'],
-        'ML2-OM' => (object)['id' => 2, 'name' => 'ML2-OM', 'type' => 'washing-machine', 'color' => '#0d9488'],
-        'ML2-PE' => (object)['id' => 4, 'name' => 'ML2-PE', 'type' => 'washing-machine', 'color' => '#d97706'],
-        'ML3-OM' => (object)['id' => 7, 'name' => 'ML3-OM', 'type' => 'washing-machine', 'color' => '#059669'],
-        'ML3-PE' => (object)['id' => 5, 'name' => 'ML3-PE', 'type' => 'washing-machine', 'color' => '#db2777'],
-        'ML4-PE' => (object)['id' => 6, 'name' => 'ML4-PE', 'type' => 'washing-machine', 'color' => '#ea580c'],
-    ];
-
-    $standardDryers = [
-        'SL1-OM' => (object)['id' => 8, 'name' => 'SL1-OM', 'type' => 'dryer', 'color' => '#b45309'],
-        'SL1-PE' => (object)['id' => 10, 'name' => 'SL1-PE', 'type' => 'dryer', 'color' => '#475569'],
-        'SL2-OM' => (object)['id' => 9, 'name' => 'SL2-OM', 'type' => 'dryer', 'color' => '#16a34a'],
-        'SL2-PE' => (object)['id' => 11, 'name' => 'SL2-PE', 'type' => 'dryer', 'color' => '#65a30d'],
-        'SL3-OM' => (object)['id' => 13, 'name' => 'SL3-OM', 'type' => 'dryer', 'color' => '#52525b'],
-        'SL3-PE' => (object)['id' => 12, 'name' => 'SL3-PE', 'type' => 'dryer', 'color' => '#9333ea'],
-    ];
-
-    $washers = collect();
-    $seenWashers = [];
-    foreach ($rawWashers as $m) {
-        $washers->push($m);
-        $seenWashers[$m->name] = true;
-    }
-    foreach ($standardWashers as $name => $fallback) {
-        if (!isset($seenWashers[$name])) {
-            $washers->push($fallback);
-        }
-    }
-    $washers = $washers->sortBy('name')->values();
-
-    $dryers = collect();
-    $seenDryers = [];
-    foreach ($rawDryers as $m) {
-        $dryers->push($m);
-        $seenDryers[$m->name] = true;
-    }
-    foreach ($standardDryers as $name => $fallback) {
-        if (!isset($seenDryers[$name])) {
-            $dryers->push($fallback);
-        }
-    }
-    $dryers = $dryers->sortBy('name')->values();
-
-    $allCombinedMachines = $washers->concat($dryers);
-    $defaultMachineId = $selectedMachine?->id ?? ($allCombinedMachines->first()?->id ?? 1);
-@endphp
-
-<div class="max-w-3xl mx-auto space-y-6" x-data="bookingApp({{ $defaultMachineId }})">
-
-    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-        <div>
-            <h1 class="text-xl font-bold text-slate-800 tracking-tight">Réserver une machine</h1>
-            <p class="text-xs text-slate-500">Planification des créneaux horaires disponibles par machine (24h/24)</p>
+<div class="max-w-3xl mx-auto space-y-5" x-data="bookingForm({{ $selectedMachine?->id ?? $machines->first()?->id ?? 'null' }}, @js($initialDate))">
+    <h1 class="text-xl font-bold">Réserver une machine</h1>
+    <p class="text-sm text-slate-600">Horaires du campus : {{ config('app.timezone') }}. Réservation jusqu’au {{ \Carbon\Carbon::parse($maxDate)->format('d/m/Y') }} inclus.</p>
+    @if($machines->isEmpty())
+        <p role="status" class="p-4 bg-white rounded-lg">Aucune machine n’est disponible dans le catalogue.</p>
+    @else
+    <form method="POST" action="{{ route('bookings.store') }}" class="bg-white rounded-xl border border-slate-200 p-4 sm:p-6 space-y-5 pb-28 sm:pb-6" @submit="if (!selectedTimes.length) { $event.preventDefault() } else { submitting = true }">
+        @csrf
+        <div><label for="machineSelect" class="block font-semibold text-sm mb-1">Machine</label>
+            <select id="machineSelect" name="machine_id" x-model="machineId" @change="selectedTimes = []; loadSlots()" class="w-full border border-slate-300 rounded-lg px-3 py-2.5">
+                @foreach($machines as $machine)
+                <option value="{{ $machine->id }}" @selected($machine->id === ($selectedMachine?->id ?? $machines->first()?->id))>{{ $machine->name }}</option>
+                @endforeach
+            </select>
         </div>
-        <a href="{{ route('calendrier') }}" class="text-xs text-[#00897b] hover:underline font-semibold flex items-center space-x-1 self-start sm:self-auto">
-            <span>&larr;</span>
-            <span>Retour au calendrier</span>
-        </a>
-    </div>
-
-    <!-- Reservation Form Card -->
-    <div class="bg-white rounded-xl shadow-md border border-slate-200 overflow-hidden">
-        
-        <div class="bg-[#00897b] px-6 py-4 text-white flex items-center justify-between">
-            <span class="text-sm font-bold">Sélection des créneaux de réservation</span>
-            <span class="text-xs bg-white/20 px-2.5 py-1 rounded font-mono font-bold" x-text="selectedMachineName">Machine</span>
+        <div><label for="bookingDate" class="block font-semibold text-sm mb-1">Date</label>
+            <input id="bookingDate" type="date" name="date" x-model="selectedDate" @change="selectedTimes = []; loadSlots()" value="{{ $initialDate }}" min="{{ $minDate }}" max="{{ $maxDate }}" class="w-full border border-slate-300 rounded-lg px-3 py-2.5" required>
         </div>
-
-        <form method="POST" action="{{ route('bookings.store') }}" class="p-6 space-y-6 text-xs">
-            @csrf
-
-            @if(session('error'))
-                <div class="p-3 bg-rose-50 border border-rose-200 text-rose-700 rounded text-xs font-semibold">
-                    {{ session('error') }}
-            @endif
-
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <!-- Machine Selector -->
-                <div>
-                    <label for="machineSelect" class="block font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                        Machine
-                    </label>
-                    <select id="machineSelect" name="machine_id" x-model.number="selectedMachineId" @change="onMachineChange()"
-                            class="w-full px-3.5 py-2.5 border border-slate-300 rounded text-xs focus:border-[#00897b] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00897b]/30 bg-slate-50 font-bold text-slate-800">
-                        @if($washers->isNotEmpty())
-                            <optgroup label="Machines à laver">
-                                @foreach($washers as $machine)
-                                    <option value="{{ $machine->id }}">{{ $machine->name }}</option>
-                                @endforeach
-                            </optgroup>
-                        @endif
-                        @if($dryers->isNotEmpty())
-                            <optgroup label="Sèche-linge">
-                                @foreach($dryers as $machine)
-                                    <option value="{{ $machine->id }}">{{ $machine->name }}</option>
-                                @endforeach
-                            </optgroup>
-                        @endif
-                    </select>
-                </div>
-
-                <!-- Date -->
-                <div>
-                    <label for="bookingDate" class="block font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                        Date de réservation
-                    </label>
-                    <input id="bookingDate" type="date" name="date" x-model="selectedDate" @change="onDateChange()" 
-                           min="{{ $minDate ?? now()->toDateString() }}" 
-                           max="{{ $maxDate ?? now()->endOfWeek()->toDateString() }}"
-                           class="w-full px-3.5 py-2.5 border border-slate-300 rounded text-xs focus:border-[#00897b] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00897b]/30 bg-white">
-                    <p class="text-[11px] text-slate-500 mt-1">
-                        Réservations limitées à la semaine en cours (jusqu'au dimanche {{ now()->endOfWeek()->format('d/m') }} à 23h59). Le quota d'heures se réinitialise chaque lundi.
-                    </p>
-                </div>
+        <noscript>
+            <p>Choisissez l’heure de début. Chaque réservation dure une heure.</p>
+            <label for="manual-time">Date et heure de début</label>
+            <input id="manual-time" type="datetime-local" name="start_time" min="{{ now()->format('Y-m-d\TH:i') }}" max="{{ $maxDate }}T23:00" required>
+            <button class="btn-primary" type="submit">Réserver ce créneau</button>
+        </noscript>
+        <div x-cloak>
+            <h2 class="font-semibold mb-2">Créneaux d’une heure disponibles</h2>
+            <p role="status" aria-live="polite" class="text-sm text-slate-600 mb-3" x-text="message"></p>
+            <p x-show="loading" role="status">Chargement des créneaux…</p>
+            <div x-show="error" role="alert" class="p-3 bg-rose-50 text-rose-800 rounded-lg">
+                <span x-text="error"></span><button type="button" @click="loadSlots()" class="ml-2 underline font-semibold">Réessayer</button>
             </div>
-
-            <!-- Multi-Slot Interactive Selection Grid (Only Open Slots Shown) -->
-            <div>
-                <div class="flex items-center justify-between mb-2">
-                    <label class="block font-bold text-slate-700 uppercase tracking-wider">
-                        Créneaux horaires disponibles (Sélection multiple possible)
-                    </label>
-                    <span class="text-[11px] text-slate-500 font-semibold font-mono" x-text="availableSlots.length + ' créneaux disponibles'"></span>
-                </div>
-                <p class="text-[11px] text-slate-500 mb-3">
-                    Sélectionnez un ou plusieurs créneaux d'1 heure. Les heures déjà réservées sont automatiquement masquées pour n'afficher que les créneaux ouverts en ce moment.
-                </p>
-
-                <!-- Hidden inputs for form submission -->
-                <template x-for="slot in selectedSlots" :key="slot">
-                    <input type="hidden" name="start_times[]" :value="slotToDateTime(slot)">
+            <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 max-h-80 overflow-y-auto p-1">
+                <template x-for="slot in slots" :key="slot.datetime">
+                    <button type="button" @click="toggle(slot.datetime)" :aria-pressed="selectedTimes.includes(slot.datetime)"
+                        :class="selectedTimes.includes(slot.datetime) ? 'bg-emerald-100 border-emerald-700 text-emerald-900' : 'bg-white border-slate-300 text-slate-800'"
+                        class="min-h-[48px] p-3 rounded-lg border font-mono text-sm" x-text="slot.start_time + ' – ' + slot.end_time"></button>
                 </template>
-
-                <div x-show="availableSlots.length > 0" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5 max-h-72 overflow-y-auto p-2 border border-slate-200 rounded-lg bg-slate-50/50">
-                    <template x-for="slot in availableSlots" :key="slot">
-                        <label :class="{'border-[#00897b] bg-[#e0f2f1] text-[#00695c] font-bold shadow-xs': isSelected(slot), 'border-slate-200 bg-white text-slate-700 hover:border-[#00897b]': !isSelected(slot)}"
-                               class="flex items-center justify-between p-3 min-h-[46px] rounded-lg border transition-all cursor-pointer select-none text-xs active:scale-[0.98]"
-                               @click.prevent="toggleSlot(slot)">
-                            <span class="font-mono text-xs font-semibold" x-text="slot"></span>
-                            <span class="w-4 h-4 rounded-full border flex items-center justify-center text-[10px] shrink-0 ml-1.5"
-                                  :class="{'bg-[#00897b] border-[#00897b] text-white': isSelected(slot), 'border-slate-300': !isSelected(slot)}">
-                                <svg aria-hidden="true" x-show="isSelected(slot)" class="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
-                            </span>
-                        </label>
-                    </template>
-                </div>
-
-                <div x-show="availableSlots.length === 0" class="p-8 text-center bg-slate-50 border border-slate-200 rounded-lg">
-                    <p class="text-xs font-bold text-slate-600">Aucun créneau disponible</p>
-                    <p class="text-[11px] text-slate-400 mt-1">Tous les créneaux de cette machine sont déjà réservés pour la date sélectionnée.</p>
-                </div>
             </div>
-
-            <!-- Quota & Credit Surveillance Summary Box -->
-            <div class="p-4 rounded-lg bg-emerald-50/80 border border-emerald-200 text-xs space-y-2.5">
-                <div class="flex items-center justify-between font-bold text-emerald-900 border-b border-emerald-200/60 pb-2">
-                    <span class="flex items-center space-x-1.5">
-                        <svg aria-hidden="true" class="w-4 h-4 text-emerald-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
-                        <span>Surveillance du Quota Hebdomadaire (<span x-text="weeklyLimit"></span> crédits / semaine)</span>
-                    </span>
-                    <span class="text-xs font-mono bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded">
-                        1h = 1 crédit
-                    </span>
-                </div>
-
-                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-slate-700 pt-1">
-                    <div class="bg-white/80 p-2.5 rounded border border-emerald-100">
-                        <span class="text-[10px] uppercase text-slate-400 font-bold block">Créneaux choisis</span>
-                        <span class="font-bold text-slate-800 text-sm font-mono" x-text="selectedSlots.length + ' heure' + (selectedSlots.length > 1 ? 's' : '')"></span>
-                    </div>
-
-                    <div class="bg-white/80 p-2.5 rounded border border-emerald-100">
-                        <span class="text-[10px] uppercase text-slate-400 font-bold block">Coût total</span>
-                        <span class="font-bold text-[#00897b] text-sm font-mono" x-text="selectedSlots.length + ' crédit' + (selectedSlots.length > 1 ? 's' : '')"></span>
-                    </div>
-
-                    <div class="bg-white/80 p-2.5 rounded border border-emerald-100">
-                        <span class="text-[10px] uppercase text-slate-400 font-bold block">Solde actuel</span>
-                        <span class="font-bold text-slate-800 text-sm font-mono" x-text="remainingHours + 'h / ' + weeklyLimit + 'h'"></span>
-                    </div>
-
-                    <div class="bg-white/80 p-2.5 rounded border border-emerald-100">
-                        <span class="text-[10px] uppercase text-slate-400 font-bold block">Solde après</span>
-                        <span class="font-bold text-sm font-mono"
-                              :class="(remainingHours - selectedSlots.length < 0) ? 'text-rose-600' : 'text-emerald-700'"
-                              x-text="((remainingHours - selectedSlots.length) + 'h / ' + weeklyLimit + 'h')"></span>
-                    </div>
-                </div>
-
-                <!-- Over quota alert -->
-                <div x-show="selectedSlots.length > remainingHours" class="p-2.5 bg-rose-50 border border-rose-200 text-rose-800 rounded font-semibold text-[11px] flex items-center space-x-2">
-                    <svg aria-hidden="true" class="w-4 h-4 text-rose-600 shrink-0 inline-block mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
-                    <span>Dépassement de quota : vous avez sélectionné <span x-text="selectedSlots.length"></span>h alors qu'il ne vous reste que <span x-text="remainingHours"></span>h sur vos <span x-text="weeklyLimit"></span>h cette semaine.</span>
-                </div>
+            <p x-show="!loading && !error && !slots.length" class="p-4 rounded-lg bg-slate-50">Aucun créneau disponible pour cette machine et cette date.</p>
+            <template x-for="time in selectedTimes" :key="time"><input type="hidden" name="start_times[]" :value="time"></template>
+            <p class="mt-4 text-sm" aria-live="polite"><span x-text="selectedTimes.length"></span>h choisies · <span x-text="remainingMinutes / 60"></span>h disponibles · <span x-text="maxNewBookings"></span> réservation(s) active(s) encore autorisée(s).</p>
+            <p x-show="overQuota" role="alert" class="text-rose-700 text-sm mt-2">La sélection dépasse votre quota ou la limite de réservations actives.</p>
+            <div class="flex flex-wrap gap-3 pt-5 mt-5 border-t">
+                <button type="submit" :disabled="!selectedTimes.length || overQuota || submitting || loading || !!error" class="btn-primary">Confirmer la réservation</button>
+                <a href="{{ route('calendrier') }}" class="px-4 py-2 underline">Annuler</a>
             </div>
-
-            <!-- Form Actions -->
-            <div class="pt-3 flex items-center justify-end space-x-3 border-t border-slate-200">
-                <a href="{{ route('calendrier') }}" 
-                   class="px-4 py-2 border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-bold rounded">
-                    Annuler
-                </a>
-                <button type="submit" 
-                        :disabled="selectedSlots.length === 0 || (selectedSlots.length > remainingHours)"
-                        :class="(selectedSlots.length === 0 || (selectedSlots.length > remainingHours)) ? 'opacity-50 cursor-not-allowed bg-slate-400' : 'bg-[#00897b] hover:bg-[#00796b] cursor-pointer shadow-xs'"
-                        class="px-6 py-2.5 text-white text-xs font-bold rounded transition-all">
-                    <span x-show="selectedSlots.length === 0">Sélectionnez au moins 1 créneau</span>
-                    <span x-show="selectedSlots.length > 0 && (selectedSlots.length > remainingHours)">Quota insuffisant</span>
-                    <span x-show="selectedSlots.length > 0 && (selectedSlots.length <= remainingHours)"
-                          x-text="'Confirmer la réservation (' + selectedSlots.length + 'h • ' + selectedSlots.length + ' crédit' + (selectedSlots.length > 1 ? 's' : '') + ')'"></span>
-                </button>
+            <div x-show="selectedTimes.length" class="sm:hidden fixed bottom-0 inset-x-0 p-3 bg-white border-t shadow-lg z-40 safe-pb flex items-center justify-between gap-3">
+                <span class="text-sm" x-text="selectedTimes.length + 'h choisies'"></span>
+                <button type="submit" :disabled="overQuota || submitting || loading || !!error" class="btn-primary">Confirmer</button>
             </div>
-
-            <!-- Sticky Mobile Bottom Bar (Visible on mobile screens < sm) -->
-            <div x-show="selectedSlots.length > 0" 
-                 x-transition:enter="transition ease-out duration-200"
-                 x-transition:enter-start="translate-y-full opacity-0"
-                 x-transition:enter-end="translate-y-0 opacity-100"
-                 x-transition:leave="transition ease-in duration-150"
-                 x-transition:leave-start="translate-y-0 opacity-100"
-                 x-transition:leave-end="translate-y-full opacity-0"
-                 class="sm:hidden fixed bottom-0 inset-x-0 bg-white/95 backdrop-blur-md border-t border-slate-200 px-4 py-3 shadow-2xl z-40 flex items-center justify-between safe-pb">
-                <div>
-                    <div class="text-xs font-bold text-slate-800" x-text="selectedSlots.length + ' créneau' + (selectedSlots.length > 1 ? 'x' : '')"></div>
-                    <div class="text-[11px] text-[#00897b] font-semibold font-mono" x-text="selectedSlots.length + ' crédit' + (selectedSlots.length > 1 ? 's' : '')"></div>
-                </div>
-                <button type="submit" 
-                        :disabled="selectedSlots.length === 0 || (selectedSlots.length > remainingHours)"
-                        class="px-5 py-2.5 bg-[#00897b] hover:bg-[#00796b] text-white text-xs font-bold rounded-lg shadow-md transition-all active:scale-95">
-                    Confirmer
-                </button>
-            </div>
-        </form>
-
-    </div>
-
+        </div>
+    </form>
+    @endif
 </div>
-
-<script>
-function bookingApp(initialMachineId) {
-    const machinesMap = {
-        @foreach($allCombinedMachines as $m)
-            {{ $m->id }}: @json($m->name),
-        @endforeach
-    };
-
-    const reservationsList = @json($reservations ?? []);
-    const isAdminUser = {{ (auth()->check() && auth()->user()->isAdmin()) ? 'true' : 'false' }};
-
-    // Full 24-hour slots without limiters
-    const all24Slots = [];
-    for (let h = 0; h < 24; h++) {
-        const sH = String(h).padStart(2, '0') + ':00';
-        const eH = String(h + 1 === 24 ? 24 : h + 1).padStart(2, '0') + ':00';
-        all24Slots.push(sH + ' - ' + eH);
-    }
-
-    return {
-        selectedMachineId: initialMachineId,
-        selectedDate: '{{ $initialDate ?? now()->toDateString() }}',
-        minDate: '{{ $minDate ?? now()->toDateString() }}',
-        maxDate: '{{ $maxDate ?? now()->endOfWeek()->toDateString() }}',
-        weeklyLimit: {{ auth()->check() ? auth()->user()->weeklyLimit() : (auth()->check() && auth()->user()->isAdmin() ? 100 : 8) }},
-        remainingHours: {{ auth()->check() ? auth()->user()->weeklyRemainingLimit() : 8 }},
-        isAdmin: isAdminUser,
-        selectedSlots: [],
-        allDaySlots: all24Slots,
-        init() {
-            const urlParams = new URLSearchParams(window.location.search);
-            const startTimeParam = urlParams.get('start_time');
-            if (startTimeParam) {
-                try {
-                    const dateObj = new Date(startTimeParam);
-                    const h = dateObj.getHours();
-                    if (!isNaN(h)) {
-                        const sH = String(h).padStart(2, '0') + ':00';
-                        const eH = String(h + 1 === 24 ? 24 : h + 1).padStart(2, '0') + ':00';
-                        const candidateSlot = sH + ' - ' + eH;
-                        if (this.availableSlots.includes(candidateSlot)) {
-                            this.selectedSlots = [candidateSlot];
-                        }
-                    }
-                } catch (e) {}
-            }
-        },
-        get selectedMachineName() {
-            return machinesMap[this.selectedMachineId] || 'Machine';
-        },
-        get availableSlots() {
-            const now = new Date();
-            const currentHour = now.getHours();
-            const isToday = this.selectedDate === this.minDate;
-
-            // Filter to show ONLY open slots
-            return this.allDaySlots.filter(slot => {
-                const [startStr, endStr] = slot.split(' - ');
-                const slotStartHour = parseInt(startStr.split(':')[0], 10);
-                const slotStartMinutes = slotStartHour * 60;
-                let slotEndMinutes = parseInt(endStr.split(':')[0], 10) * 60;
-                if (slotEndMinutes === 0) slotEndMinutes = 1440;
-
-                // For today, do not show slots that have already passed
-                if (isToday && slotStartHour < currentHour) {
-                    return false;
-                }
-
-                // Check against reservations for this machine and date
-                for (const r of reservationsList) {
-                    if (r.machine_id === this.selectedMachineId && r.date === this.selectedDate) {
-                        const rStartTime = r.start.split(' ')[1] || '00:00';
-                        const rEndTime = r.end.split(' ')[1] || '00:00';
-                        const rStartMin = parseInt(rStartTime.split(':')[0], 10) * 60 + parseInt(rStartTime.split(':')[1] || '0', 10);
-                        let rEndMin = parseInt(rEndTime.split(':')[0], 10) * 60 + parseInt(rEndTime.split(':')[1] || '0', 10);
-                        if (rEndMin === 0) rEndMin = 1440;
-
-                        if (slotStartMinutes < rEndMin && slotEndMinutes > rStartMin) {
-                            return false; // Slot is booked, filter it out!
-                        }
-                    }
-                }
-                return true; // Slot is open!
-            });
-        },
-        slotToDateTime(slot) {
-            const startHour = slot.split(' - ')[0];
-            return this.selectedDate + ' ' + startHour + ':00';
-        },
-        isSelected(slot) {
-            return this.selectedSlots.includes(slot);
-        },
-        toggleSlot(slot) {
-            const idx = this.selectedSlots.indexOf(slot);
-            if (idx > -1) {
-                this.selectedSlots.splice(idx, 1);
-            } else {
-                this.selectedSlots.push(slot);
-            }
-        },
-        onMachineChange() {
-            this.selectedSlots = [];
-        },
-        onDateChange() {
-            if (this.selectedDate > this.maxDate) {
-                this.selectedDate = this.maxDate;
-            }
-            if (this.selectedDate < this.minDate) {
-                this.selectedDate = this.minDate;
-            }
-            this.selectedSlots = [];
-        }
-    };
-}
-</script>
 @endsection

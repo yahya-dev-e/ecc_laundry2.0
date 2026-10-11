@@ -5,7 +5,7 @@ namespace App\Enums;
 enum MachineType: string
 {
     case WASHING_MACHINE = 'washing-machine';
-    case DRYER           = 'dryer';
+    case DRYER = 'dryer';
 
     // Backwards compatibility alias
     public const WASHER = self::WASHING_MACHINE;
@@ -14,7 +14,7 @@ enum MachineType: string
     {
         return match ($this) {
             self::WASHING_MACHINE => 'Washing Machine',
-            self::DRYER           => 'Tumble Dryer',
+            self::DRYER => 'Tumble Dryer',
         };
     }
 
@@ -22,31 +22,25 @@ enum MachineType: string
     {
         return match ($this) {
             self::WASHING_MACHINE => 'Washer',
-            self::DRYER           => 'Dryer',
+            self::DRYER => 'Dryer',
         };
     }
 
     public function defaultDurationMinutes(): int
     {
-        return match ($this) {
-            self::WASHING_MACHINE => config('laundry.cycle_durations.washer', 45),
-            self::DRYER           => config('laundry.cycle_durations.dryer', 40),
-        };
+        return 60; // The standard browser reservation is one hour.
     }
 
     public function defaultCost(): int
     {
-        return match ($this) {
-            self::WASHING_MACHINE => config('laundry.credit_costs.washer', 2),
-            self::DRYER           => config('laundry.credit_costs.dryer', 2),
-        };
+        return 1; // One quota hour; variable-duration API requests use exact minutes.
     }
 
     public function icon(): string
     {
         return match ($this) {
             self::WASHING_MACHINE => 'washer',
-            self::DRYER           => 'wind',
+            self::DRYER => 'wind',
         };
     }
 }

@@ -3,100 +3,45 @@
 namespace App\Http\Controllers;
 
 use App\Enums\MachineStatus;
-use App\Enums\MachineType;
 use App\Http\Requests\UpdateMachineStatusRequest;
 use App\Models\Machine;
 use App\Services\MachineSchedulerService;
 use Carbon\Carbon;
-use Illuminate\Http\JsonResponse;
-use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\View\View;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class MachineController extends Controller
 {
-    public function __construct(
-        protected MachineSchedulerService $scheduler
-    ) {}
+    public function __construct(protected MachineSchedulerService $scheduler) {}
 
-    /**
-     * Display a listing of laundry machines.
-     */
-    public function index(Request $request): View
+    public function index()
     {
-        $typeFilter = $request->query('type');
-        $statusFilter = $request->query('status');
-
-        // Order strictly by name (never by code)
-        $query = Machine::query()->orderBy('name');
-
-        if ($typeFilter && in_array($typeFilter, ['washing-machine', 'dryer'])) {
-            $query->where('type', $typeFilter);
-        }
-
-        if ($statusFilter && MachineStatus::tryFrom($statusFilter)) {
-            $query->where('status', $statusFilter);
-        }
-
-        $machines = $query->get();
-        $metrics = $this->scheduler->getMachineMetrics();
-
-        return view('dashboard', [
-            'machines' => $machines,
-            'metrics' => $metrics,
-            'currentType' => $typeFilter,
-            'currentStatus' => $statusFilter,
-        ]);
+        return view('admin.machines', ['machines' => Machine::orderBy('name')->paginate(25)]);
     }
 
-    /**
-     * Display machine details and upcoming schedule.
-     */
-    public function show(Machine $machine): View
+    public function slots(Machine $machine, Request $request)
     {
-        $machine->load(['reservations' => function ($query) {
-            $query->where('start_time', '>', Carbon::now())->orderBy('start_time')->limit(10);
-        }]);
+        $data = $request->validate(['date' => ['nullable', 'date_format:Y-m-d']]);
 
-        $availableSlots = $this->scheduler->getAvailableSlots($machine, Carbon::today());
-
-        return view('bookings.create', [
-            'selectedMachine' => $machine,
-            'availableSlots' => $availableSlots,
-            'machines' => Machine::orderBy('name')->get(),
-        ]);
+        return response()->json(['machine_id' => $machine->id, 'name' => $machine->name,
+            'date' => $data['date'] ?? now()->toDateString(), 'timezone' => config('app.timezone'),
+            'remaining_minutes' => $request->user()->weeklyRemainingMinutes(Carbon::parse($data['date'] ?? now()->toDateString())),
+            'max_new_bookings' => max(0, config('laundry.max_simultaneous_reservations', 3) - $request->user()->reservations()->activeOrUpcoming()->count()),
+            'slots' => $this->scheduler->getAvailableSlots($machine, Carbon::parse($data['date'] ?? now()->toDateString()))])->header('Cache-Control', 'no-store');
     }
 
-    /**
-     * Get available booking slots as JSON for dynamic date pickers.
-     */
-    public function slots(Machine $machine, Request $request): JsonResponse
+    public function updateStatus(UpdateMachineStatusRequest $request, Machine $machine)
     {
-        $dateStr = $request->query('date', Carbon::today()->toDateString());
-        $date = Carbon::parse($dateStr);
+        $status = MachineStatus::from($request->validated('status'));
+        DB::transaction(function () use ($machine, $status) {
+            $machine = Machine::whereKey($machine->id)->lockForUpdate()->firstOrFail();
+            if ($machine->active_reservation_id) {
+                throw ValidationException::withMessages(['status' => 'Un cycle est encore en cours. Attendez sa fin avant de changer l’état.']);
+            }
+            $machine->update(['status' => $status]);
+        }, 5);
 
-        $slots = $this->scheduler->getAvailableSlots($machine, $date);
-
-        return response()->json([
-            'machine_id' => $machine->id,
-            'name' => $machine->name,
-            'date' => $date->toDateString(),
-            'slots' => $slots,
-        ]);
-    }
-
-    /**
-     * Update machine operational status (Staff / Admin).
-     */
-    public function updateStatus(UpdateMachineStatusRequest $request, Machine $machine): RedirectResponse
-    {
-        $validated = $request->validated();
-
-        // Strictly update columns present in the MySQL schema (status)
-        $machine->update([
-            'status' => $validated['status'],
-        ]);
-
-        return back()->with('success', "Machine {$machine->name} status changed to {$machine->status->label()}.");
+        return back()->with('success', 'État de la machine mis à jour.');
     }
 }

@@ -38,14 +38,12 @@ class ResetPasswordNotification extends Notification
      */
     public function toMail(object $notifiable): MailMessage
     {
-        $resetUrl = url(route('password.reset', [
-            'token' => $this->token,
-            'email' => $notifiable->getEmailForPasswordReset(),
-        ], false));
+        $resetUrl = rtrim(config('app.url'), '/').'/reset-password/'.rawurlencode($this->token)
+            .'?email='.rawurlencode($notifiable->getEmailForPasswordReset());
 
         return (new MailMessage)
             ->subject('Réinitialisation de votre mot de passe - Buanderie Centrale Casablanca')
-            ->greeting('Bonjour ' . ($notifiable->name ?? '') . ',')
+            ->greeting('Bonjour '.($notifiable->name ?? '').',')
             ->line('Vous recevez cet e-mail car nous avons reçu une demande de réinitialisation du mot de passe pour votre compte sur le portail Buanderie Centrale Casablanca.')
             ->action('Réinitialiser mon mot de passe', $resetUrl)
             ->line('Ce lien de réinitialisation expirera dans 60 minutes.')

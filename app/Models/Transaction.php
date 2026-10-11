@@ -17,6 +17,7 @@ class Transaction extends Model
         'type',
         'description',
         'reference_id',
+        'event_key',
     ];
 
     protected function casts(): array

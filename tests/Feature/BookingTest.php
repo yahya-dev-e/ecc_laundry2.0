@@ -3,106 +3,94 @@
 namespace Tests\Feature;
 
 use App\Enums\MachineStatus;
-use App\Models\Booking;
 use App\Models\Machine;
+use App\Models\Reservation;
 use App\Models\User;
-use Carbon\Carbon;
+use App\Services\BookingService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 class BookingTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_authenticated_user_can_view_bookings_page(): void
-    {
-        $user = User::factory()->create(['credits' => 10]);
-
-        $response = $this->actingAs($user)->get(route('bookings.index'));
-
-        $response->assertStatus(200);
-        $response->assertSee('Mes Réservations & Historique');
-    }
-
-    public function test_user_can_reserve_an_available_machine(): void
-    {
-        $user = User::factory()->create(['credits' => 10]);
-        $machine = Machine::factory()->create([
-            'status' => MachineStatus::AVAILABLE,
-        ]);
-
-        $slotTime = Carbon::now()->addHours(2)->startOfHour();
-
-        $response = $this->actingAs($user)->post(route('bookings.store'), [
-            'machine_id' => $machine->id,
-            'start_time' => $slotTime->toIso8601String(),
-        ]);
-
-        $response->assertRedirect(route('bookings.index'));
-        $this->assertDatabaseHas('reservations', [
-            'user_id' => $user->id,
-            'machine_id' => $machine->id,
-        ]);
-
-        $this->assertEquals(9, $user->fresh()->credits);
-    }
-
-    public function test_user_cannot_reserve_machine_with_insufficient_credits(): void
-    {
-        $user = User::factory()->create(['credits' => 0]);
-        $machine = Machine::factory()->create([
-            'status' => MachineStatus::AVAILABLE,
-        ]);
-
-        $slotTime = Carbon::now()->addHours(3)->startOfHour();
-
-        $response = $this->actingAs($user)->post(route('bookings.store'), [
-            'machine_id' => $machine->id,
-            'start_time' => $slotTime->toIso8601String(),
-        ]);
-
-        $this->assertDatabaseMissing('reservations', [
-            'user_id' => $user->id,
-            'machine_id' => $machine->id,
-        ]);
-        $this->assertEquals(0, $user->fresh()->credits);
-    }
-
-    public function test_user_can_cancel_booking_and_get_refund(): void
-    {
-        $user = User::factory()->create(['credits' => 10]);
-        $machine = Machine::factory()->create();
-        $booking = Booking::factory()->create([
-            'user_id' => $user->id,
-            'machine_id' => $machine->id,
-            'start_time' => Carbon::now()->addHours(2),
-            'end_time' => Carbon::now()->addHours(3),
-        ]);
-
-        $response = $this->actingAs($user)->post(route('bookings.cancel', $booking));
-
-        $response->assertRedirect(route('bookings.index'));
-        $this->assertDatabaseMissing('reservations', ['id' => $booking->id]);
-        $this->assertEquals(11, $user->fresh()->credits);
-    }
-
-    public function test_user_can_start_cycle_on_confirmed_booking(): void
+    public function test_booking_http_flow_charges_and_cancellation_retains_history_once(): void
     {
         $user = User::factory()->create();
-        $machine = Machine::factory()->create([
-            'status' => MachineStatus::AVAILABLE,
-        ]);
-        $booking = Booking::factory()->create([
-            'user_id' => $user->id,
-            'machine_id' => $machine->id,
-            'start_time' => Carbon::now()->subMinutes(5),
-            'end_time' => Carbon::now()->addMinutes(40),
-        ]);
+        $machine = Machine::factory()->create();
+        $this->actingAs($user)->post('/bookings', ['machine_id' => $machine->id, 'start_time' => now()->addHour()->toIso8601String()])
+            ->assertRedirect('/dashboard')->assertSessionHasNoErrors();
+        $booking = Reservation::firstOrFail();
+        $this->assertSame(420, $user->weeklyRemainingMinutes());
+        $this->assertDatabaseHas('transactions', ['booking_id' => $booking->id, 'amount' => -60]);
+        $this->post('/bookings/'.$booking->id.'/cancel', ['redirect_to' => 'https://evil.example/dashboard', 'reason' => 'Changement'])
+            ->assertRedirect('/dashboard')->assertSessionHas('success');
+        $this->assertNotNull($booking->fresh()->cancelled_at);
+        $this->assertSame('Changement', $booking->fresh()->cancellation_reason);
+        $this->post('/bookings/'.$booking->id.'/cancel')->assertSessionHas('status');
+        $this->assertSame(1, DB::table('transactions')->where('type', 'refund')->count());
+        $this->assertSame(480, $user->weeklyRemainingMinutes());
+    }
 
-        $response = $this->actingAs($user)->post(route('bookings.start', $booking));
+    public function test_multi_slot_duplicate_and_conflict_leave_no_partial_booking(): void
+    {
+        $user = User::factory()->create();
+        $machine = Machine::factory()->create();
+        $time = now()->addHours(2)->toIso8601String();
+        $this->actingAs($user)->post('/bookings', ['machine_id' => $machine->id, 'start_times' => [$time, $time]])
+            ->assertSessionHasErrors('start_times.0');
+        $this->assertDatabaseCount('reservations', 0);
+        app(BookingService::class)->createBooking(User::factory()->create(), $machine, now()->addHours(3));
+        $this->post('/bookings', ['machine_id' => $machine->id, 'start_times' => [$time, now()->addHours(3)->toIso8601String()]])
+            ->assertSessionHas('error');
+        $this->assertSame(0, $user->reservations()->count());
+        $this->assertDatabaseCount('transactions', 1);
+    }
 
-        $response->assertRedirect(route('dashboard'));
-        $this->assertEquals('in_progress', $booking->fresh()->status);
-        $this->assertEquals(MachineStatus::IN_USE, $machine->fresh()->status);
+    public function test_students_cannot_cancel_or_start_another_persons_reservation(): void
+    {
+        $user = User::factory()->create();
+        $booking = app(BookingService::class)->createBooking(User::factory()->create(), Machine::factory()->create(), now()->addHour());
+        $this->actingAs($user)->post('/bookings/'.$booking->id.'/start')->assertForbidden();
+        $this->post('/bookings/'.$booking->id.'/cancel')->assertForbidden();
+    }
+
+    public function test_slots_use_campus_timezone_cutoff_and_sunday_midnight_boundary(): void
+    {
+        $user = User::factory()->create();
+        $machine = Machine::factory()->create();
+        $this->travelTo(now()->endOfWeek()->setTime(22, 45));
+        $response = $this->actingAs($user)->getJson('/machines/'.$machine->id.'/slots?date='.now()->toDateString())->assertOk();
+        $slots = collect($response->json('slots'));
+        $this->assertFalse($slots->firstWhere('start_time', '22:00')['is_available']);
+        $this->assertTrue($slots->firstWhere('start_time', '23:00')['is_available']);
+        $this->assertSame('Africa/Casablanca', $response->json('timezone'));
+        $this->post('/bookings', ['machine_id' => $machine->id, 'start_time' => now()->setTime(23, 0)->toIso8601String()])
+            ->assertSessionHasNoErrors()->assertSessionHas('success');
+        $this->post('/bookings', ['machine_id' => $machine->id, 'start_time' => now()->addDay()->startOfDay()->toIso8601String()])
+            ->assertSessionHasErrors('start_time');
+    }
+
+    public function test_real_pages_render_for_student_and_admin(): void
+    {
+        $user = User::factory()->create();
+        foreach (['/dashboard', '/bookings/create', '/calendrier'] as $path) {
+            $this->actingAs($user)->get($path)->assertOk();
+        }
+        $admin = User::factory()->create(['role' => 'admin']);
+        foreach (['/utilisateurs', '/admin/users/create', '/admin/users/'.$user->id.'/edit', '/machines'] as $path) {
+            $this->actingAs($admin)->get($path)->assertOk();
+        }
+    }
+
+    public function test_machine_status_is_admin_only_and_cannot_fake_an_active_cycle(): void
+    {
+        $machine = Machine::factory()->create();
+        $this->actingAs(User::factory()->create())->patch('/machines/'.$machine->id.'/status', ['status' => 'available'])->assertForbidden();
+        $this->actingAs(User::factory()->create(['role' => 'admin']))->patch('/machines/'.$machine->id.'/status', ['status' => 'in-use'])
+            ->assertSessionHasErrors('status');
+        $this->patch('/machines/'.$machine->id.'/status', ['status' => MachineStatus::UNDER_MAINTENANCE->value])->assertSessionHasNoErrors();
+        $this->assertSame(MachineStatus::UNDER_MAINTENANCE, $machine->fresh()->status);
     }
 }

@@ -28,7 +28,7 @@
 
 <div class="space-y-6 max-w-6xl mx-auto" x-data="{
     search: '',
-    selectedMachineName: '{{ $currentMachine?->name ?? 'ML1-OM' }}',
+    selectedMachineName: @js($currentMachine?->name ?? ''),
     selectedMachineId: {{ $currentMachine?->id ?? 1 }},
     selectedDate: '{{ $selectedDate }}',
     resModalOpen: false,
@@ -47,6 +47,7 @@
     }
 }">
 
+    @include('components.live-revision')
     <!-- Info Notice Banner -->
     <div class="bg-white border-l-4 border-[#00897b] p-3.5 rounded shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <div class="flex items-center space-x-3">
@@ -54,14 +55,19 @@
                 i
             </div>
             <span class="text-xs text-slate-700">
-                Réservations ouvertes pour la semaine en cours (jusqu'à dimanche 23h59). Vos crédits se réinitialisent chaque lundi.
+                @if(config('laundry.restrict_to_current_week', true))
+                Réservations ouvertes pour la semaine en cours, jusqu’à dimanche minuit.
+                @else
+                Réservations ouvertes jusqu’à {{ config('laundry.max_advance_booking_days', 7) }} jours à l’avance.
+                @endif
+                Votre quota horaire se renouvelle chaque lundi.
             </span>
         </div>
 
         @if(!auth()->check() || !auth()->user()->isAdmin())
             <div class="hidden sm:flex items-center space-x-2 text-xs font-semibold px-2.5 py-1 rounded bg-emerald-50 text-emerald-800 border border-emerald-200">
                 <span>Quota restant :</span>
-                <span class="font-bold">{{ auth()->check() ? auth()->user()->weeklyRemainingLimit() : 8 }} / 8 heures</span>
+                <span class="font-bold">{{ auth()->user()->weeklyRemainingLimit() }} / {{ auth()->user()->weeklyLimit() }} heures</span>
             </div>
         @else
             <div class="hidden sm:flex items-center space-x-2 text-xs font-semibold px-2.5 py-1 rounded bg-amber-50 text-amber-800 border border-amber-200">
@@ -115,7 +121,7 @@
                     @php
                         $mColor = $machineColorPalette[$machine->name ?? ''] ?? $machine->color ?? '#4338ca';
                     @endphp
-                    <button type="button" @click="selectMachine('{{ $machine->name }}', {{ $machine->id }})" 
+                    <button type="button" @click="selectMachine(@js($machine->name), {{ $machine->id }})"
                             :class="{'ring-2 ring-slate-900 scale-105 shadow-md': selectedMachineId === {{ $machine->id }}}"
                             style="background-color: {{ $mColor }};"
                             class="badge-machine text-white hover:opacity-90 py-1.5 px-2 sm:px-3 text-[11px] sm:text-xs justify-center text-center">
@@ -132,7 +138,7 @@
                     @php
                         $mColor = $machineColorPalette[$machine->name ?? ''] ?? $machine->color ?? '#b45309';
                     @endphp
-                    <button type="button" @click="selectMachine('{{ $machine->name }}', {{ $machine->id }})"
+                    <button type="button" @click="selectMachine(@js($machine->name), {{ $machine->id }})"
                             :class="{'ring-2 ring-slate-900 scale-105 shadow-md': selectedMachineId === {{ $machine->id }}}"
                             style="background-color: {{ $mColor }};"
                             class="badge-machine text-white hover:opacity-90 py-1.5 px-2 sm:px-3 text-[11px] sm:text-xs justify-center text-center">
@@ -304,7 +310,7 @@
                         $nowTop = ($nowMinutes / 60) * 52;
                     @endphp
                     <div id="system-time-pointer"
-                         x-data="systemTimePointer('{{ $selectedDate }}', '{{ $todayDate }}')"
+                         x-data="systemTimePointer('{{ $selectedDate }}', '{{ now()->toIso8601String() }}', '{{ config('app.timezone') }}')"
                          x-show="isVisible"
                          class="absolute left-0 right-0 z-30 pointer-events-none flex items-center transition-all duration-300"
                          :style="'top: ' + topPx + 'px;'"
@@ -326,9 +332,9 @@
                             $mName = $block['machine']->name ?? 'Machine';
                             $mTypeStr = ($block['machine']->type instanceof \App\Enums\MachineType ? $block['machine']->type->value : (string)($block['machine']->type ?? '')) === 'dryer' ? 'Sèche-linge' : 'Machine à laver';
                             $uEmail = $block['user']?->email ?? ($block['user']?->name ? strtolower(str_replace(' ', '.', $block['user']->name)) . '@fecc.ma' : 'etudiant@fecc.ma');
-                            $canCancelBlock = auth()->check() && (auth()->id() === ($block['user_id'] ?? null) || auth()->user()->isAdmin());
+                            $canCancelBlock = $block['start_time']->isFuture() && auth()->check() && (auth()->id() === ($block['user_id'] ?? null) || auth()->user()->isAdmin());
                         @endphp
-                        <div style="background-color: {{ $machineColor }}; top: {{ $block['top'] + 1 }}px; height: {{ $block['height'] - 2 }}px; left: calc({{ $block['leftPct'] }}% + 4px); width: calc({{ $block['widthPct'] }}% - 8px);"
+                        <div role="button" tabindex="0" @keydown.enter.prevent="$el.click()" @keydown.space.prevent="$el.click()" style="background-color: {{ $machineColor }}; top: {{ $block['top'] + 1 }}px; height: {{ $block['height'] - 2 }}px; left: calc({{ $block['leftPct'] }}% + 4px); width: calc({{ $block['widthPct'] }}% - 8px);"
                              class="absolute rounded-md text-white overflow-hidden transition-all cursor-pointer border border-white/20 select-none shadow-sm hover:shadow-md hover:scale-[1.01] hover:brightness-105 z-20"
                              @click.stop="openReservationModal({
                                  id: {{ $block['id'] ?? 0 }},
@@ -377,11 +383,12 @@
 
     <!-- MODAL : DÉTAILS DE LA RÉSERVATION -->
     <div x-show="resModalOpen" 
+         role="dialog" aria-modal="true" aria-labelledby="reservation-dialog-title" x-trap.inert.noscroll="resModalOpen"
          x-cloak
          @keydown.escape.window="closeReservationModal()"
          class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs transition-opacity duration-200">
         <div @click.outside="closeReservationModal()"
-             class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden transform transition-all flex flex-col">
+             class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-md max-h-[90dvh] overflow-y-auto transform transition-all flex flex-col">
             <!-- Modal Header -->
             <div style="background: linear-gradient(135deg, #004d40 0%, #00796b 100%); color: white;" class="px-5 py-4 text-white flex items-center justify-between shrink-0">
                 <div class="flex items-center space-x-3">
@@ -389,11 +396,11 @@
                           class="px-2.5 py-1 rounded font-mono font-bold text-xs shadow-xs text-white"
                           x-text="resModalData?.code"></span>
                     <div>
-                        <h3 class="text-sm font-bold">Détails de la réservation</h3>
+                        <h3 id="reservation-dialog-title" class="text-sm font-bold">Détails de la réservation</h3>
                         <p class="text-[11px] text-emerald-100">Machine, utilisateur et créneau réservé</p>
                     </div>
                 </div>
-                <button type="button" @click="closeReservationModal()" class="w-8 h-8 rounded-full hover:bg-white/20 text-white flex items-center justify-center transition-colors text-lg">
+                <button type="button" @click="closeReservationModal()" aria-label="Fermer les détails de la réservation" class="w-11 h-11 rounded-full hover:bg-white/20 text-white flex items-center justify-center transition-colors text-lg">
                     &times;
                 </button>
             </div>

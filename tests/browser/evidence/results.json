@@ -1,0 +1,202 @@
+[
+  {
+    "engine": "chromium",
+    "steps": [
+      {
+        "name": "registration validation is visible",
+        "pass": true
+      },
+      {
+        "name": "create real account and retain authenticated session",
+        "pass": true
+      },
+      {
+        "name": "POST logout and normalized email login",
+        "pass": true
+      },
+      {
+        "name": "mobile menu focus trap and Escape",
+        "pass": true
+      },
+      {
+        "name": "CSRF rejects missing form token",
+        "pass": true
+      },
+      {
+        "name": "keyboard-select authoritative campus slot and book",
+        "pass": true
+      },
+      {
+        "name": "calendar details dialog keyboard access and cancellation",
+        "pass": true
+      },
+      {
+        "name": "phone pages have no horizontal document overflow",
+        "pass": true
+      },
+      {
+        "name": "admin can create and edit users from phone",
+        "pass": true
+      },
+      {
+        "name": "short landscape login scrolls to submit",
+        "pass": true
+      }
+    ],
+    "pageErrors": [],
+    "version": "151.0.7922.34",
+    "timezone": "Pacific/Honolulu",
+    "csrfEnabled": true,
+    "pass": true
+  },
+  {
+    "engine": "firefox",
+    "steps": [
+      {
+        "name": "registration validation is visible",
+        "pass": true
+      },
+      {
+        "name": "create real account and retain authenticated session",
+        "pass": true
+      },
+      {
+        "name": "POST logout and normalized email login",
+        "pass": true
+      },
+      {
+        "name": "mobile menu focus trap and Escape",
+        "pass": true
+      },
+      {
+        "name": "CSRF rejects missing form token",
+        "pass": true
+      },
+      {
+        "name": "keyboard-select authoritative campus slot and book",
+        "pass": true
+      },
+      {
+        "name": "calendar details dialog keyboard access and cancellation",
+        "pass": true
+      },
+      {
+        "name": "phone pages have no horizontal document overflow",
+        "pass": true
+      },
+      {
+        "name": "admin can create and edit users from phone",
+        "pass": true
+      },
+      {
+        "name": "short landscape login scrolls to submit",
+        "pass": true
+      }
+    ],
+    "pageErrors": [],
+    "version": "153.0",
+    "timezone": "Pacific/Honolulu",
+    "csrfEnabled": true,
+    "pass": true
+  },
+  {
+    "engine": "edge",
+    "steps": [
+      {
+        "name": "registration validation is visible",
+        "pass": true
+      },
+      {
+        "name": "create real account and retain authenticated session",
+        "pass": true
+      },
+      {
+        "name": "POST logout and normalized email login",
+        "pass": true
+      },
+      {
+        "name": "mobile menu focus trap and Escape",
+        "pass": true
+      },
+      {
+        "name": "CSRF rejects missing form token",
+        "pass": true
+      },
+      {
+        "name": "keyboard-select authoritative campus slot and book",
+        "pass": true
+      },
+      {
+        "name": "calendar details dialog keyboard access and cancellation",
+        "pass": true
+      },
+      {
+        "name": "phone pages have no horizontal document overflow",
+        "pass": true
+      },
+      {
+        "name": "admin can create and edit users from phone",
+        "pass": true
+      },
+      {
+        "name": "short landscape login scrolls to submit",
+        "pass": true
+      }
+    ],
+    "pageErrors": [],
+    "version": "155.0.4283.45",
+    "timezone": "Pacific/Honolulu",
+    "csrfEnabled": true,
+    "pass": true
+  },
+  {
+    "engine": "webkit",
+    "steps": [
+      {
+        "name": "registration validation is visible",
+        "pass": true
+      },
+      {
+        "name": "create real account and retain authenticated session",
+        "pass": true
+      },
+      {
+        "name": "POST logout and normalized email login",
+        "pass": true
+      },
+      {
+        "name": "mobile menu focus trap and Escape",
+        "pass": true
+      },
+      {
+        "name": "CSRF rejects missing form token",
+        "pass": true
+      },
+      {
+        "name": "keyboard-select authoritative campus slot and book",
+        "pass": true
+      },
+      {
+        "name": "calendar details dialog keyboard access and cancellation",
+        "pass": true
+      },
+      {
+        "name": "phone pages have no horizontal document overflow",
+        "pass": true
+      },
+      {
+        "name": "admin can create and edit users from phone",
+        "pass": true
+      },
+      {
+        "name": "short landscape login scrolls to submit",
+        "pass": true
+      }
+    ],
+    "pageErrors": [],
+    "version": "26.5",
+    "timezone": "Pacific/Honolulu",
+    "csrfEnabled": true,
+    "pass": true
+  }
+]

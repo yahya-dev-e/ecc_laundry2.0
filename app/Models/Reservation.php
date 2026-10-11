@@ -2,8 +2,6 @@
 
 namespace App\Models;
 
-use Carbon\Carbon;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -12,57 +10,17 @@ class Reservation extends Model
 {
     use HasFactory;
 
-    /**
-     * Exact MySQL database table name.
-     *
-     * @var string
-     */
     protected $table = 'reservations';
 
-    /**
-     * The primary key for the model.
-     *
-     * @var string
-     */
-    protected $primaryKey = 'id';
+    protected $fillable = ['user_id', 'machine_id', 'start_time', 'end_time', 'quota_minutes',
+        'notified_start', 'notified_end', 'weekly_session_limit_remaining', 'started_at',
+        'completed_at', 'cancelled_at', 'released_at', 'cancellation_reason'];
 
-    /**
-     * The attributes that are mass assignable.
-     * STRICTLY MATCHING REAL DATABASE COLUMNS ONLY (NO 'status', NO 'credits_spent')
-     *
-     * @var array<int, string>
-     */
-    protected $fillable = [
-        'user_id',
-        'machine_id',
-        'start_time',
-        'end_time',
-        'notified_start',
-        'notified_end',
-        'weekly_session_limit_remaining',
-    ];
-
-    /**
-     * The attributes that should be cast.
-     *
-     * @return array<string, string>
-     */
     protected function casts(): array
     {
-        return [
-            'start_time' => 'datetime',
-            'end_time' => 'datetime',
-            'notified_start' => 'boolean',
-            'notified_end' => 'boolean',
-            'weekly_session_limit_remaining' => 'integer',
-        ];
+        return array_fill_keys(['start_time', 'end_time', 'started_at', 'completed_at', 'cancelled_at', 'released_at'], 'datetime')
+            + ['notified_start' => 'boolean', 'notified_end' => 'boolean', 'quota_minutes' => 'integer'];
     }
-
-    /*
-    |--------------------------------------------------------------------------
-    | Relationships
-    |--------------------------------------------------------------------------
-    */
 
     public function user(): BelongsTo
     {
@@ -74,120 +32,79 @@ class Reservation extends Model
         return $this->belongsTo(Machine::class);
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | Time-Derived Query Scopes (NO 'status' COLUMN QUERIES!)
-    |--------------------------------------------------------------------------
-    */
-
-    /**
-     * Scope: In Progress (start_time <= now AND end_time >= now).
-     */
-    public function scopeInProgress(Builder $query): Builder
+    public function scopeOccupying($query)
     {
-        $now = Carbon::now();
-        return $query->where('start_time', '<=', $now)
-                     ->where('end_time', '>=', $now);
+        return $query->whereNull('cancelled_at')->whereNull('released_at');
     }
 
-    /**
-     * Scope: Upcoming (start_time > now).
-     */
-    public function scopeUpcoming(Builder $query): Builder
+    public function scopeInProgress($query)
     {
-        return $query->where('start_time', '>', Carbon::now());
+        return $query->occupying()->whereNotNull('started_at')->whereNull('completed_at');
     }
 
-    /**
-     * Scope: Completed (end_time < now).
-     */
-    public function scopeCompleted(Builder $query): Builder
+    public function scopeUpcoming($query)
     {
-        return $query->where('end_time', '<', Carbon::now());
+        return $query->occupying()->whereNull('started_at')->where('end_time', '>', now());
     }
 
-    /**
-     * Scope: Active or Upcoming (end_time >= now).
-     */
-    public function scopeActiveOrUpcoming(Builder $query): Builder
+    public function scopeCompleted($query)
     {
-        return $query->where('end_time', '>=', Carbon::now());
+        return $query->whereNotNull('completed_at');
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | Dynamic Accessors & Helper Methods
-    |--------------------------------------------------------------------------
-    */
+    public function scopeActiveOrUpcoming($query)
+    {
+        return $query->occupying()->where('end_time', '>', now());
+    }
 
-    /**
-     * Dynamically derive status from start_time and end_time.
-     * Returns 'in_progress', 'upcoming', or 'completed' based on timestamps.
-     */
     public function getStatusAttribute(): string
     {
-        $now = Carbon::now();
-
-        if ($this->end_time && $this->end_time->lessThan($now)) {
+        if ($this->cancelled_at) {
+            return 'cancelled';
+        }
+        if ($this->released_at) {
+            return 'no_show';
+        }
+        if ($this->completed_at) {
             return 'completed';
         }
-
-        if ($this->start_time && $this->end_time && $this->start_time->lessThanOrEqualTo($now) && $this->end_time->greaterThanOrEqualTo($now)) {
+        if ($this->started_at) {
             return 'in_progress';
         }
 
-        return 'upcoming';
+        return $this->end_time?->isPast() ? 'no_show' : 'upcoming';
     }
 
-    /**
-     * Helper: Check if reservation is currently in progress.
-     */
     public function isInProgress(): bool
     {
         return $this->status === 'in_progress';
     }
 
-    /**
-     * Helper: Check if reservation is upcoming.
-     */
     public function isUpcoming(): bool
     {
         return $this->status === 'upcoming';
     }
 
-    /**
-     * Helper: Check if reservation is completed.
-     */
     public function isCompleted(): bool
     {
         return $this->status === 'completed';
     }
 
-    /**
-     * Helper: Check if reservation cycle can be started.
-     */
     public function canBeStarted(): bool
     {
-        return $this->status === 'upcoming' || $this->status === 'in_progress';
+        return ! $this->started_at && ! $this->cancelled_at && ! $this->released_at && ! $this->completed_at
+            && $this->start_time && $this->end_time
+            && now()->betweenIncluded($this->start_time, $this->start_time->copy()->addMinutes(config('laundry.grace_period_minutes', 15)))
+            && $this->end_time->isFuture();
     }
 
-    /**
-     * Helper: Check if reservation can be cancelled.
-     */
     public function canBeCancelled(): bool
     {
-        return $this->status === 'upcoming';
+        return ! $this->started_at && ! $this->completed_at && ! $this->cancelled_at && ! $this->released_at && $this->start_time?->isFuture();
     }
 
-    /**
-     * Dynamic Credits Spent: 1 hour = 1 credit.
-     */
-    public function getCreditsSpentAttribute(): int
+    public function getCreditsSpentAttribute(): float
     {
-        if ($this->start_time && $this->end_time) {
-            $hours = (int) round($this->start_time->diffInMinutes($this->end_time) / 60);
-            return max(1, $hours);
-        }
-        return 1;
+        return $this->quota_minutes / 60;
     }
 }

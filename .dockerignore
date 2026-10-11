@@ -1,0 +1,12 @@
+.git
+.env*
+!.env.example
+node_modules
+vendor
+audit/.runtime
+audit/evidence
+storage/logs/*
+storage/framework/views/*
+storage/framework/sessions/*
+public/build
+database/*.sqlite*

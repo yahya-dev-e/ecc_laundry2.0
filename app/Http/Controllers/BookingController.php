@@ -2,248 +2,121 @@
 
 namespace App\Http\Controllers;
 
-use App\Enums\MachineStatus;
 use App\Http\Requests\StoreBookingRequest;
 use App\Models\Machine;
 use App\Models\Reservation;
 use App\Services\BookingService;
 use App\Services\MachineSchedulerService;
 use Carbon\Carbon;
-use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\View\View;
+use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 
 class BookingController extends Controller
 {
-    public function __construct(
-        protected BookingService $bookingService,
-        protected MachineSchedulerService $scheduler
-    ) {}
+    public function __construct(protected BookingService $bookingService, protected MachineSchedulerService $scheduler) {}
 
-    /**
-     * Display a listing of the user's laundry reservations and transactions.
-     */
-    public function index(Request $request): View
+    public function create(Request $request)
     {
-        $user = $request->user();
-        $now = Carbon::now();
-
-        // Active reservations currently in progress: start_time <= now AND end_time >= now
-        $activeBookings = $user ? $user->reservations()
-            ->with('machine')
-            ->where('start_time', '<=', $now)
-            ->where('end_time', '>=', $now)
-            ->latest('start_time')
-            ->get() : collect();
-
-        // Upcoming reservations: start_time > now
-        $upcomingBookings = $user ? $user->reservations()
-            ->with('machine')
-            ->where('start_time', '>', $now)
-            ->orderBy('start_time')
-            ->get() : collect();
-
-        // Completed reservations in the past: end_time < now
-        $pastBookings = $user ? $user->reservations()
-            ->with('machine')
-            ->where('end_time', '<', $now)
-            ->latest('start_time')
-            ->paginate(10) : collect();
-
-        $recentTransactions = $user ? $user->transactions()
-            ->latest()
-            ->limit(8)
-            ->get() : collect();
-
-        return view('bookings.index', [
-            'activeBookings' => $activeBookings,
-            'upcomingBookings' => $upcomingBookings,
-            'pastBookings' => $pastBookings,
-            'recentTransactions' => $recentTransactions,
-        ]);
-    }
-
-    /**
-     * Show form to reserve a new laundry machine slot.
-     */
-    public function create(Request $request): View
-    {
-        $selectedMachineId = $request->query('machine_id');
-        $selectedMachine = $selectedMachineId ? Machine::find($selectedMachineId) : null;
-
-        // Fetch all campus machines ordered strictly by name so users can reserve open slots
         $machines = Machine::orderBy('name')->get();
-
-        $minDate = Carbon::today()->toDateString();
+        $selectedMachine = $machines->firstWhere('id', (int) $request->query('machine_id'));
+        $minDate = now()->toDateString();
         $maxDate = config('laundry.restrict_to_current_week', true)
-            ? Carbon::now()->endOfWeek()->toDateString()
-            : Carbon::now()->addDays(config('laundry.max_advance_booking_days', 7))->toDateString();
-
+            ? now()->endOfWeek()->toDateString() : now()->addDays(config('laundry.max_advance_booking_days', 7))->toDateString();
         $initialDate = $minDate;
-        if ($request->filled('date')) {
-            $candidateDate = $request->query('date');
-            if ($candidateDate >= $minDate && $candidateDate <= $maxDate) {
-                $initialDate = $candidateDate;
+        try {
+            $candidate = Carbon::parse($request->query('date', $request->query('start_time', $minDate)))->toDateString();
+            if ($candidate >= $minDate && $candidate <= $maxDate) {
+                $initialDate = $candidate;
             }
-        } elseif ($request->filled('start_time')) {
-            try {
-                $candidateDate = Carbon::parse($request->query('start_time'))->toDateString();
-                if ($candidateDate >= $minDate && $candidateDate <= $maxDate) {
-                    $initialDate = $candidateDate;
-                }
-            } catch (\Exception $e) {}
+        } catch (\Throwable) {
         }
+        $reservations = []; // Availability is read from the authoritative slots endpoint.
 
-        $reservations = Reservation::where('start_time', '>=', Carbon::today()->startOfDay())
-            ->where('start_time', '<=', Carbon::parse($maxDate)->endOfDay())
-            ->get(['machine_id', 'start_time', 'end_time'])
-            ->map(function ($r) {
-                return [
-                    'machine_id' => $r->machine_id,
-                    'start' => $r->start_time?->format('Y-m-d H:i'),
-                    'end' => $r->end_time?->format('Y-m-d H:i'),
-                    'date' => $r->start_time?->format('Y-m-d'),
-                ];
-            });
-
-        return view('bookings.create', [
-            'machines' => $machines,
-            'selectedMachine' => $selectedMachine,
-            'reservations' => $reservations,
-            'minDate' => $minDate,
-            'maxDate' => $maxDate,
-            'initialDate' => $initialDate,
-        ]);
+        return view('bookings.create', compact('machines', 'selectedMachine', 'minDate', 'maxDate', 'initialDate', 'reservations'));
     }
 
-    /**
-     * Store a newly created reservation in storage.
-     */
-    public function store(StoreBookingRequest $request): RedirectResponse
+    public function store(StoreBookingRequest $request)
     {
-        $validated = $request->validated();
-        $machine = Machine::findOrFail($validated['machine_id']);
-        
-        $startTimes = [];
-        if (!empty($validated['start_times'])) {
-            $startTimes = array_map(fn($t) => Carbon::parse($t), $validated['start_times']);
-        } elseif (!empty($validated['start_time'])) {
-            $startTimes = [Carbon::parse($validated['start_time'])];
-        }
-
-        if (empty($startTimes)) {
-            return back()->withInput()->with('error', 'Veuillez sélectionner au moins un créneau horaire.');
-        }
-
-        $totalSlots = count($startTimes);
-        $user = $request->user();
-        if ($user && !$user->hasCredits($totalSlots)) {
-            $remaining = $user->weeklyRemainingLimit();
-            $limit = $user->weeklyLimit();
-            return back()->withInput()->with('error', "Quota hebdomadaire insuffisant : Vous avez sélectionné {$totalSlots} créneau(x) mais il ne vous reste que {$remaining} crédit(s) sur vos {$limit} crédits cette semaine.");
-        }
-
+        $data = $request->validated();
+        $machine = Machine::findOrFail($data['machine_id']);
+        $starts = array_map(fn ($t) => Carbon::parse($t), $data['start_times'] ?? [$data['start_time']]);
         try {
-            $createdCount = 0;
-            foreach ($startTimes as $startTime) {
-                $this->bookingService->createBooking(
-                    user: $request->user(),
-                    machine: $machine,
-                    startTime: $startTime,
-                    durationMinutes: $validated['duration_minutes'] ?? 60
-                );
-                $createdCount++;
-            }
+            $created = $this->bookingService->createBookings($request->user(), $machine, $starts, $data['duration_minutes'] ?? 60);
 
-            $slotCountMsg = $createdCount > 1 ? "{$createdCount} créneaux réservés" : "Créneau réservé";
-            return redirect()->route('dashboard')
-                ->with('success', "{$slotCountMsg} avec succès pour {$machine->name} !");
+            return redirect()->route('dashboard')->with('success', count($created).' créneau(x) réservé(s) avec succès.');
         } catch (InvalidArgumentException $e) {
             return back()->withInput()->with('error', $e->getMessage());
         }
     }
 
-    /**
-     * Start the washing/drying cycle on the machine.
-     */
-    public function start(Request $request, Reservation $booking): RedirectResponse
+    public function start(Request $request, Reservation $booking)
     {
-        if ($booking->user_id !== $request->user()->id && !$request->user()->isAdmin()) {
-            abort(403, 'Unauthorized action.');
-        }
-
+        abort_unless($booking->user_id === $request->user()->id || $request->user()->isAdmin(), 403);
         try {
             $this->bookingService->startCycle($booking);
 
-            return redirect()->route('dashboard')
-                ->with('success', "Cycle started on {$booking->machine->name}! The timer is now running.");
+            return redirect()->route('dashboard')->with('success', 'Le cycle a démarré.');
         } catch (InvalidArgumentException $e) {
             return back()->with('error', $e->getMessage());
         }
     }
 
-    /**
-     * Cancel an existing reservation and release slot.
-     */
-    public function cancel(Request $request, Reservation $booking): RedirectResponse
+    private function destination(Request $request): string
     {
-        $currentUser = $request->user();
-        if (!$currentUser) {
-            return redirect()->route('login');
+        $value = $request->input('redirect_to');
+        if (! is_string($value)) {
+            return route('dashboard');
+        }
+        $url = parse_url($value);
+        if (! $url || (isset($url['host']) && $url['host'] !== parse_url(config('app.url'), PHP_URL_HOST))
+            || (isset($url['scheme']) && $url['scheme'] !== parse_url(config('app.url'), PHP_URL_SCHEME))) {
+            return route('dashboard');
+        }
+        if (($url['path'] ?? '') === '/dashboard') {
+            return route('dashboard');
+        }
+        if (($url['path'] ?? '') === '/calendrier') {
+            parse_str($url['query'] ?? '', $params);
+            $params = array_filter(Arr::only($params, ['date', 'machine_id']), 'is_scalar');
+
+            return route('calendrier', $params);
         }
 
-        $reservationIds = $request->input('reservation_ids');
-        if (!empty($reservationIds) && is_array($reservationIds)) {
-            $bookings = Reservation::whereIn('id', $reservationIds)->get();
-            $cancelledCount = 0;
-            foreach ($bookings as $b) {
-                if ($b->user_id === $currentUser->id || $currentUser->isAdmin()) {
-                    try {
-                        $this->bookingService->cancelBooking($b, 'Cancelled by user', $currentUser->isAdmin());
-                        $cancelledCount++;
-                    } catch (\Exception $e) {}
-                }
-            }
+        return route('dashboard');
+    }
 
-            $message = $cancelledCount > 1
-                ? "{$cancelledCount} créneaux de réservation ont été annulés avec succès. Vos crédits ont été restitués."
-                : "La réservation a été annulée avec succès. Votre crédit a été restitué.";
-
-            $redirectTarget = $request->input('redirect_to');
-            if ($redirectTarget) {
-                return redirect($redirectTarget)->with('success', $message);
-            }
-
-            return redirect()->route('dashboard')->with('success', $message);
+    public function cancel(Request $request, Reservation $booking)
+    {
+        $data = $request->validate([
+            'reservation_ids' => ['nullable', 'array', 'min:1', 'max:24'],
+            'reservation_ids.*' => ['integer', 'distinct', 'exists:reservations,id'],
+            'reason' => ['nullable', 'string', 'max:500'], 'redirect_to' => ['nullable', 'string', 'max:2048'],
+        ]);
+        $ids = $data['reservation_ids'] ?? [$booking->id];
+        $bookings = Reservation::whereIn('id', $ids)->orderBy('user_id')->orderBy('machine_id')->get();
+        foreach ($bookings as $item) {
+            abort_unless($item->user_id === $request->user()->id || $request->user()->isAdmin(), 403);
         }
-
-        if ($booking->user_id !== $currentUser->id && !$currentUser->isAdmin()) {
-            abort(403, 'Action non autorisée.');
-        }
-
-        $reason = $request->input('reason', 'Annulé par ' . ($currentUser->isAdmin() ? 'administrateur' : 'utilisateur'));
-
         try {
-            $this->bookingService->cancelBooking($booking, $reason, $currentUser->isAdmin());
+            $count = DB::transaction(function () use ($bookings, $request, $data) {
+                $count = 0;
+                foreach ($bookings as $item) {
+                    $count += (int) $this->bookingService->cancelBooking($item, $data['reason'] ?? 'Annulation par #'.$request->user()->id);
+                }
 
-            $message = "La réservation #{$booking->id} a été annulée avec succès. Votre crédit vous a été restitué.";
+                return $count;
+            }, 5);
 
-            $redirectTarget = $request->input('redirect_to');
-            if ($redirectTarget) {
-                return redirect($redirectTarget)->with('success', $message);
-            }
-
-            return redirect()->route('bookings.index')->with('success', $message);
+            return redirect($this->destination($request))->with($count ? 'success' : 'status',
+                $count ? $count.' réservation(s) annulée(s) avec succès. Votre quota a été restitué.' : 'Ces réservations étaient déjà annulées.');
         } catch (InvalidArgumentException $e) {
             return back()->with('error', $e->getMessage());
         }
     }
 
-    /**
-     * Remove / destroy an existing reservation.
-     */
-    public function destroy(Request $request, Reservation $booking): RedirectResponse
+    public function destroy(Request $request, Reservation $booking)
     {
         return $this->cancel($request, $booking);
     }

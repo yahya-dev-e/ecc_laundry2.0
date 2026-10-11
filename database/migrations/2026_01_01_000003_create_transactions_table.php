@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('transactions', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('booking_id')->nullable()->constrained()->nullOnDelete();
+            $table->foreignId('booking_id')->nullable()->constrained('reservations')->nullOnDelete();
             $table->integer('amount'); // Positive for top-ups/refunds, negative for charges
             $table->string('type')->default('booking_charge'); // booking_charge, topup, refund
             $table->string('description');

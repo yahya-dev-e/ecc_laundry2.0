@@ -8,6 +8,7 @@ use App\Models\Reservation;
 use App\Services\MachineSchedulerService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class DashboardController extends Controller
@@ -25,11 +26,11 @@ class DashboardController extends Controller
         $userReservations = $user ? $user->reservations()
             ->with('machine')
             ->latest('start_time')
-            ->get() : collect();
+            ->paginate(20) : collect();
 
         $activeCycles = $user ? $user->reservations()
             ->with('machine')
-            ->where('start_time', '<=', Carbon::now())
+            ->inProgress()
             ->where('end_time', '>=', Carbon::now())
             ->latest('start_time')
             ->get() : collect();
@@ -54,6 +55,12 @@ class DashboardController extends Controller
      */
     public function index(Request $request): View
     {
+        $request->validate([
+            'date' => ['nullable', 'date_format:Y-m-d'],
+            'machine_id' => ['nullable', 'integer'],
+            'type' => ['nullable', 'string', 'in:washing-machine,washer,dryer'],
+            'status' => ['nullable', 'string', Rule::enum(MachineStatus::class)],
+        ]);
         $user = $request->user();
 
         // 1. Determine selected date for the calendar navigation
@@ -85,13 +92,13 @@ class DashboardController extends Controller
         ];
 
         $dayOfWeek = $dayNames[$selectedDate->dayOfWeek] ?? $selectedDate->format('l');
-        $dateFormatted = $selectedDate->day . ' ' . ($monthNames[$selectedDate->month] ?? $selectedDate->format('F')) . ' ' . $selectedDate->year;
+        $dateFormatted = $selectedDate->day.' '.($monthNames[$selectedDate->month] ?? $selectedDate->format('F')).' '.$selectedDate->year;
 
         // 7-day week strip calculation (Monday to Sunday)
         $startOfWeek = $selectedDate->copy()->startOfWeek(Carbon::MONDAY);
         $shortDayNames = [
             1 => 'Lun', 2 => 'Mar', 3 => 'Mer', 4 => 'Jeu',
-            5 => 'Ven', 6 => 'Sam', 0 => 'Dim'
+            5 => 'Ven', 6 => 'Sam', 0 => 'Dim',
         ];
         $weekDays = [];
         for ($i = 0; $i < 7; $i++) {
@@ -110,10 +117,10 @@ class DashboardController extends Controller
         $dayEnd = $selectedDate->copy()->endOfDay();
         $dayEndExclusive = $selectedDate->copy()->addDay()->startOfDay();
 
-        $dayReservations = Reservation::with(['machine', 'user'])
+        $dayReservations = Reservation::occupying()->with(['machine', 'user'])
             ->where(function ($q) use ($dayStart, $dayEndExclusive) {
                 $q->where('start_time', '<', $dayEndExclusive)
-                  ->where('end_time', '>', $dayStart);
+                    ->where('end_time', '>', $dayStart);
             })
             ->get();
 
@@ -144,7 +151,7 @@ class DashboardController extends Controller
         foreach ($sortedReservations as $res) {
             $lastIndex = count($mergedBlocks) - 1;
             if ($lastIndex >= 0) {
-                $sameMachine = (int)$mergedBlocks[$lastIndex]['machine_id'] === (int)$res->machine_id;
+                $sameMachine = (int) $mergedBlocks[$lastIndex]['machine_id'] === (int) $res->machine_id;
                 $sameUser = ($mergedBlocks[$lastIndex]['user_id'] === $res->user_id) && ($mergedBlocks[$lastIndex]['user_id'] !== null);
                 $isContiguous = $res->start_time->lte($mergedBlocks[$lastIndex]['end_time']);
 
@@ -153,6 +160,7 @@ class DashboardController extends Controller
                         $mergedBlocks[$lastIndex]['end_time'] = $res->end_time->copy();
                     }
                     $mergedBlocks[$lastIndex]['reservation_ids'][] = $res->id;
+
                     continue;
                 }
             }
@@ -179,16 +187,16 @@ class DashboardController extends Controller
             $durationMinutes = max(30, (int) $clampedStart->diffInMinutes($clampedEnd, false));
             $endMinutes = $startMinutes + $durationMinutes;
 
-            $durationFormatted = $durationMinutes >= 60 
-                ? ($durationMinutes % 60 === 0 ? ($durationMinutes / 60) . ' h' : sprintf('%dh%02d', floor($durationMinutes/60), $durationMinutes%60))
-                : $durationMinutes . ' min';
+            $durationFormatted = $durationMinutes >= 60
+                ? ($durationMinutes % 60 === 0 ? ($durationMinutes / 60).' h' : sprintf('%dh%02d', floor($durationMinutes / 60), $durationMinutes % 60))
+                : $durationMinutes.' min';
 
             $blocksWithTime[] = array_merge($block, [
                 'startMinutes' => $startMinutes,
                 'endMinutes' => $endMinutes,
                 'durationMinutes' => $durationMinutes,
                 'durationFormatted' => $durationFormatted,
-                'timeFormatted' => $block['start_time']->format('H:i') . ' - ' . $block['end_time']->format('H:i'),
+                'timeFormatted' => $block['start_time']->format('H:i').' - '.$block['end_time']->format('H:i'),
             ]);
         }
 
@@ -197,6 +205,7 @@ class DashboardController extends Controller
             if ($a['startMinutes'] === $b['startMinutes']) {
                 return $b['durationMinutes'] <=> $a['durationMinutes'];
             }
+
             return $a['startMinutes'] <=> $b['startMinutes'];
         });
 
@@ -219,7 +228,7 @@ class DashboardController extends Controller
                 }
             }
         }
-        if (!empty($currentCluster)) {
+        if (! empty($currentCluster)) {
             $clusters[] = $currentCluster;
         }
 
@@ -238,7 +247,7 @@ class DashboardController extends Controller
                         break;
                     }
                 }
-                if (!$placed) {
+                if (! $placed) {
                     $newCol = count($columns);
                     $columns[$newCol] = $b['endMinutes'];
                     $assignments[$idx] = $newCol;
@@ -269,14 +278,14 @@ class DashboardController extends Controller
         // 3. Fetch user's currently active cycles (time-derived: start_time <= now <= end_time)
         $activeCycles = $user ? $user->reservations()
             ->with('machine')
-            ->where('start_time', '<=', Carbon::now())
+            ->inProgress()
             ->where('end_time', '>=', Carbon::now())
             ->get() : collect();
 
         // 4. Fetch user's next upcoming reservation (time-derived: start_time > now)
         $nextBooking = $user ? $user->reservations()
             ->with('machine')
-            ->where('start_time', '>', Carbon::now())
+            ->upcoming()
             ->orderBy('start_time')
             ->first() : null;
 
@@ -316,5 +325,17 @@ class DashboardController extends Controller
             'reservationsByHour' => $reservationsByHour,
             'calendarBlocks' => $calendarBlocks,
         ]);
+    }
+
+    public function revision()
+    {
+        $reservations = Reservation::selectRaw('count(*) as total, max(updated_at) as changed, sum(id) as ids,
+            sum(case when cancelled_at is not null then id else 0 end) as cancelled,
+            sum(case when released_at is not null then id else 0 end) as released,
+            sum(case when started_at is not null then id else 0 end) as started,
+            sum(case when completed_at is not null then id else 0 end) as completed')->first();
+        $machines = Machine::orderBy('id')->get(['id', 'status', 'active_reservation_id', 'updated_at']);
+
+        return response()->json(['revision' => hash('sha256', $reservations->toJson().$machines->toJson())])->header('Cache-Control', 'no-store');
     }
 }

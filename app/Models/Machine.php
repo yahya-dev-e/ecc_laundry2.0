@@ -7,8 +7,8 @@ use App\Enums\MachineType;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Machine extends Model
 {
@@ -33,6 +33,7 @@ class Machine extends Model
         'type',
         'status',
         'color',
+        'active_reservation_id',
     ];
 
     /**
@@ -45,6 +46,7 @@ class Machine extends Model
         return [
             'type' => MachineType::class,
             'status' => MachineStatus::class,
+            'active_reservation_id' => 'integer',
         ];
     }
 
@@ -67,13 +69,9 @@ class Machine extends Model
     /**
      * Active booking currently running on this machine (time-derived).
      */
-    public function activeBooking(): HasOne
+    public function activeBooking(): BelongsTo
     {
-        $now = Carbon::now();
-        return $this->hasOne(Reservation::class)
-            ->where('start_time', '<=', $now)
-            ->where('end_time', '>=', $now)
-            ->latestOfMany('start_time');
+        return $this->belongsTo(Reservation::class, 'active_reservation_id');
     }
 
     /*
@@ -125,7 +123,7 @@ class Machine extends Model
             'SL3-OM' => '#52525b', // Zinc
         ];
 
-        if (!empty($this->name) && isset($palette[$this->name])) {
+        if (! empty($this->name) && isset($palette[$this->name])) {
             return $palette[$this->name];
         }
 
@@ -202,7 +200,7 @@ class Machine extends Model
      */
     public function cycleProgressPercentage(): int
     {
-        if (!$this->isInUse()) {
+        if (! $this->isInUse()) {
             return 0;
         }
 
@@ -212,8 +210,9 @@ class Machine extends Model
             if ($totalSeconds <= 0) {
                 return 0;
             }
-            $elapsed = Carbon::now()->diffInSeconds($active->start_time);
+            $elapsed = $active->start_time->diffInSeconds(Carbon::now());
             $percentage = (int) round(($elapsed / $totalSeconds) * 100);
+
             return min(100, max(0, $percentage));
         }
 

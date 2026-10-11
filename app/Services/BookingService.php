@@ -7,6 +7,7 @@ use App\Events\CycleCompleted;
 use App\Events\CycleStarted;
 use App\Models\Machine;
 use App\Models\Reservation;
+use App\Models\Transaction;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -14,166 +15,157 @@ use InvalidArgumentException;
 
 class BookingService
 {
-    public function __construct(
-        protected MachineSchedulerService $scheduler
-    ) {}
+    public function __construct(protected MachineSchedulerService $scheduler) {}
 
-    /**
-     * Create a new reservation for a user.
-     * STRICTLY writes only the columns that exist in the database.
-     */
     public function createBooking(User $user, Machine $machine, Carbon $startTime, ?int $durationMinutes = null): Reservation
     {
-        $duration = $durationMinutes ?? $machine->default_duration_minutes;
-        $endTime = (clone $startTime)->addMinutes($duration);
-
-        if (!$machine->status->isOperable()) {
-            throw new InvalidArgumentException("Machine {$machine->name} is currently out of service.");
-        }
-
-        if (!$this->scheduler->isMachineAvailableForSlot($machine, $startTime, $endTime)) {
-            throw new InvalidArgumentException("Machine {$machine->name} already has a conflicting reservation during this slot.");
-        }
-
-        $cost = max(1, (int) round($duration / 60));
-        if (!$user->hasCredits($cost)) {
-            $limit = $user->weeklyLimit();
-            $remaining = $user->weeklyRemainingLimit();
-            throw new InvalidArgumentException("Crédits insuffisants. Vous avez besoin de {$cost} crédit(s) pour réserver cette machine ({$remaining} crédit(s) restant(s) sur vos {$limit} crédits cette semaine).");
-        }
-
-        // Limit booking window to current week (up to Sunday 23:59:59)
-        if (!$user->isAdmin()) {
-            if ($startTime->lt(Carbon::now()->subMinutes(15))) {
-                throw new InvalidArgumentException("Impossible de réserver un créneau horaire déjà passé.");
-            }
-            if (config('laundry.restrict_to_current_week', true) && $startTime->gt(Carbon::now()->endOfWeek())) {
-                throw new InvalidArgumentException("Les réservations sont limitées à la semaine en cours (jusqu'à dimanche 23h59).");
-            }
-        }
-
-        return DB::transaction(function () use ($user, $machine, $startTime, $endTime, $cost) {
-            $reservation = Reservation::create([
-                'user_id' => $user->id,
-                'machine_id' => $machine->id,
-                'start_time' => $startTime,
-                'end_time' => $endTime,
-                'notified_start' => false,
-                'notified_end' => false,
-                'weekly_session_limit_remaining' => $user->weeklyRemainingLimit(),
-            ]);
-
-            $user->deductCredits($cost, "Reservation for machine {$machine->name}", $reservation->id);
-
-            // If reservation starts within 15 minutes, set machine status to RESERVED
-            if ($startTime->lessThanOrEqualTo(Carbon::now()->addMinutes(15)) && $machine->isAvailable()) {
-                $machine->update(['status' => MachineStatus::RESERVED]);
-            }
-
-            return $reservation;
-        });
+        return $this->createBookings($user, $machine, [$startTime], $durationMinutes)[0];
     }
 
-    /**
-     * Start the physical washing or drying cycle.
-     */
+    public function createBookings(User $user, Machine $machine, array $starts, ?int $durationMinutes = null): array
+    {
+        return DB::transaction(function () use ($user, $machine, $starts, $durationMinutes) {
+            // All writers take user then machine locks in this order. SQLite serializes writers;
+            // MySQL/Postgres acquire row locks, including availability/quota rechecks below.
+            $user = User::whereKey($user->id)->lockForUpdate()->firstOrFail();
+            $machine = Machine::whereKey($machine->id)->lockForUpdate()->firstOrFail();
+            $duration = $durationMinutes ?? $machine->default_duration_minutes;
+            if ($duration < 20 || $duration > 120 || ! $starts || count($starts) > 24) {
+                throw new InvalidArgumentException('Sélection de créneaux invalide.');
+            }
+            if (! $machine->status->isOperable()) {
+                throw new InvalidArgumentException('Cette machine est hors service.');
+            }
+            $times = array_map(fn ($t) => Carbon::parse($t)->setTimezone(config('app.timezone')), $starts);
+            usort($times, fn ($a, $b) => $a->getTimestamp() <=> $b->getTimestamp());
+            $max = config('laundry.restrict_to_current_week', true)
+                ? now()->startOfWeek()->addWeek() : now()->addDays(config('laundry.max_advance_booking_days', 7))->endOfDay();
+            $previousEnd = null;
+            foreach ($times as $start) {
+                $end = $start->copy()->addMinutes($duration);
+                if ($start->lt(now()) || $end->gt($max)) {
+                    throw new InvalidArgumentException('Ce créneau est passé ou hors de la période de réservation.');
+                }
+                if (($previousEnd && $start->lt($previousEnd)) || ! $this->scheduler->isMachineAvailableForSlot($machine, $start, $end)) {
+                    throw new InvalidArgumentException('Un créneau sélectionné est déjà réservé.');
+                }
+                $previousEnd = $end;
+            }
+            foreach (collect($times)->groupBy(fn ($time) => $time->copy()->startOfWeek()->toDateString()) as $week => $weekTimes) {
+                if ($user->weeklyRemainingMinutes(Carbon::parse($week)) < $weekTimes->count() * $duration) {
+                    throw new InvalidArgumentException('Quota hebdomadaire insuffisant.');
+                }
+            }
+            $activeCount = $user->reservations()->activeOrUpcoming()->count();
+            if ($activeCount + count($times) > config('laundry.max_simultaneous_reservations', 3)) {
+                throw new InvalidArgumentException('Vous avez atteint le nombre maximal de réservations actives.');
+            }
+            $bookings = [];
+            foreach ($times as $start) {
+                $booking = Reservation::create([
+                    'user_id' => $user->id, 'machine_id' => $machine->id, 'start_time' => $start,
+                    'end_time' => $start->copy()->addMinutes($duration), 'quota_minutes' => $duration,
+                    'weekly_session_limit_remaining' => (int) floor($user->weeklyRemainingMinutes($start) / 60),
+                ]);
+                Transaction::create(['user_id' => $user->id, 'booking_id' => $booking->id,
+                    'amount' => -$duration, 'type' => 'booking_charge', 'event_key' => 'charge:'.$booking->id,
+                    'description' => 'Réservation de '.$machine->name.' (minutes)']);
+                $bookings[] = $booking;
+            }
+
+            return $bookings;
+        }, 5);
+    }
+
     public function startCycle(Reservation $booking): Machine
     {
-        if (!$booking->canBeStarted()) {
-            throw new InvalidArgumentException("This reservation cannot be started because it is not within the start window.");
-        }
+        return DB::transaction(function () use ($booking) {
+            User::whereKey($booking->user_id)->lockForUpdate()->firstOrFail();
+            $machine = Machine::whereKey($booking->machine_id)->lockForUpdate()->firstOrFail();
+            $booking = Reservation::whereKey($booking->id)->lockForUpdate()->firstOrFail();
+            if (! $booking->canBeStarted() || ! $machine->status->isOperable() || $machine->active_reservation_id || $machine->isInUse()) {
+                throw new InvalidArgumentException('Le cycle ne peut pas être démarré : vérifiez le créneau et l’état de la machine.');
+            }
+            $booking->update(['started_at' => now()]);
+            $machine->update(['status' => MachineStatus::IN_USE, 'active_reservation_id' => $booking->id]);
+            DB::afterCommit(fn () => event(new CycleStarted($machine->fresh(), $booking->fresh())));
 
-        $machine = $booking->machine;
-
-        DB::transaction(function () use ($machine) {
-            $machine->update([
-                'status' => MachineStatus::IN_USE,
-            ]);
-        });
-
-        event(new CycleStarted($machine->fresh(), $booking->fresh()));
-
-        return $machine;
+            return $machine;
+        }, 5);
     }
 
-    /**
-     * Complete the cycle and make machine available.
-     */
     public function completeCycle(Machine $machine): void
     {
-        $now = Carbon::now();
-        $activeBooking = Reservation::where('machine_id', $machine->id)
-            ->where('start_time', '<=', $now)
-            ->where('end_time', '>=', $now)
-            ->latest('start_time')
-            ->first();
-
         DB::transaction(function () use ($machine) {
-            $machine->update([
-                'status' => MachineStatus::AVAILABLE,
-            ]);
-        });
-
-        event(new CycleCompleted($machine->fresh(), $activeBooking?->fresh()));
+            $machine = Machine::whereKey($machine->id)->lockForUpdate()->firstOrFail();
+            if (! $machine->active_reservation_id) {
+                return;
+            }
+            $booking = Reservation::whereKey($machine->active_reservation_id)->lockForUpdate()->first();
+            if (! $booking || $booking->completed_at || ! $booking->started_at || $booking->end_time->isFuture()) {
+                return;
+            }
+            $booking->update(['completed_at' => now()]);
+            $machine->update(['active_reservation_id' => null,
+                'status' => $machine->status->isOperable() ? MachineStatus::AVAILABLE : $machine->status]);
+            DB::afterCommit(fn () => event(new CycleCompleted($machine->fresh(), $booking->fresh())));
+        }, 5);
     }
 
-    /**
-     * Cancel an existing reservation and release slot.
-     */
-    public function cancelBooking(Reservation $booking, string $reason = 'Cancelled by user', bool $isAdmin = false): void
+    public function cancelBooking(Reservation $booking, string $reason = 'Annulé par utilisateur', bool $isAdmin = false): bool
     {
-        if (!$isAdmin && !$booking->canBeCancelled()) {
-            throw new InvalidArgumentException("Cette réservation ne peut pas être annulée car elle est déjà terminée ou en cours.");
-        }
-
-        DB::transaction(function () use ($booking) {
-            $machine = $booking->machine;
-            $user = $booking->user;
-            $creditsToRefund = $booking->credits_spent;
-
-            // Delete the reservation row to release the time slot
-            $booking->delete();
-
-            // Refund credits to user
-            if ($user) {
-                $user->addCredits(
-                    $creditsToRefund,
-                    "Remboursement pour annulation de réservation sur " . ($machine?->name ?? 'machine')
-                );
+        return DB::transaction(function () use ($booking, $reason) {
+            User::whereKey($booking->user_id)->lockForUpdate()->firstOrFail();
+            $machine = Machine::whereKey($booking->machine_id)->lockForUpdate()->firstOrFail();
+            $booking = Reservation::whereKey($booking->id)->lockForUpdate()->firstOrFail();
+            if ($booking->cancelled_at) {
+                return false;
+            }
+            if (! $booking->canBeCancelled()) {
+                throw new InvalidArgumentException('Seules les réservations futures non démarrées peuvent être annulées.');
+            }
+            $booking->update(['cancelled_at' => now(), 'cancellation_reason' => $reason]);
+            Transaction::create(['user_id' => $booking->user_id, 'booking_id' => $booking->id,
+                'amount' => $booking->quota_minutes, 'type' => 'refund', 'event_key' => 'refund:'.$booking->id,
+                'description' => $reason]);
+            if ($machine->active_reservation_id === $booking->id) {
+                $machine->update(['active_reservation_id' => null,
+                    'status' => $machine->status->isOperable() ? MachineStatus::AVAILABLE : $machine->status]);
             }
 
-            // Revert machine status to available if it was reserved or in use
-            if ($machine && ($machine->status === MachineStatus::RESERVED || $machine->status === MachineStatus::IN_USE)) {
-                $machine->update(['status' => MachineStatus::AVAILABLE]);
-            }
-        });
+            return true;
+        }, 5);
     }
 
-    /**
-     * Release expired reservations where user failed to show up.
-     */
     public function releaseExpiredBookings(): int
     {
-        $graceMinutes = config('laundry.grace_period_minutes', 15);
-        $cutoff = Carbon::now()->subMinutes($graceMinutes);
+        $ids = Reservation::occupying()->whereNull('started_at')->whereNull('completed_at')
+            ->where('start_time', '<=', now()->subMinutes(config('laundry.grace_period_minutes', 15)))->pluck('id');
+        $released = 0;
+        foreach ($ids as $id) {
+            $released += DB::transaction(function () use ($id) {
+                $snapshot = Reservation::find($id);
+                if (! $snapshot) {
+                    return 0;
+                }
+                User::whereKey($snapshot->user_id)->lockForUpdate()->firstOrFail();
+                $machine = Machine::whereKey($snapshot->machine_id)->lockForUpdate()->firstOrFail();
+                $booking = Reservation::whereKey($id)->lockForUpdate()->firstOrFail();
+                if ($booking->started_at || $booking->cancelled_at || $booking->released_at || $booking->completed_at) {
+                    return 0;
+                }
+                $booking->update(['released_at' => now(), 'cancellation_reason' => 'Absence après le délai de présence']);
+                Transaction::create(['user_id' => $booking->user_id, 'booking_id' => $booking->id,
+                    'amount' => $booking->quota_minutes, 'type' => 'refund', 'event_key' => 'refund:'.$booking->id,
+                    'description' => 'Libération pour absence (minutes)']);
+                if (! $machine->active_reservation_id && $machine->isReserved()) {
+                    $machine->update(['status' => MachineStatus::AVAILABLE]);
+                }
 
-        // Expired upcoming reservations where start_time <= cutoff and machine remained reserved
-        $expiredBookings = Reservation::where('start_time', '<=', $cutoff)
-            ->where('end_time', '>', Carbon::now())
-            ->whereHas('machine', function ($q) {
-                $q->where('status', MachineStatus::RESERVED);
-            })
-            ->get();
-
-        $count = $expiredBookings->count();
-        foreach ($expiredBookings as $booking) {
-            $machine = $booking->machine;
-            $booking->delete();
-            if ($machine) {
-                $machine->update(['status' => MachineStatus::AVAILABLE]);
-            }
+                return 1;
+            }, 5);
         }
 
-        return $count;
+        return $released;
     }
 }

@@ -3,32 +3,32 @@
 namespace App\Listeners;
 
 use App\Events\CycleCompleted;
-use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Queue\InteractsWithQueue;
-use Illuminate\Support\Facades\Log;
+use App\Models\Reservation;
+use App\Notifications\CycleFinishedNotification;
+use Illuminate\Contracts\Queue\ShouldQueueAfterCommit;
+use Illuminate\Support\Facades\DB;
 
-class SendCycleAlertNotification implements ShouldQueue
+class SendCycleAlertNotification implements ShouldQueueAfterCommit
 {
-    use InteractsWithQueue;
+    public int $tries = 3;
 
-    /**
-     * Handle the event.
-     */
+    public function backoff(): array
+    {
+        return [30, 120, 300];
+    }
+
     public function handle(CycleCompleted $event): void
     {
-        $machine = $event->machine;
-        $booking = $event->booking;
-
-        if ($booking && $booking->user) {
-            $user = $booking->user;
-
-            Log::info("Cycle alert: Machine {$machine->name} has completed its cycle for user {$user->name} ({$user->email}).");
-
-            // In production, integrate SMS/Push notifications (e.g. Firebase, Twilio, WebPush)
-            // or send email reminder:
-            // $user->notify(new LaundryCycleFinishedNotification($machine));
-        } else {
-            Log::info("Cycle alert: Machine {$machine->name} has completed its cycle without active booking.");
+        if (! $event->booking) {
+            return;
         }
+        DB::transaction(function () use ($event) {
+            $booking = Reservation::whereKey($event->booking->id)->lockForUpdate()->first();
+            if (! $booking || $booking->notified_end || ! $booking->completed_at || ! $booking->user) {
+                return;
+            }
+            $booking->user->notify(new CycleFinishedNotification($event->machine->name));
+            $booking->update(['notified_end' => true]);
+        }, 5);
     }
 }

@@ -27,7 +27,7 @@ class MachineSeeder extends Seeder
             [
                 'name' => 'ML2-OM',
                 'type' => MachineType::WASHING_MACHINE,
-                'status' => MachineStatus::IN_USE,
+                'status' => MachineStatus::AVAILABLE,
                 'color' => '#0d9488',
             ],
             [
@@ -77,7 +77,7 @@ class MachineSeeder extends Seeder
             [
                 'name' => 'SL1-PE',
                 'type' => MachineType::DRYER,
-                'status' => MachineStatus::IN_USE,
+                'status' => MachineStatus::AVAILABLE,
                 'color' => '#475569',
             ],
             [
@@ -101,7 +101,7 @@ class MachineSeeder extends Seeder
         ];
 
         foreach ($machines as $machine) {
-            Machine::updateOrCreate(['name' => $machine['name']], $machine);
+            Machine::firstOrCreate(['name' => $machine['name']], $machine);
         }
     }
 }
