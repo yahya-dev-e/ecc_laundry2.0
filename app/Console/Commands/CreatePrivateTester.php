@@ -15,9 +15,9 @@ class CreatePrivateTester extends Command
     {
         $email = strtolower(trim($this->argument('email')));
         $database = config('database.connections.'.config('database.default').'.database');
-        if (! config('private_test.enabled') || ! str_ends_with((string) $database, '_test')
+        if (! config('private_test.enabled') || ! preg_match('/[_-]test$/', (string) $database)
             || ! in_array($email, config('private_test.emails'), true)) {
-            $this->error('Requires private test mode, an allowlisted email and a database name ending in _test.');
+            $this->error('Requires private test mode, an allowlisted email and a database name ending in _test or -test.');
 
             return self::FAILURE;
         }

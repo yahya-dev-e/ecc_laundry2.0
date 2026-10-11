@@ -20,18 +20,33 @@ return new class extends Migration
             DB::table('users')->where('id', $user->id)->update(['email' => strtolower(trim($user->email))]);
         }
         Schema::table('users', function (Blueprint $t) {
-            $t->unsignedInteger('session_version')->default(0);
-            $t->unsignedInteger('weekly_limit_minutes')->nullable();
+            if (! Schema::hasColumn('users', 'session_version')) {
+                $t->unsignedInteger('session_version')->default(0);
+            }
+            if (! Schema::hasColumn('users', 'weekly_limit_minutes')) {
+                $t->unsignedInteger('weekly_limit_minutes')->nullable();
+            }
         });
         Schema::table('reservations', function (Blueprint $t) {
-            $t->unsignedInteger('quota_minutes')->default(60);
-            $t->boolean('quota_waived')->default(false);
-            $t->timestamp('started_at')->nullable();
-            $t->timestamp('completed_at')->nullable();
-            $t->timestamp('cancelled_at')->nullable();
-            $t->timestamp('released_at')->nullable();
-            $t->string('cancellation_reason', 500)->nullable();
-            $t->index(['machine_id', 'cancelled_at', 'released_at', 'start_time']);
+            // MySQL commits DDL before the following index statement. Allow recovery
+            // from the original overlong-index failure without dropping existing data.
+            if (! Schema::hasColumn('reservations', 'quota_minutes')) {
+                $t->unsignedInteger('quota_minutes')->default(60);
+            }
+            if (! Schema::hasColumn('reservations', 'quota_waived')) {
+                $t->boolean('quota_waived')->default(false);
+            }
+            foreach (['started_at', 'completed_at', 'cancelled_at', 'released_at'] as $column) {
+                if (! Schema::hasColumn('reservations', $column)) {
+                    $t->timestamp($column)->nullable();
+                }
+            }
+            if (! Schema::hasColumn('reservations', 'cancellation_reason')) {
+                $t->string('cancellation_reason', 500)->nullable();
+            }
+            if (! Schema::hasIndex('reservations', ['machine_id', 'cancelled_at', 'released_at', 'start_time'])) {
+                $t->index(['machine_id', 'cancelled_at', 'released_at', 'start_time'], 'reservations_availability_index');
+            }
         });
         DB::table('reservations')->orderBy('id')->chunkById(200, function ($rows) {
             foreach ($rows as $row) {

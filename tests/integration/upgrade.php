@@ -33,6 +33,21 @@ $user = User::create(['name' => 'Legacy', 'email' => 'LEGACY@EXAMPLE.TEST', 'stu
 $machine = Machine::create(['name' => 'OLD-WASHER', 'type' => 'washing-machine', 'status' => 'in-use', 'color' => '#00897b']);
 $past = Reservation::create(['user_id' => $user->id, 'machine_id' => $machine->id, 'start_time' => now()->subDays(2), 'end_time' => now()->subDays(2)->addMinutes(45)]);
 $active = Reservation::create(['user_id' => $user->id, 'machine_id' => $machine->id, 'start_time' => now()->subMinutes(5), 'end_time' => now()->addMinutes(55)]);
+if (in_array('--partial-index-failure', $argv, true)) {
+    // Simulate MySQL's committed columns after the old index name was rejected.
+    Schema::table('users', function (Blueprint $t) {
+        $t->unsignedInteger('session_version')->default(0);
+        $t->unsignedInteger('weekly_limit_minutes')->nullable();
+    });
+    Schema::table('reservations', function (Blueprint $t) {
+        $t->unsignedInteger('quota_minutes')->default(60);
+        $t->boolean('quota_waived')->default(false);
+        foreach (['started_at', 'completed_at', 'cancelled_at', 'released_at'] as $column) {
+            $t->timestamp($column)->nullable();
+        }
+        $t->string('cancellation_reason', 500)->nullable();
+    });
+}
 foreach (glob(database_path('migrations/2026_10_11*.php')) as $file) {
     (require $file)->up();
 }
@@ -45,6 +60,7 @@ $check(Schema::getForeignKeys('transactions')[0]['foreign_table'] === 'reservati
 $check($past->fresh()->quota_minutes === 45 && $past->fresh()->completed_at !== null, 'Legacy duration/history preserved without retroactive no-show refund');
 $check($machine->fresh()->active_reservation_id === $active->id && $active->fresh()->started_at !== null, 'Identifiable active cycle preserved');
 $check($user->fresh()->email === 'legacy@example.test', 'Legacy email normalized');
+$check(Schema::hasIndex('reservations', 'reservations_availability_index') && strlen('reservations_availability_index') <= 64, 'Explicit availability index fits MySQL identifier limit');
 Artisan::call('laundry:reconcile-ledger');
 $check(DB::table('transactions')->count() === 0, 'Ledger reconciliation is dry-run by default');
 Artisan::call('laundry:reconcile-ledger', ['--apply' => true]);
