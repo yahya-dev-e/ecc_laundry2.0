@@ -22,14 +22,14 @@ MAIL_MAILER=log records mail locally; it does not deliver to an inbox. Configure
 ## Rules
 
 - Campus timezone defaults to Africa/Casablanca; the server decides available slots.
-- Default booking window: today through Sunday, including the Sunday 23:00–Monday 00:00 slot. This is not a same-day-only restriction.
+- Default booking window: today through the date seven days ahead, inclusive, in campus time. On Sunday 11 October, dates through Sunday 18 October are available, including its 23:00–Monday 00:00 slot. Past starts and reservations ending beyond that final midnight are rejected.
 - Students receive eight hours per Monday–Sunday week; administrators receive a finite 100 hours. An administrator can set an individual limit.
 - Browser bookings are one hour. Validated API/form requests can specify 20–120 minutes, charged in exact integer minutes.
 - At most three active/upcoming reservations per account by default. A multi-slot request either commits all reservations and charges or none.
 - A cycle starts only during its reserved start window, with 15 minutes of grace, on an operable machine without another active cycle.
 - Future unstarted reservations can be cancelled. Cancellations and no-shows retain history and refund once. Completed cycles remain counted.
 - Admin quota reset exempts existing reservations for the current week; new reservations still count, including after an exempt reservation is cancelled.
-- Rolling advance booking is optional through LAUNDRY_RESTRICT_CURRENT_WEEK=false. Quota is checked against each reservation's target week.
+- Rolling advance booking is the default (`LAUNDRY_RESTRICT_CURRENT_WEEK=false`, `LAUNDRY_MAX_ADVANCE_DAYS=7`). Existing installations must update their .env if it explicitly enables the old current-week restriction. Quota remains Monday–Sunday and is checked against each reservation's target week. Set the restriction to true to restore the legacy window.
 
 ## Existing installations
 

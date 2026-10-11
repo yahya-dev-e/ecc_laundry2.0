@@ -18,8 +18,7 @@ class MachineSchedulerService
     public function getAvailableSlots(Machine $machine, Carbon $date): array
     {
         $date = $date->copy()->setTimezone(config('app.timezone'))->startOfDay();
-        $max = config('laundry.restrict_to_current_week', true)
-            ? now()->startOfWeek()->addWeek() : now()->addDays(config('laundry.max_advance_booking_days', 7))->endOfDay();
+        $max = BookingWindow::end();
         $reservations = Reservation::occupying()->where('machine_id', $machine->id)
             ->where('start_time', '<', $date->copy()->addDay())->where('end_time', '>', $date)->get(['start_time', 'end_time']);
         $slots = [];

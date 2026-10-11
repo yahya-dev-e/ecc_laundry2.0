@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Services\BookingWindow;
 use Illuminate\Foundation\Http\FormRequest;
 
 class StoreBookingRequest extends FormRequest
@@ -13,8 +14,7 @@ class StoreBookingRequest extends FormRequest
 
     public function rules(): array
     {
-        $maximum = config('laundry.restrict_to_current_week', true)
-            ? now()->endOfWeek() : now()->addDays(config('laundry.max_advance_booking_days', 7))->endOfDay();
+        $maximum = BookingWindow::end()->subSecond();
 
         return [
             'machine_id' => ['required', 'integer', 'exists:machines,id'],

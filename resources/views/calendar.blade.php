@@ -55,7 +55,7 @@
                 i
             </div>
             <span class="text-xs text-slate-700">
-                @if(config('laundry.restrict_to_current_week', true))
+                @if(config('laundry.restrict_to_current_week', false))
                 Réservations ouvertes pour la semaine en cours, jusqu’à dimanche minuit.
                 @else
                 Réservations ouvertes jusqu’à {{ config('laundry.max_advance_booking_days', 7) }} jours à l’avance.
@@ -271,15 +271,15 @@
                     
                     <!-- Background: 24 hour rows with click-to-book and horizontal divider lines -->
                     @php
-                        $endOfWeekDate = \Carbon\Carbon::now()->endOfWeek()->toDateString();
-                        $isReservableDay = ($selectedDate >= $todayDate && $selectedDate <= $endOfWeekDate);
+                        $lastBookingDate = \App\Services\BookingWindow::lastDate();
+                        $isReservableDay = ($selectedDate >= $todayDate && $selectedDate <= $lastBookingDate);
                         $currentHour = (int)\Carbon\Carbon::now()->format('H');
                     @endphp
                     @for ($h = 0; $h < 24; $h++)
                         @php
                             $top = $h * 52;
                             $hourStr = sprintf('%02d:00', $h);
-                            $isPastSlot = ($selectedDate === $todayDate && $h < $currentHour) || ($selectedDate < $todayDate);
+                            $isPastSlot = \Carbon\Carbon::parse($selectedDate)->setTime($h, 0)->lt(now());
                             $canBook = $isReservableDay && !$isPastSlot;
                         @endphp
                         <!-- Limitor boundary line at top of hour -->

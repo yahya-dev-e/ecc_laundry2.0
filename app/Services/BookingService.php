@@ -38,8 +38,7 @@ class BookingService
             }
             $times = array_map(fn ($t) => Carbon::parse($t)->setTimezone(config('app.timezone')), $starts);
             usort($times, fn ($a, $b) => $a->getTimestamp() <=> $b->getTimestamp());
-            $max = config('laundry.restrict_to_current_week', true)
-                ? now()->startOfWeek()->addWeek() : now()->addDays(config('laundry.max_advance_booking_days', 7))->endOfDay();
+            $max = BookingWindow::end();
             $previousEnd = null;
             foreach ($times as $start) {
                 $end = $start->copy()->addMinutes($duration);

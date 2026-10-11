@@ -7,6 +7,7 @@ use App\Models\Machine;
 use App\Models\Reservation;
 use App\Models\User;
 use App\Services\BookingService;
+use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
@@ -58,6 +59,7 @@ class BookingTest extends TestCase
 
     public function test_slots_use_campus_timezone_cutoff_and_sunday_midnight_boundary(): void
     {
+        config(['laundry.restrict_to_current_week' => true]);
         $user = User::factory()->create();
         $machine = Machine::factory()->create();
         $this->travelTo(now()->endOfWeek()->setTime(22, 45));
@@ -70,6 +72,30 @@ class BookingTest extends TestCase
             ->assertSessionHasNoErrors()->assertSessionHas('success');
         $this->post('/bookings', ['machine_id' => $machine->id, 'start_time' => now()->addDay()->startOfDay()->toIso8601String()])
             ->assertSessionHasErrors('start_time');
+    }
+
+    public function test_rolling_window_on_sunday_includes_next_sunday_and_its_last_slot(): void
+    {
+        $this->travelTo(Carbon::parse('2026-10-11 10:15', 'Africa/Casablanca'));
+        $user = User::factory()->create();
+        $machine = Machine::factory()->create();
+        $this->actingAs($user)->get('/bookings/create')->assertViewHas('maxDate', '2026-10-18');
+        $slots = $this->getJson('/machines/'.$machine->id.'/slots?date=2026-10-18')->assertOk()->json('slots');
+        $this->assertTrue(collect($slots)->firstWhere('start_time', '23:00')['is_available']);
+        foreach (['2026-10-12T12:00:00+01:00', '2026-10-18T23:00:00+01:00'] as $start) {
+            $this->post('/bookings', ['machine_id' => $machine->id, 'start_time' => $start])
+                ->assertSessionHasNoErrors()->assertSessionHas('success');
+        }
+        $this->post('/bookings', ['machine_id' => $machine->id, 'start_time' => '2026-10-19T00:00:00+01:00'])
+            ->assertSessionHasErrors('start_time');
+        $outside = $this->getJson('/machines/'.$machine->id.'/slots?date=2026-10-19')->json('slots');
+        $this->assertFalse(collect($outside)->contains('is_available', true));
+        try {
+            app(BookingService::class)->createBooking($user, $machine, Carbon::parse('2026-10-18 23:30'), 60);
+            $this->fail('Reservation crossing the window end accepted');
+        } catch (\InvalidArgumentException) {
+            $this->assertDatabaseCount('reservations', 2);
+        }
     }
 
     public function test_real_pages_render_for_student_and_admin(): void

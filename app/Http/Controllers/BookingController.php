@@ -6,6 +6,7 @@ use App\Http\Requests\StoreBookingRequest;
 use App\Models\Machine;
 use App\Models\Reservation;
 use App\Services\BookingService;
+use App\Services\BookingWindow;
 use App\Services\MachineSchedulerService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -22,8 +23,7 @@ class BookingController extends Controller
         $machines = Machine::orderBy('name')->get();
         $selectedMachine = $machines->firstWhere('id', (int) $request->query('machine_id'));
         $minDate = now()->toDateString();
-        $maxDate = config('laundry.restrict_to_current_week', true)
-            ? now()->endOfWeek()->toDateString() : now()->addDays(config('laundry.max_advance_booking_days', 7))->toDateString();
+        $maxDate = BookingWindow::lastDate();
         $initialDate = $minDate;
         try {
             $candidate = Carbon::parse($request->query('date', $request->query('start_time', $minDate)))->toDateString();
