@@ -2,7 +2,7 @@
 
 Date: 11 October 2026. Repository: yahya-dev-e/ecc_laundry2.0.
 
-This records the implemented website changes after audit commit `24bfc898160f6ab5ce804e2220d46e5d180e384b`, through the rolling-window update on `codex/private-school-test-2026-10-11`. It includes behavior, infrastructure, tests, deployment preparation and the server steps reported in this conversation. The appendix lists every changed tracked file. It is a change record, not a claim that every feature has been verified in production.
+This records the implemented website changes after audit commit `24bfc898160f6ab5ce804e2220d46e5d180e384b`, through the rolling-window and Node 18 compatibility updates on `codex/private-school-test-2026-10-11`. It includes behavior, infrastructure, tests, deployment preparation and the server steps reported in this conversation. The appendix lists every changed tracked file. It is a change record, not a claim that every feature has been verified in production.
 
 ## Branches and scope
 
@@ -12,6 +12,7 @@ This records the implemented website changes after audit commit `24bfc898160f6ab
 - Private test preparation: `codex/private-school-test-2026-10-11`, commit `d8d6a83`.
 - MySQL migration recovery and hyphenated test database support: `847d604`, on the private test branch.
 - Rolling-window update and this document: subsequent commit on the private test branch, inheriting all the above fixes.
+- Node 18 compatibility update: subsequent commit on the same private test branch; final dependency stack described below supersedes the initial Vite 7 setup.
 - No merge into main, no pull request and no production deployment performed by the agent. The original fork workspace was not edited for these fixes. Historical audit reports/probes remain historical evidence.
 
 ## Authentication and account security
@@ -129,8 +130,12 @@ This records the implemented website changes after audit commit `24bfc898160f6ab
 
 - Restored Laravel public front controller, public rewrite configuration, base Controller and tracked placeholders for writable cache/storage directories.
 - Upgraded locked framework to Laravel 12.69.3 and PHPUnit 11.5.57; restored User factory. Composer lock is committed for reproducible installs.
-- Frontend upgraded to Vite 7 / Tailwind 4 with matching PostCSS/Vite configuration, Alpine and focus support. Removed unused Axios. Package lock records exact dependencies.
-- Build tooling requires modern Node; the server's Node 18.8 was left unchanged. Laptop build succeeded using its suitable newer runtime and compiled assets were packaged separately.
+- Initial audit fixes upgraded to Vite 7 / Tailwind 4. The later Node 18 request replaces that build stack with pinned Vite 6.4.4, laravel-vite-plugin 1.3.0 and Tailwind 4.1.18 through @tailwindcss/postcss 4.1.18. Alpine/focus support and Tailwind 4 markup remain. Removed unused Axios. Package lock records exact dependencies.
+- The final application build supports the server's existing Node 18.8.0 and npm 8.18.0; a Node upgrade and laptop asset transfer are no longer required. Initial laptop build/ZIP transfer remains recorded below as completed history.
+- Removed @tailwindcss/vite and configured Tailwind's compatible PostCSS plugin instead. Application package declares Node >=18.8.0. Compatible direct dependencies are pinned to prevent a later npm update silently reintroducing the newer major requirements.
+- Playwright is separated into tests/browser/package.json with its own lockfile, so production npm ci does not install browser-test tooling that requires newer Node. Browser tests remain a development/CI operation on Node 22+. Root build installation needs no engine-warning suppression, --force or --legacy-peer-deps.
+- Preview launcher uses fileURLToPath(new URL('.', import.meta.url)) instead of import.meta.dirname, making its working-directory handling valid on Node 18.
+- CI example adds a Windows Node 18.8.0 engine-strict install/build job, while browser jobs retain modern Node and explicitly install their separate test package. The CI template is still unactivated. Docker can keep its Node 22 asset builder: the same compatible dependencies also run there.
 - Unsafe standalone Node imitation of the website/authentication was removed; preview launcher uses real Laravel and binds loopback.
 - .env.example has no fixed application key, debug disabled, campus timezone, explicit session/queue/cache/mail defaults and private-test options. A new private APP_KEY is generated per deployment.
 - Standard machine seeding uses firstOrCreate so existing operational state is preserved. Demo users require explicit local/testing opt-in and a privately supplied password; no shared fixed demo credentials.
@@ -169,7 +174,9 @@ These were carried out or reported by the user on the Windows Server; the agent 
 
 - Original fixes verification: 23 backend tests / 170 assertions; six legacy upgrade checks; independent-process SQLite races; actual database queue/local SMTP tests; 40 browser workflow checks across Chromium, Firefox, Edge and WebKit; production frontend build; dependency audits at that time.
 - Private-test gate/provisioning and migration recovery verification: 28 tests / 199 assertions; seven normal legacy upgrade checks and seven partial-index-recovery checks.
-- Latest rolling-window verification: 29 tests / 210 assertions, all passing; frontend production build passing. Earlier 40-check browser result remains historical for the fixes; it was not rerun for this rolling-window update.
+- Rolling-window verification: 29 tests / 210 assertions, all passing; frontend production build passing.
+- Node compatibility verification uses the official Windows x64 Node 18.8.0 executable, whose SHA-256 matched the published Node distribution checksum, and npm 8.18.0. A clean npm ci --engine-strict, npm run build and npm audit --audit-level=moderate pass; npm reports zero known vulnerabilities at the time checked. A loopback Vite development-server smoke test also compiles and serves the application CSS with Node 18.8.0. This verifies the laptop Windows runtime; server-specific network/antivirus/OS differences still require running the supplied commands there.
+- After the compatible build, all 40 browser workflow checks were rerun and passed across Chromium, Firefox, installed Edge and WebKit, using the newly built assets and the rolling-window code. tests/browser/evidence/results.json records that run. Backend code was not changed by the Node compatibility update; the latest backend result remains 29 tests / 210 assertions.
 - Browser checks use real Laravel with CSRF enabled, a fixed test-only campus clock, Honolulu browser timezone, 320/390px phone viewports and 844×390 landscape. They cover signup/errors/login/logout, mobile menu focus, keyboard booking/calendar/cancellation, admin phone forms, overflow and missing-CSRF rejection.
 - Chromium/Firefox/Edge/WebKit automation is not proof of every native Safari/Opera, Android/iOS, macOS/Linux or old-browser combination. Real phone workflow testing remains outstanding.
 - Fresh MySQL installation reached migrations on the user's server; a real MySQL identifier bug was observed and fixed. Full MySQL concurrency/load/production upgrade certification is still outstanding; local regression tests used SQLite.
@@ -185,7 +192,17 @@ LAUNDRY_RESTRICT_CURRENT_WEEK=false
 LAUNDRY_MAX_ADVANCE_DAYS=7
 ```
 
-Run `php artisan config:clear` and restart the test server using the same chosen bind address/port. No new migration, dependency reinstall or frontend asset copy is required for this window change: its interface changes are server-rendered Blade and the compiled asset output is unchanged.
+For the rolling-window change alone, run `php artisan config:clear` and restart the test server using the same chosen bind address/port. No new migration is required.
+
+The later Node 18 compatibility update **does** replace the frontend dependencies/build. After pulling that commit, run the following on the server with its existing Node 18.8.0 and npm 8.18.0:
+
+```bat
+npm ci
+npm run build
+php artisan config:clear
+```
+
+Then restart the test server. npm ci replaces node_modules according to the committed lockfile; it does not touch .env, the database, PHP dependencies or main. Keep the separate tests/browser package for a modern development/CI machine. Laravel/PHP continues serving the website; this does not turn it into a Node web server.
 
 ## Complete tracked-file inventory
 
@@ -197,6 +214,7 @@ The following appendix is generated from Git against the audit commit. It includ
 | A | `.dockerignore` |
 | M | `.env.example` |
 | A | `.gitattributes` |
+| M | `.gitignore` |
 | A | `app/Console/Commands/CreateAdministrator.php` |
 | A | `app/Console/Commands/CreatePrivateTester.php` |
 | A | `app/Console/Commands/ReconcileLedger.php` |
@@ -285,6 +303,8 @@ The following appendix is generated from Git against the audit commit. It includ
 | A | `storage/logs/.gitignore` |
 | A | `tests/browser/evidence/.gitignore` |
 | A | `tests/browser/evidence/results.json` |
+| A | `tests/browser/package-lock.json` |
+| A | `tests/browser/package.json` |
 | A | `tests/browser/regression.mjs` |
 | A | `tests/browser/router.php` |
 | A | `tests/browser/run.mjs` |

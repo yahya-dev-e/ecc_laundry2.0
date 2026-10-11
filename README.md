@@ -6,7 +6,7 @@ The original audit is in [audit/REPORT.md](audit/REPORT.md). The fixes and remai
 
 ## Local installation
 
-Use PHP 8.3+ with PDO SQLite or PDO MySQL, mbstring, OpenSSL, fileinfo, intl and ZIP; Composer 2; Node.js 22. Dependencies are locked.
+Use PHP 8.3+ with PDO SQLite or PDO MySQL, mbstring, OpenSSL, fileinfo, intl and ZIP; Composer 2; Node.js 18.8+ for frontend builds. Dependencies are locked. The server's Node 18.8.0 is supported by the pinned build stack (Vite 6.4.4, Laravel Vite plugin 1.3.0, Tailwind/PostCSS 4.1.18). Laravel/PHP serves the application; Node is not required to serve built production assets.
 
 1. Copy .env.example to .env. Generate your own key with php artisan key:generate after composer install.
 2. Run composer install and npm ci --ignore-scripts.
@@ -60,10 +60,11 @@ Run queue workers under a supervisor, restart them when deploying code, monitor 
     php tests/integration/upgrade.php
     php tests/integration/concurrency.php
     node tests/integration/smtp.mjs
-    npx playwright install chromium firefox webkit
+    npm ci --prefix tests/browser
+    npm exec --prefix tests/browser -- playwright install chromium firefox webkit
     node tests/browser/run.mjs
 
-Browser tests create their own SQLite database, use synthetic example.test accounts, and exercise the real public/index.php with CSRF enabled. The fixed clock exists only in the test router. Set BROWSER_ENGINES=chromium,firefox,edge,webkit to include an installed Edge. Optional TEST_PHP_INI and PLAYWRIGHT_MODULE_DIR support external test runtimes.
+Browser tests run on a development/CI machine with Node 22+, independently of the Node 18-compatible server build. Their Playwright dependencies and lockfile live in tests/browser. They create their own SQLite database, use synthetic example.test accounts, and exercise the real public/index.php with CSRF enabled. The fixed clock exists only in the test router. Set BROWSER_ENGINES=chromium,firefox,edge,webkit to include an installed Edge. Optional TEST_PHP_INI and PLAYWRIGHT_MODULE_DIR support external test runtimes.
 
 The concurrency test uses separate PHP processes. It normally creates an isolated SQLite file. MySQL runs require LAUNDRY_TEST_DB=mysql and an explicitly configured disposable database whose name ends in _test; that database is reset.
 

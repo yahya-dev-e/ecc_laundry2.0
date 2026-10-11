@@ -6,6 +6,16 @@ on:
 permissions:
   contents: read
 jobs:
+  node18-build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '18.8.0'
+          cache: npm
+      - run: npm ci --engine-strict
+      - run: npm run build
   regression:
     strategy:
       fail-fast: false
@@ -32,7 +42,8 @@ jobs:
       - run: php tests/integration/upgrade.php
       - run: php tests/integration/concurrency.php
       - run: node tests/integration/smtp.mjs
-      - run: npx playwright install --with-deps chromium firefox webkit
+      - run: npm ci --prefix tests/browser
+      - run: npm exec --prefix tests/browser -- playwright install --with-deps chromium firefox webkit
       - run: node tests/browser/run.mjs
       - uses: actions/upload-artifact@v4
         if: always()

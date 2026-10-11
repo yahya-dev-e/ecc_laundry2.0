@@ -15,7 +15,7 @@ composer install --no-dev --prefer-dist --optimize-autoloader
 copy .env.example .env
 ```
 
-Build assets using Node 22 or newer supported by Vite (`npm ci` then `npm run build`). If Node is unavailable on this older server, build the exact branch on your own computer and copy only `public/build` into this checkout.
+Build assets directly using the server's existing Node 18.8.0: run `npm ci` then `npm run build`. The compatible build stack is pinned in the lockfile; no Node upgrade or laptop asset transfer is required. Do not install the separate browser-test package on the server; it is for modern development/CI runtimes. Building elsewhere and copying public/build remains an optional alternative.
 
 ## 2. Fresh database, never a production clone
 
