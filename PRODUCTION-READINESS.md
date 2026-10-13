@@ -74,4 +74,8 @@ php artisan laundry:readiness
 
 This command is read-only and safe to share: it prints check labels, not credentials. A private test environment is expected to fail general-release checks such as PRIVATE_TEST_ENABLED. Do not disable safeguards merely to make the report green. Passing this command does not replace the manual items above.
 
-No new application database migration is introduced by this deeper review. If the real schema reports nonnullable student_id/room_number columns, stop and adapt/rehearse that schema change before enabling the simplified signup.
+Server follow-up on 13 October: the release readiness output confirmed the live database has NOT NULL student_id/room_number columns, unlike the repository's fresh-install schema. Added 2026_10_13_000001_make_profile_fields_optional.php to change those fields to nullable while retaining string type/length, collation and existing values. Already-nullable columns are skipped. A regression covers existing values, repeat execution and two new accounts with NULL profiles. This migration is now required for that live schema; automatic rollback to NOT NULL is refused because new accounts may lack those values.
+
+The user-reported release build and configuration checks passed on Windows Server using Node 18.8. Missing reset/queue tables and pending migrations remain unexecuted at this point. Apache still serves the old checkout. Verify the live migration history before executing the upgrade.
+
+Follow-up verification: 42 backend tests / 298 assertions pass. Previous 48 browser checks remain the recorded browser result; the schema-only follow-up was verified by the new migration regression.

@@ -222,7 +222,8 @@ Full findings, evidence and remaining release checks are in PRODUCTION-READINESS
 - Added read-only laundry:readiness configuration/schema diagnostic. Passing it does not certify the workers, scheduler, external email or production migration.
 - Latest verification: 41 backend tests / 295 assertions pass; 48 browser workflow checks pass across Chromium, Firefox, Edge and WebKit with no page errors; Node 18.8 production build passes; local SMTP, migration recovery, independent-process booking races and committed-cycle queue-outage integrations pass.
 - Expanded browser signup tests initially exhausted the shared test IP limit. Each engine now receives a fresh guarded synthetic database/rate-limit state; application throttles remain enabled.
-- No new application migration is required by this pass. Actual production-schema nullable profile columns still need verification. No external email was sent, main was not changed and the school server was not deployed by the agent.
+- Server follow-up confirmed the live profile columns are NOT NULL. Added 2026_10_13_000001_make_profile_fields_optional.php to permit NULL without removing existing metadata, preserving string type/length and collation; already-nullable columns are skipped. New regression covers existing-value preservation, repeat execution and multiple NULL profiles. No external email was sent or main branch changed.
+- The user prepared a separate laundry-release checkout, copied the existing production .env and built its frontend successfully on the server. Release configuration checks pass. Reset/queue tables and pending migrations remain outstanding; Apache still points to the old checkout at this stage.
 
 ## Complete tracked-file inventory (updated)
 
@@ -360,3 +361,5 @@ The following appendix is generated from Git against the audit commit. It includ
 | M | `tests/TestCase.php` |
 | M | `tests/Unit/BookingServiceTest.php` |
 | M | `vite.config.js` |
+| A | `database/migrations/2026_10_13_000001_make_profile_fields_optional.php` |
+| A | `tests/Feature/LegacyProfileMigrationTest.php` |
