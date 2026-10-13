@@ -225,6 +225,8 @@ Full findings, evidence and remaining release checks are in PRODUCTION-READINESS
 - Server follow-up confirmed the live profile columns are NOT NULL. Added 2026_10_13_000001_make_profile_fields_optional.php to permit NULL without removing existing metadata, preserving string type/length and collation; already-nullable columns are skipped. New regression covers existing-value preservation, repeat execution and multiple NULL profiles. No external email was sent or main branch changed.
 - The user prepared a separate laundry-release checkout, copied the existing production .env and built its frontend successfully on the server. Release configuration checks pass. Reset/queue tables and pending migrations remain outstanding; Apache still points to the old checkout at this stage.
 
+The next server check found an existing transactions table whose creation migration is still pending. Its migration now validates and adopts an existing ledger instead of recreating it; dropping an adopted ledger is refused. Foreign-key repair uses actual MySQL constraint names and SQLite column-based removal. Verification reached 43 backend tests / 300 assertions, with seven legacy partial-upgrade checks passing.
+
 ## Complete tracked-file inventory (updated)
 
 The following appendix is generated from Git against the audit commit. It includes dependency locks, tests and configuration as well as product code. A means added; M means modified. Consult the Git diff for exact line-level changes; the sections above explain their intended effect.

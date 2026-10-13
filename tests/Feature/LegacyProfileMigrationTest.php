@@ -29,4 +29,15 @@ class LegacyProfileMigrationTest extends TestCase
         }
         $this->assertSame(2, User::whereNull('student_id')->whereNull('room_number')->count());
     }
+
+    public function test_existing_ledger_is_adopted_without_recreating_or_changing_rows(): void
+    {
+        $user = User::factory()->create();
+        $transaction = $user->transactions()->create(['amount' => 17, 'type' => 'topup', 'description' => 'Existing ledger record']);
+        $migration = require database_path('migrations/2026_01_01_000003_create_transactions_table.php');
+        $migration->up();
+        $migration->up();
+        $this->assertSame(17, (int) $transaction->fresh()->amount);
+        $this->assertDatabaseCount('transactions', 1);
+    }
 }

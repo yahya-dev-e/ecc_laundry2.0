@@ -11,6 +11,15 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (Schema::hasTable('transactions')) {
+            foreach (['id', 'user_id', 'booking_id', 'amount', 'type', 'description', 'created_at', 'updated_at'] as $column) {
+                if (! Schema::hasColumn('transactions', $column)) {
+                    throw new RuntimeException('Existing transactions table is missing '.$column.'; inspect the ledger before upgrading.');
+                }
+            }
+
+            return;
+        }
         Schema::create('transactions', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
@@ -30,6 +39,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('transactions');
+        throw new RuntimeException('The ledger may predate migration history; use a reviewed restore plan instead of dropping it.');
     }
 };

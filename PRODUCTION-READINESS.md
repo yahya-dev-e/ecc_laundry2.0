@@ -79,3 +79,5 @@ Server follow-up on 13 October: the release readiness output confirmed the live 
 The user-reported release build and configuration checks passed on Windows Server using Node 18.8. Missing reset/queue tables and pending migrations remain unexecuted at this point. Apache still serves the old checkout. Verify the live migration history before executing the upgrade.
 
 Follow-up verification: 42 backend tests / 298 assertions pass. Previous 48 browser checks remain the recorded browser result; the schema-only follow-up was verified by the new migration regression.
+
+Migration-history follow-up: the live database contains transactions even though its creation migration is pending. The migration now validates and adopts an existing ledger without recreating it; missing required columns stop the upgrade. Automatic down() refuses to delete an adopted ledger. Legacy foreign-key repair uses the actual constraint name on MySQL and the required column-based operation on SQLite. Verification: 43 backend tests / 300 assertions pass, plus seven partial-upgrade integration checks. The actual MySQL table definition still needs inspection before migration.

@@ -81,8 +81,8 @@ return new class extends Migration
             if ($key['columns'] === ['booking_id'] && $key['foreign_table'] !== 'reservations') {
                 Schema::disableForeignKeyConstraints();
                 try {
-                    Schema::table('transactions', function (Blueprint $t) {
-                        $t->dropForeign(['booking_id']);
+                    Schema::table('transactions', function (Blueprint $t) use ($key) {
+                        $t->dropForeign(DB::connection()->getDriverName() === 'sqlite' ? ['booking_id'] : $key['name']);
                         $t->foreign('booking_id')->references('id')->on('reservations')->nullOnDelete();
                     });
                 } finally {
