@@ -41,6 +41,7 @@ jobs:
       - run: php vendor/phpunit/phpunit/phpunit --fail-on-warning
       - run: php tests/integration/upgrade.php
       - run: php tests/integration/concurrency.php
+      - run: php tests/integration/cycle-outage.php
       - run: node tests/integration/smtp.mjs
       - run: npm ci --prefix tests/browser
       - run: npm exec --prefix tests/browser -- playwright install --with-deps chromium firefox webkit

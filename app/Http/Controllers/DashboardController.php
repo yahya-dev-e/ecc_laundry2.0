@@ -153,9 +153,10 @@ class DashboardController extends Controller
             if ($lastIndex >= 0) {
                 $sameMachine = (int) $mergedBlocks[$lastIndex]['machine_id'] === (int) $res->machine_id;
                 $sameUser = ($mergedBlocks[$lastIndex]['user_id'] === $res->user_id) && ($mergedBlocks[$lastIndex]['user_id'] !== null);
+                $sameCancellationState = $mergedBlocks[$lastIndex]['cancellable'] === $res->canBeCancelled();
                 $isContiguous = $res->start_time->lte($mergedBlocks[$lastIndex]['end_time']);
 
-                if ($sameMachine && $sameUser && $isContiguous) {
+                if ($sameMachine && $sameUser && $sameCancellationState && $isContiguous) {
                     if ($res->end_time->gt($mergedBlocks[$lastIndex]['end_time'])) {
                         $mergedBlocks[$lastIndex]['end_time'] = $res->end_time->copy();
                     }
@@ -172,6 +173,7 @@ class DashboardController extends Controller
                 'machine' => $res->machine,
                 'user_id' => $res->user_id,
                 'user' => $res->user,
+                'cancellable' => $res->canBeCancelled(),
                 'start_time' => $res->start_time->copy(),
                 'end_time' => $res->end_time->copy(),
             ];
@@ -184,7 +186,7 @@ class DashboardController extends Controller
             $clampedEnd = $block['end_time']->gt($dayEndExclusive) ? $dayEndExclusive->copy() : $block['end_time']->copy();
 
             $startMinutes = max(0, (int) $dayStart->diffInMinutes($clampedStart, false));
-            $durationMinutes = max(30, (int) $clampedStart->diffInMinutes($clampedEnd, false));
+            $durationMinutes = max(1, (int) $clampedStart->diffInMinutes($clampedEnd, false));
             $endMinutes = $startMinutes + $durationMinutes;
 
             $durationFormatted = $durationMinutes >= 60

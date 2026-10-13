@@ -94,7 +94,8 @@ class Reservation extends Model
     {
         return ! $this->started_at && ! $this->cancelled_at && ! $this->released_at && ! $this->completed_at
             && $this->start_time && $this->end_time
-            && now()->betweenIncluded($this->start_time, $this->start_time->copy()->addMinutes(config('laundry.grace_period_minutes', 15)))
+            && now()->gte($this->start_time)
+            && now()->lt($this->start_time->copy()->addMinutes(config('laundry.grace_period_minutes', 15)))
             && $this->end_time->isFuture();
     }
 

@@ -87,7 +87,14 @@ class BookingService
             }
             $booking->update(['started_at' => now()]);
             $machine->update(['status' => MachineStatus::IN_USE, 'active_reservation_id' => $booking->id]);
-            DB::afterCommit(fn () => event(new CycleStarted($machine->fresh(), $booking->fresh())));
+            DB::afterCommit(function () use ($machine, $booking) {
+                try {
+                    event(new CycleStarted($machine->fresh(), $booking->fresh()));
+                } catch (\Throwable $e) {
+                    // The cycle is already committed; a broadcast outage must not report a failed start.
+                    report($e);
+                }
+            });
 
             return $machine;
         }, 5);
@@ -107,7 +114,14 @@ class BookingService
             $booking->update(['completed_at' => now()]);
             $machine->update(['active_reservation_id' => null,
                 'status' => $machine->status->isOperable() ? MachineStatus::AVAILABLE : $machine->status]);
-            DB::afterCommit(fn () => event(new CycleCompleted($machine->fresh(), $booking->fresh())));
+            DB::afterCommit(function () use ($machine, $booking) {
+                try {
+                    event(new CycleCompleted($machine->fresh(), $booking->fresh()));
+                } catch (\Throwable $e) {
+                    // CheckActiveCycles redispatches completed, unnotified reservations.
+                    report($e);
+                }
+            });
         }, 5);
     }
 

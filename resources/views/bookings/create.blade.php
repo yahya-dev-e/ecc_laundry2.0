@@ -1,6 +1,6 @@
 @extends('layouts.app')
 @section('content')
-<div class="max-w-3xl mx-auto space-y-5" x-data="bookingForm({{ $selectedMachine?->id ?? $machines->first()?->id ?? 'null' }}, @js($initialDate))">
+<div class="max-w-3xl mx-auto space-y-5" x-data="bookingForm({{ $selectedMachine?->id ?? $machines->first()?->id ?? 'null' }}, @js($initialDate))" @pageshow.window="submitting = false; if ($event.persisted) loadSlots()">
     <h1 class="text-xl font-bold">Réserver une machine</h1>
     <p class="text-sm text-slate-600">Horaires du campus : {{ config('app.timezone') }}. Réservation jusqu’au {{ \Carbon\Carbon::parse($maxDate)->format('d/m/Y') }} inclus.</p>
     @if($machines->isEmpty())

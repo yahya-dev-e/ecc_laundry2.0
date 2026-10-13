@@ -5,10 +5,14 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Notifications\WelcomeNotification;
+use App\Rules\SafePassword;
+use App\Support\AccountInput;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rules\Password;
+use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
 {
@@ -24,7 +28,7 @@ class AuthController extends Controller
 
     public function login(Request $request)
     {
-        $request->merge(['email' => strtolower(trim((string) $request->input('email')))]);
+        AccountInput::normalizeEmail($request);
         $credentials = $request->validate(['email' => ['required', 'email'], 'password' => ['required', 'string']]);
         if (! Auth::attempt($credentials, $request->boolean('remember'))) {
             return back()->withErrors(['email' => 'Les identifiants ne correspondent pas à nos données.'])->onlyInput('email');
@@ -37,17 +41,21 @@ class AuthController extends Controller
 
     public function register(Request $request)
     {
-        $request->merge(['email' => strtolower(trim((string) $request->input('email')))]);
+        AccountInput::normalizeEmail($request);
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
-            'student_id' => ['required', 'string', 'max:50', 'unique:users,student_id'],
-            'room_number' => ['required', 'string', 'max:50'],
-            'password' => ['required', 'confirmed', Password::min(8)],
-        ]);
-        $user = DB::transaction(fn () => User::create([
-            ...collect($validated)->except('password_confirmation')->all(), 'role' => 'student',
-        ]));
+            'password' => ['required', 'string', 'confirmed', Password::min(8), new SafePassword],
+        ], ['email.unique' => 'Un compte existe déjà avec cette adresse. Connectez-vous ou réinitialisez votre mot de passe.']);
+        try {
+            $user = DB::transaction(fn () => User::create([
+                ...collect($validated)->only(['name', 'email', 'password'])->all(), 'role' => 'student',
+            ]));
+        } catch (UniqueConstraintViolationException $e) {
+            throw ValidationException::withMessages([
+                'email' => 'Un compte existe déjà avec cette adresse. Connectez-vous ou réinitialisez votre mot de passe.',
+            ]);
+        }
         $user->refresh();
         try {
             $user->notify((new WelcomeNotification)->afterCommit());

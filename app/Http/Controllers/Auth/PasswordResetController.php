@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Jobs\SendResetLink;
 use App\Models\User;
+use App\Rules\SafePassword;
+use App\Support\AccountInput;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -21,7 +23,7 @@ class PasswordResetController extends Controller
 
     public function sendResetLinkEmail(Request $request)
     {
-        $request->merge(['email' => strtolower(trim((string) $request->input('email')))]);
+        AccountInput::normalizeEmail($request);
         $request->validate(['email' => ['required', 'email', 'max:255']]);
         $user = User::where('email', $request->email)->first();
         if ($user) {
@@ -44,15 +46,17 @@ class PasswordResetController extends Controller
 
     public function showResetForm(Request $request, string $token)
     {
+        $request->validate(['email' => ['nullable', 'string', 'email', 'max:255']]);
+
         return view('auth.reset-password', ['token' => $token, 'email' => $request->query('email', '')]);
     }
 
     public function reset(Request $request)
     {
-        $request->merge(['email' => strtolower(trim((string) $request->input('email')))]);
+        AccountInput::normalizeEmail($request);
         $data = $request->validate([
             'email' => ['required', 'email'], 'token' => ['required', 'string', 'size:64'],
-            'password' => ['required', 'confirmed', Password::min(8)],
+            'password' => ['required', 'string', 'confirmed', Password::min(8), new SafePassword],
         ]);
         $changed = DB::transaction(function () use ($data) {
             $user = User::where('email', $data['email'])->lockForUpdate()->first();

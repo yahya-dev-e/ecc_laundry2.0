@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Support\AccountInput;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\IpUtils;
@@ -23,7 +24,7 @@ class PrivateTestAccess
         }
 
         if ($request->isMethod('post') && $request->is('login', 'forgot-password', 'reset-password')) {
-            $email = strtolower(trim((string) $request->input('email')));
+            $email = AccountInput::email($request->input('email'));
             if (! in_array($email, $allowed, true)) {
                 if ($request->is('forgot-password')) {
                     return back()->with('status', 'Si cette adresse correspond à un compte, vous recevrez un lien de réinitialisation. Vérifiez également vos courriers indésirables.');

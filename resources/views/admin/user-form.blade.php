@@ -3,13 +3,13 @@
 @php($person = $user ?? null)
 <div class="max-w-xl mx-auto bg-white p-5 sm:p-8 rounded-xl border border-slate-200">
     <h1 class="text-xl font-bold mb-6">{{ $person ? 'Modifier le compte' : 'Ajouter un utilisateur' }}</h1>
-    <form method="POST" action="{{ $person ? route('admin.users.update') : route('admin.users.store') }}" class="space-y-4" x-data="{ submitting: false }" @submit="submitting = true">
+    <form method="POST" action="{{ $person ? route('admin.users.update') : route('admin.users.store') }}" class="space-y-4" x-data="{ submitting: false }" @submit="submitting = true" @pageshow.window="submitting = false">
         @csrf
         @if($person)<input type="hidden" name="id" value="{{ $person->id }}">@endif
         <x-form-field name="name" label="Nom complet" :value="$person?->name ?? ''" autocomplete="name" maxlength="255" />
         <x-form-field name="email" label="Adresse e-mail" type="email" :value="$person?->email ?? ''" autocomplete="email" autocapitalize="none" maxlength="255" />
-        <x-form-field name="student_id" label="Numéro étudiant" :value="$person?->student_id ?? ''" maxlength="50" />
-        <x-form-field name="room_number" label="Chambre" :value="$person?->room_number ?? ''" maxlength="50" />
+        <x-form-field name="student_id" label="Numéro étudiant (facultatif)" :required="false" :value="$person?->student_id ?? ''" maxlength="50" />
+        <x-form-field name="room_number" label="Chambre (facultatif)" :required="false" :value="$person?->room_number ?? ''" maxlength="50" />
         <div><label for="role" class="block font-semibold text-sm mb-1">Rôle</label>
             <select id="role" name="role" class="border rounded-lg p-2 w-full">
                 @foreach(['student' => 'Étudiant', 'admin' => 'Administrateur'] as $value => $label)

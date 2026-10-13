@@ -28,7 +28,7 @@ class CreatePrivateTester extends Command
         }
         $name = $this->ask('Name');
         $password = $this->secret('Choose a private test password (at least 12 characters)');
-        if (! $name || strlen((string) $password) < 12 || $password !== $this->secret('Confirm password')) {
+        if (! $name || strlen((string) $password) < 12 || strlen((string) $password) > 72 || str_contains((string) $password, "\0") || $password !== $this->secret('Confirm password')) {
             $this->error('A name and matching password of at least 12 characters are required.');
 
             return self::FAILURE;

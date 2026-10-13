@@ -2,7 +2,7 @@
 @section('title', 'Réinitialiser le mot de passe')
 @section('content')
 <h1 class="text-2xl font-bold text-slate-900 mb-6">Nouveau mot de passe</h1>
-<form method="POST" action="{{ route('password.update') }}" class="space-y-4" x-data="{ submitting: false }" @submit="submitting = true">
+<form method="POST" action="{{ route('password.update') }}" class="space-y-4" x-data="{ submitting: false }" @submit="submitting = true" @pageshow.window="submitting = false">
     @csrf
     <input type="hidden" name="token" value="{{ $token }}">
     <x-form-field name="email" label="Adresse e-mail" type="email" :value="$email" autocomplete="email" autocapitalize="none" />

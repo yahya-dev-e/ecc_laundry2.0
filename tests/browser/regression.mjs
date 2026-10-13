@@ -31,7 +31,7 @@ for (const engine of (process.env.BROWSER_ENGINES || 'chromium,firefox,edge,webk
         const email = identity + '@example.test', password = 'Browser-test-pass-42!';
         await step('registration validation is visible', async () => {
             await page.goto(base + '/register');
-            for (const [name,value] of Object.entries({name: 'Test Student', email, student_id: identity, room_number: 'TEST',
+            for (const [name,value] of Object.entries({name: 'Test Student', email,
                 password, password_confirmation: 'Wrong-password-42!'})) await page.locator('#' + name).fill(value);
             await page.getByRole('button', {name: 'Créer mon compte', exact: true}).click();
             await page.getByRole('alert').waitFor();
@@ -55,6 +55,37 @@ for (const engine of (process.env.BROWSER_ENGINES || 'chromium,firefox,edge,webk
             await page.locator('#password').fill(password);
             await page.getByRole('button', {name: 'Se connecter', exact: true}).click();
             await page.waitForURL('**/dashboard');
+        });
+        await step('duplicate signup and wrong login keep readable inline feedback', async () => {
+            await page.getByRole('button', {name: 'Se déconnecter', exact: true}).click();
+            await page.waitForURL('**/login');
+            await page.locator('#email').fill(email);
+            await page.locator('#password').fill('Incorrect-password');
+            await page.getByRole('button', {name: 'Se connecter', exact: true}).click();
+            await page.getByRole('alert').waitFor();
+            assert.match(await page.getByRole('alert').innerText(), /identifiants/);
+            await page.goto(base + '/register');
+            assert.equal(await page.locator('#student_id, #room_number').count(), 0);
+            for (const [name,value] of Object.entries({name:'Duplicate', email, password, password_confirmation:password})) await page.locator('#'+name).fill(value);
+            await page.getByRole('button', {name: 'Créer mon compte', exact: true}).click();
+            await page.getByRole('alert').waitFor();
+            assert.match(await page.getByRole('alert').innerText(), /compte existe déjà/);
+            assert.equal(await page.locator('#password').inputValue(), '');
+            await page.goto(base + '/login');
+            await page.locator('#email').fill(email);
+            await page.locator('#password').fill(password);
+            await page.getByRole('button', {name: 'Se connecter', exact: true}).click();
+            await page.waitForURL('**/dashboard');
+        });
+        await step('missing page and expired form retain site branding on phone', async () => {
+            const response = await page.goto(base + '/does-not-exist');
+            assert.equal(response.status(),404);
+            await page.getByRole('heading', {name:'Page introuvable'}).waitFor();
+            assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
+            const expired = await page.request.post(base + '/bookings', {form:{machine_id:'1'}});
+            assert.equal(expired.status(),419);
+            assert.match(await expired.text(), /Session expirée/);
+            await page.goto(base + '/dashboard');
         });
         await step('mobile menu focus trap and Escape', async () => {
             const toggle = page.getByRole('button', {name: 'Ouvrir le menu de navigation'});

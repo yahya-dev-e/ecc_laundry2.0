@@ -15,6 +15,14 @@
         "pass": true
       },
       {
+        "name": "duplicate signup and wrong login keep readable inline feedback",
+        "pass": true
+      },
+      {
+        "name": "missing page and expired form retain site branding on phone",
+        "pass": true
+      },
+      {
         "name": "mobile menu focus trap and Escape",
         "pass": true
       },
@@ -62,6 +70,14 @@
       },
       {
         "name": "POST logout and normalized email login",
+        "pass": true
+      },
+      {
+        "name": "duplicate signup and wrong login keep readable inline feedback",
+        "pass": true
+      },
+      {
+        "name": "missing page and expired form retain site branding on phone",
         "pass": true
       },
       {
@@ -115,6 +131,14 @@
         "pass": true
       },
       {
+        "name": "duplicate signup and wrong login keep readable inline feedback",
+        "pass": true
+      },
+      {
+        "name": "missing page and expired form retain site branding on phone",
+        "pass": true
+      },
+      {
         "name": "mobile menu focus trap and Escape",
         "pass": true
       },
@@ -162,6 +186,14 @@
       },
       {
         "name": "POST logout and normalized email login",
+        "pass": true
+      },
+      {
+        "name": "duplicate signup and wrong login keep readable inline feedback",
+        "pass": true
+      },
+      {
+        "name": "missing page and expired form retain site branding on phone",
         "pass": true
       },
       {

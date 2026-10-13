@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Models\User;
+use App\Rules\SafePassword;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Validator;
 
@@ -24,15 +25,15 @@ class CreateAdministrator extends Command
         ];
         $validator = Validator::make($data, [
             'name' => 'required|string|max:255', 'email' => 'required|email|max:255|unique:users',
-            'student_id' => 'required|string|max:50|unique:users', 'room_number' => 'required|string|max:50',
-            'password' => 'required|string|min:12|confirmed',
+            'student_id' => 'nullable|string|max:50|unique:users', 'room_number' => 'nullable|string|max:50',
+            'password' => ['required', 'string', 'min:12', 'confirmed', new SafePassword],
         ]);
         if ($validator->fails()) {
             foreach ($validator->errors()->all() as $error) {
                 $this->error($error);
             }
 
-return self::FAILURE;
+            return self::FAILURE;
         }
         User::create(collect($data)->except('password_confirmation')->all() + ['role' => 'admin']);
         $this->info('Administrator created.');

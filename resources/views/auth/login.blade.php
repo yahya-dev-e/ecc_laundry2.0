@@ -43,26 +43,14 @@
                 Se connecter
             </h1>
 
-            @if (session('status'))
-                <div class="w-full max-w-xs p-3 mb-4 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-start space-x-2">
-                    <svg class="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
-                    <span>{{ session('status') }}</span>
-                </div>
-            @endif
-
-            @if (session('success'))
-                <div class="w-full max-w-xs p-3 mb-4 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-start space-x-2">
-                    <svg class="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
-                    <span>{{ session('success') }}</span>
-                </div>
-            @endif
+            @include('components.form-feedback')
 
             <!-- Form -->
             <form method="POST" action="{{ route('login') }}" class="w-full max-w-xs space-y-4">
                 @csrf
 
                 <div>
-                    <input type="email" id="email" name="email" value="{{ old('email') }}" placeholder="Email" autocomplete="email" autocapitalize="none" spellcheck="false" aria-label="Adresse email" required
+                    <input type="email" id="email" name="email" value="{{ is_string(old('email')) ? old('email') : '' }}" placeholder="Email" autocomplete="email" autocapitalize="none" spellcheck="false" aria-label="Adresse email" required
                            class="w-full px-4 py-3 rounded-md bg-[#f1f3f4] text-slate-800 placeholder-slate-400 text-xs border border-transparent focus:border-[#00b4a7] focus:bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00b4a7]/40 transition-all">
                 </div>
 

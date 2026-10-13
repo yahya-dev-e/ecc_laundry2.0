@@ -21,6 +21,8 @@ MAIL_MAILER=log records mail locally; it does not deliver to an inbox. Configure
 
 ## Rules
 
+- Public signup requires only name, email, password and confirmation. All email domains are accepted and reservations are available immediately; email ownership is not verified. Student ID and room are optional legacy/admin metadata.
+
 - Campus timezone defaults to Africa/Casablanca; the server decides available slots.
 - Default booking window: today through the date seven days ahead, inclusive, in campus time. On Sunday 11 October, dates through Sunday 18 October are available, including its 23:00–Monday 00:00 slot. Past starts and reservations ending beyond that final midnight are rejected.
 - Students receive eight hours per Monday–Sunday week; administrators receive a finite 100 hours. An administrator can set an individual limit.
@@ -59,6 +61,7 @@ Run queue workers under a supervisor, restart them when deploying code, monitor 
     php vendor/phpunit/phpunit/phpunit --fail-on-warning
     php tests/integration/upgrade.php
     php tests/integration/concurrency.php
+    php tests/integration/cycle-outage.php
     node tests/integration/smtp.mjs
     npm ci --prefix tests/browser
     npm exec --prefix tests/browser -- playwright install chromium firefox webkit
@@ -71,3 +74,5 @@ The concurrency test uses separate PHP processes. It normally creates an isolate
 ci/audit-fixes.yml.example contains a ready-to-enable workflow for Windows/macOS/Linux browser and backend checks, MySQL tests and a container build. Move it into .github/workflows/ with an account/token allowed to edit workflows. The current GitHub token has repo access but no workflow scope, so this template is not activated and no remote result is claimed. Current local results and compatibility limitations are in FIXES.md.
 
 Settings and complaints are not implemented features and are not linked as working pages. Availability polls every 30 seconds; dashboards/calendars offer a refresh notice rather than claiming a clock is real-time data synchronization.
+
+See PRODUCTION-READINESS.md for the 13 October deeper review and remaining server checks. Run php artisan laundry:readiness for a read-only deployment diagnostic; it does not certify external mail delivery or running workers/scheduler. SMTP connection timeout defaults to ten seconds (MAIL_TIMEOUT).

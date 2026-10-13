@@ -19,6 +19,10 @@ class ValidateSessionVersion
                 $request->session()->invalidate();
                 $request->session()->regenerateToken();
 
+                if ($request->expectsJson()) {
+                    return response()->json(['message' => 'Votre session a expiré. Veuillez vous reconnecter.'], 401);
+                }
+
                 return redirect()->route('login')->with('status', 'Votre session a expiré. Veuillez vous reconnecter.');
             }
         }

@@ -11,6 +11,7 @@ const env = {...process.env, APP_ENV:'local', APP_DEBUG:'false',
     APP_URL:'http://127.0.0.1:'+port, APP_TIMEZONE:'Africa/Casablanca',
     DB_CONNECTION:'sqlite', DB_DATABASE:database, SESSION_DRIVER:'database',
     SESSION_ENCRYPT:'true', CACHE_STORE:'database', QUEUE_CONNECTION:'database',
+    PRIVATE_TEST_ENABLED:'false',
     MAIL_MAILER:'log', MAIL_FROM_ADDRESS:'sender@example.test',
     FIXES_BROWSER_TEST:'1', BROWSER_TEST_URL:'http://127.0.0.1:'+port,
     BROWSER_ENGINES: process.env.BROWSER_ENGINES || 'chromium,firefox,webkit',
@@ -35,7 +36,22 @@ try {
         await new Promise(resolve=>setTimeout(resolve,200));
     }
     if(!ready)throw Error('Test server did not start');
-    await run(process.execPath,['tests/browser/regression.mjs']);
+    const engines = env.BROWSER_ENGINES.split(',');
+    const results = [];
+    const evidence = new URL('./evidence/results.json', import.meta.url);
+    let failed = false;
+    for (let index = 0; index < engines.length; index++) {
+        // Each engine gets fresh synthetic users and rate-limit state.
+        // Do not weaken the application's signup throttle to accommodate tests.
+        if (index > 0) await run(process.env.PHP_BINARY || 'php',[...phpArgs,'tests/browser/seed.php']);
+        env.BROWSER_ENGINES = engines[index];
+        try { await run(process.execPath,['tests/browser/regression.mjs']); }
+        catch { failed = true; }
+        const engineResults = JSON.parse(fs.readFileSync(evidence, 'utf8'));
+        results.push(...engineResults);
+    }
+    fs.writeFileSync(evidence, JSON.stringify(results,null,2));
+    if (failed) throw new Error('One or more browser workflows failed; inspect tests/browser/evidence/results.json');
 } finally {
     if(server){server.kill();await new Promise(resolve=>{server.once('exit',resolve);setTimeout(resolve,3000);});}
     fs.rmSync(runtime,{recursive:true,force:true});

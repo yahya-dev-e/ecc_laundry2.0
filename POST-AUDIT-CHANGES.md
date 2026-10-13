@@ -1,8 +1,8 @@
 # Complete post-audit change record
 
-Date: 11 October 2026. Repository: yahya-dev-e/ecc_laundry2.0.
+Created: 11 October 2026. Updated: 13 October 2026. Repository: yahya-dev-e/ecc_laundry2.0.
 
-This records the implemented website changes after audit commit `24bfc898160f6ab5ce804e2220d46e5d180e384b`, through the rolling-window and Node 18 compatibility updates on `codex/private-school-test-2026-10-11`. It includes behavior, infrastructure, tests, deployment preparation and the server steps reported in this conversation. The appendix lists every changed tracked file. It is a change record, not a claim that every feature has been verified in production.
+This records the implemented website changes after audit commit `24bfc898160f6ab5ce804e2220d46e5d180e384b`, through the rolling-window, Node 18 compatibility and 13 October production-readiness updates on `codex/private-school-test-2026-10-11`. It includes behavior, infrastructure, tests, deployment preparation and the server steps reported in this conversation. The appendix lists every changed tracked file. It is a change record, not a claim that every feature has been verified in production.
 
 ## Branches and scope
 
@@ -18,7 +18,7 @@ This records the implemented website changes after audit commit `24bfc898160f6ab
 ## Authentication and account security
 
 - Login and registration normalize email by trimming whitespace and lowercasing it.
-- Registration validates required identity fields, unique email/student ID, password confirmation and minimum password length. Submitted role fields cannot grant administration: public signup always creates a student.
+- Registration now requires only name, unique email, password and confirmation. On 13 October, the user explicitly requested removing student ID and dorm room from signup, accepting all email domains and allowing reservations immediately without verification. Public signup ignores submitted role/profile fields and always creates a student. Existing ID/room data is retained for optional administrative editing.
 - Newly created users are refreshed from the database before authentication so the database's session-version default is present.
 - Successful login/signup regenerate the session identifier and store the user's authentication version.
 - Logout is POST-only, invalidates the session and regenerates the CSRF token.
@@ -204,7 +204,27 @@ php artisan config:clear
 
 Then restart the test server. npm ci replaces node_modules according to the committed lockfile; it does not touch .env, the database, PHP dependencies or main. Keep the separate tests/browser package for a modern development/CI machine. Laravel/PHP continues serving the website; this does not turn it into a Node web server.
 
-## Complete tracked-file inventory
+## Additional deep review — 13 October 2026
+
+Full findings, evidence and remaining release checks are in PRODUCTION-READINESS.md. This pass starts from Node-18-compatible commit 068502e.
+
+- Removed ID/room signup requirements and made their admin/initial-administrator fields optional. Added explicit duplicate-account sign-in/reset guidance.
+- Login now displays validation errors. Signup/admin unique-constraint races become form validation rather than generic server errors.
+- Added scalar-safe email normalization across auth, throttles and private access; safe rendering of malformed old input; reset-email query and booking preselection validation.
+- Added password checks against bcrypt truncation beyond 72 bytes and null-byte hashing failures for new credentials. Legacy login behavior remains.
+- Added branded French HTML error pages (including 419, 429 and 500) without echoing exception details. They work without Vite assets or a database. Common French validation messages and shared feedback stay on the form; JSON errors retain JSON responses.
+- Session-version expiry now returns 401 to JSON polling instead of redirecting to login HTML.
+- Resolved the exact grace-deadline overlap between cycle start and no-show release.
+- Post-commit event/queue failures no longer falsely report that a committed cycle start/completion failed. Periodic checks recover actual completed-but-unnotified reservations, excluding inferred legacy history.
+- Corrected twenty-minute calendar labels and prevented running blocks from swallowing future cancellation controls. Replaced ad-hoc modal escaping with JavaScript-safe encoding; removed invented fallback email addresses.
+- Reset disabled submission flags on browser pageshow; restored booking pages refresh slot availability.
+- Added configurable SMTP connection timeout (MAIL_TIMEOUT, default 10 seconds).
+- Added read-only laundry:readiness configuration/schema diagnostic. Passing it does not certify the workers, scheduler, external email or production migration.
+- Latest verification: 41 backend tests / 295 assertions pass; 48 browser workflow checks pass across Chromium, Firefox, Edge and WebKit with no page errors; Node 18.8 production build passes; local SMTP, migration recovery, independent-process booking races and committed-cycle queue-outage integrations pass.
+- Expanded browser signup tests initially exhausted the shared test IP limit. Each engine now receives a fresh guarded synthetic database/rate-limit state; application throttles remain enabled.
+- No new application migration is required by this pass. Actual production-schema nullable profile columns still need verification. No external email was sent, main was not changed and the school server was not deployed by the agent.
+
+## Complete tracked-file inventory (updated)
 
 The following appendix is generated from Git against the audit commit. It includes dependency locks, tests and configuration as well as product code. A means added; M means modified. Consult the Git diff for exact line-level changes; the sections above explain their intended effect.
 
@@ -217,6 +237,7 @@ The following appendix is generated from Git against the audit commit. It includ
 | M | `.gitignore` |
 | A | `app/Console/Commands/CreateAdministrator.php` |
 | A | `app/Console/Commands/CreatePrivateTester.php` |
+| A | `app/Console/Commands/ReadinessCheck.php` |
 | A | `app/Console/Commands/ReconcileLedger.php` |
 | M | `app/Enums/MachineType.php` |
 | A | `app/Http/Controllers/Admin/UserController.php` |
@@ -243,9 +264,11 @@ The following appendix is generated from Git against the audit commit. It includ
 | M | `app/Notifications/ResetPasswordNotification.php` |
 | M | `app/Notifications/WelcomeNotification.php` |
 | M | `app/Providers/AppServiceProvider.php` |
+| A | `app/Rules/SafePassword.php` |
 | M | `app/Services/BookingService.php` |
 | A | `app/Services/BookingWindow.php` |
 | M | `app/Services/MachineSchedulerService.php` |
+| A | `app/Support/AccountInput.php` |
 | M | `bootstrap/app.php` |
 | A | `bootstrap/cache/.gitignore` |
 | A | `ci/audit-fixes.yml.example` |
@@ -255,6 +278,7 @@ The following appendix is generated from Git against the audit commit. It includ
 | M | `config/app.php` |
 | M | `config/database.php` |
 | M | `config/laundry.php` |
+| A | `config/mail.php` |
 | A | `config/private_test.php` |
 | A | `config/session.php` |
 | A | `database/factories/UserFactory.php` |
@@ -264,6 +288,7 @@ The following appendix is generated from Git against the audit commit. It includ
 | M | `database/seeders/DatabaseSeeder.php` |
 | M | `database/seeders/MachineSeeder.php` |
 | A | `FIXES.md` |
+| A | `lang/fr/validation.php` |
 | M | `package-lock.json` |
 | M | `package.json` |
 | M | `phpunit.xml` |
@@ -271,6 +296,7 @@ The following appendix is generated from Git against the audit commit. It includ
 | M | `postcss.config.js` |
 | M | `preview-server.js` |
 | A | `PRIVATE-TEST.md` |
+| A | `PRODUCTION-READINESS.md` |
 | A | `public/.htaccess` |
 | A | `public/index.php` |
 | M | `README.md` |
@@ -289,6 +315,17 @@ The following appendix is generated from Git against the audit commit. It includ
 | A | `resources/views/components/form-field.blade.php` |
 | A | `resources/views/components/live-revision.blade.php` |
 | M | `resources/views/dashboard.blade.php` |
+| A | `resources/views/errors/401.blade.php` |
+| A | `resources/views/errors/402.blade.php` |
+| A | `resources/views/errors/403.blade.php` |
+| A | `resources/views/errors/404.blade.php` |
+| A | `resources/views/errors/419.blade.php` |
+| A | `resources/views/errors/429.blade.php` |
+| A | `resources/views/errors/4xx.blade.php` |
+| A | `resources/views/errors/500.blade.php` |
+| A | `resources/views/errors/503.blade.php` |
+| A | `resources/views/errors/5xx.blade.php` |
+| A | `resources/views/errors/layout.blade.php` |
 | M | `resources/views/layouts/app.blade.php` |
 | A | `resources/views/layouts/auth.blade.php` |
 | M | `resources/views/layouts/navigation.blade.php` |
@@ -313,8 +350,10 @@ The following appendix is generated from Git against the audit commit. It includ
 | M | `tests/Feature/BookingTest.php` |
 | M | `tests/Feature/MachineAvailabilityTest.php` |
 | A | `tests/Feature/PrivateTestAccessTest.php` |
+| A | `tests/Feature/ReadinessTest.php` |
 | A | `tests/integration/concurrency.php` |
 | A | `tests/integration/contender.php` |
+| A | `tests/integration/cycle-outage.php` |
 | A | `tests/integration/mail.php` |
 | A | `tests/integration/smtp.mjs` |
 | A | `tests/integration/upgrade.php` |

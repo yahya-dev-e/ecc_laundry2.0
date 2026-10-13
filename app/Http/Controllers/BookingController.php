@@ -20,6 +20,7 @@ class BookingController extends Controller
 
     public function create(Request $request)
     {
+        $request->validate(['machine_id' => ['nullable', 'integer'], 'date' => ['nullable', 'date_format:Y-m-d'], 'start_time' => ['nullable', 'date']]);
         $machines = Machine::orderBy('name')->get();
         $selectedMachine = $machines->firstWhere('id', (int) $request->query('machine_id'));
         $minDate = now()->toDateString();

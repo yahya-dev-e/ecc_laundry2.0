@@ -331,7 +331,7 @@
                             $machineColor = $machineColorPalette[$block['machine']->name ?? ''] ?? $block['machine']->color ?? '#4338ca';
                             $mName = $block['machine']->name ?? 'Machine';
                             $mTypeStr = ($block['machine']->type instanceof \App\Enums\MachineType ? $block['machine']->type->value : (string)($block['machine']->type ?? '')) === 'dryer' ? 'Sèche-linge' : 'Machine à laver';
-                            $uEmail = $block['user']?->email ?? ($block['user']?->name ? strtolower(str_replace(' ', '.', $block['user']->name)) . '@fecc.ma' : 'etudiant@fecc.ma');
+                            $uEmail = $block['user']?->email ?? 'Compte indisponible';
                             $canCancelBlock = $block['start_time']->isFuture() && auth()->check() && (auth()->id() === ($block['user_id'] ?? null) || auth()->user()->isAdmin());
                         @endphp
                         <div role="button" tabindex="0" @keydown.enter.prevent="$el.click()" @keydown.space.prevent="$el.click()" style="background-color: {{ $machineColor }}; top: {{ $block['top'] + 1 }}px; height: {{ $block['height'] - 2 }}px; left: calc({{ $block['leftPct'] }}% + 4px); width: calc({{ $block['widthPct'] }}% - 8px);"
@@ -339,12 +339,12 @@
                              @click.stop="openReservationModal({
                                  id: {{ $block['id'] ?? 0 }},
                                  reservation_ids: {{ json_encode($block['reservation_ids'] ?? [$block['id']]) }},
-                                 code: '{{ addslashes($mName) }}',
-                                 type: '{{ addslashes($mTypeStr) }}',
-                                 bg: '{{ $machineColor }}',
+                                 code: @js($mName),
+                                 type: @js($mTypeStr),
+                                 bg: @js($machineColor),
                                  machine_id: {{ $block['machine_id'] ?? 1 }},
-                                 user: '{{ addslashes($uEmail) }}',
-                                 email: '{{ addslashes($uEmail) }}',
+                                 user: @js($uEmail),
+                                 email: @js($uEmail),
                                  date: '{{ $selectedDate }}',
                                  time: '{{ $block['timeFormatted'] }}',
                                  duration: '{{ $block['durationFormatted'] }}',
