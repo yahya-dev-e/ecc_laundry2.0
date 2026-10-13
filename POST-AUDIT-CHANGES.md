@@ -229,6 +229,8 @@ The next server check found an existing transactions table whose creation migrat
 
 The live ledger check confirmed 88 orphan references and no reservation foreign key. Added 2026_10_13_000002_preserve_legacy_ledger_links.php to archive original dangling IDs in legacy_booking_id, retain every ledger row, clear invalid active references and restore the reservation constraint. The full upgrade still applies its earlier ledger-unit conversion. Verification: 44 backend tests / 303 assertions pass.
 
+During the live maintenance upgrade, the optional-profile migration found student_id absent, rather than merely nonnullable. The migration now adds absent optional fields or relaxes existing ones, preserving accounts. A regression covers absent columns and repeated execution. The preceding four migrations already completed and are recorded in migration history; normal migrate resumes pending work.
+
 ## Complete tracked-file inventory (updated)
 
 The following appendix is generated from Git against the audit commit. It includes dependency locks, tests and configuration as well as product code. A means added; M means modified. Consult the Git diff for exact line-level changes; the sections above explain their intended effect.

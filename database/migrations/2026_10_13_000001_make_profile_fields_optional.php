@@ -11,7 +11,14 @@ return new class extends Migration
         foreach (['student_id', 'room_number'] as $name) {
             $column = collect(Schema::getColumns('users'))->firstWhere('name', $name);
             if (! $column) {
-                throw new RuntimeException('Missing users.'.$name.'; inspect the existing schema before upgrading.');
+                Schema::table('users', function (Blueprint $table) use ($name) {
+                    $field = $table->string($name)->nullable();
+                    if ($name === 'student_id') {
+                        $field->unique();
+                    }
+                });
+
+                continue;
             }
             if ($column['nullable']) {
                 continue;

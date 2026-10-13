@@ -41,6 +41,23 @@ class LegacyProfileMigrationTest extends TestCase
         $this->assertDatabaseCount('transactions', 1);
     }
 
+    public function test_missing_legacy_profile_columns_are_added_as_optional_and_repeatable(): void
+    {
+        $existing = User::factory()->create();
+        Schema::table('users', function (Blueprint $table) {
+            $table->dropUnique(['student_id']);
+            $table->dropColumn(['student_id', 'room_number']);
+        });
+        $migration = require database_path('migrations/2026_10_13_000001_make_profile_fields_optional.php');
+        $migration->up();
+        $migration->up();
+        $this->assertSame($existing->email, $existing->fresh()->email);
+        $this->assertNull($existing->fresh()->student_id);
+        $this->assertNull($existing->fresh()->room_number);
+        User::factory()->create(['student_id' => null, 'room_number' => null]);
+        $this->assertSame(2, User::whereNull('student_id')->whereNull('room_number')->count());
+    }
+
     public function test_orphan_ledger_links_are_preserved_and_constraint_restored_without_deleting_history(): void
     {
         Schema::table('transactions', fn (Blueprint $table) => $table->dropForeign(['booking_id']));
