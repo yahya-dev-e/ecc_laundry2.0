@@ -40,4 +40,19 @@ class LegacyProfileMigrationTest extends TestCase
         $this->assertSame(17, (int) $transaction->fresh()->amount);
         $this->assertDatabaseCount('transactions', 1);
     }
+
+    public function test_orphan_ledger_links_are_preserved_and_constraint_restored_without_deleting_history(): void
+    {
+        Schema::table('transactions', fn (Blueprint $table) => $table->dropForeign(['booking_id']));
+        $user = User::factory()->create();
+        $orphan = $user->transactions()->create(['booking_id' => 99999, 'amount' => -60, 'type' => 'booking_charge', 'description' => 'Historical charge']);
+        $migration = require database_path('migrations/2026_10_13_000002_preserve_legacy_ledger_links.php');
+        $migration->up();
+        $migration->up();
+        $this->assertDatabaseHas('transactions', ['id' => $orphan->id, 'booking_id' => null, 'legacy_booking_id' => 99999,
+            'amount' => -60, 'type' => 'booking_charge', 'description' => 'Historical charge']);
+        $this->assertDatabaseCount('transactions', 1);
+        $this->assertTrue(collect(Schema::getForeignKeys('transactions'))->contains(
+            fn ($key) => $key['columns'] === ['booking_id'] && $key['foreign_table'] === 'reservations'));
+    }
 }
