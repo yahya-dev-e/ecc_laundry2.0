@@ -231,6 +231,8 @@ The live ledger check confirmed 88 orphan references and no reservation foreign 
 
 During the live maintenance upgrade, the optional-profile migration found student_id absent, rather than merely nonnullable. The migration now adds absent optional fields or relaxes existing ones, preserving accounts. A regression covers absent columns and repeated execution. The preceding four migrations already completed and are recorded in migration history; normal migrate resumes pending work.
 
+The user subsequently completed the production MySQL migration, passed readiness, switched Apache and reported the public site working. A new user-requested policy drops email delivery older than 15 minutes (LAUNDRY_MAX_EMAIL_DELAY_MINUTES). Guards run when welcome/reset/completion messages execute; cycle age uses scheduled end, and recovery excludes expired alerts. Existing reset links and reservations remain valid. Added stale/recent-mail tests; backend total is now 48 tests / 316 assertions. No schema migration or frontend rebuild is needed for this policy.
+
 ## Complete tracked-file inventory (updated)
 
 The following appendix is generated from Git against the audit commit. It includes dependency locks, tests and configuration as well as product code. A means added; M means modified. Consult the Git diff for exact line-level changes; the sections above explain their intended effect.
@@ -370,3 +372,5 @@ The following appendix is generated from Git against the audit commit. It includ
 | A | `database/migrations/2026_10_13_000001_make_profile_fields_optional.php` |
 | A | `tests/Feature/LegacyProfileMigrationTest.php` |
 | A | `database/migrations/2026_10_13_000002_preserve_legacy_ledger_links.php` |
+| A | `app/Support/MailDeliveryWindow.php` |
+| A | `tests/Feature/MailDeliveryWindowTest.php` |

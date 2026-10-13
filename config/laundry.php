@@ -7,4 +7,5 @@ return [
     'grace_period_minutes' => (int) env('LAUNDRY_GRACE_PERIOD_MINUTES', 15),
     'restrict_to_current_week' => (bool) env('LAUNDRY_RESTRICT_CURRENT_WEEK', false),
     'max_advance_booking_days' => (int) env('LAUNDRY_MAX_ADVANCE_DAYS', 7),
+    'max_email_delay_minutes' => (int) env('LAUNDRY_MAX_EMAIL_DELAY_MINUTES', 15),
 ];

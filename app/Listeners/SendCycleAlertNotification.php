@@ -5,6 +5,7 @@ namespace App\Listeners;
 use App\Events\CycleCompleted;
 use App\Models\Reservation;
 use App\Notifications\CycleFinishedNotification;
+use App\Support\MailDeliveryWindow;
 use Illuminate\Contracts\Queue\ShouldQueueAfterCommit;
 use Illuminate\Support\Facades\DB;
 
@@ -24,7 +25,8 @@ class SendCycleAlertNotification implements ShouldQueueAfterCommit
         }
         DB::transaction(function () use ($event) {
             $booking = Reservation::whereKey($event->booking->id)->lockForUpdate()->first();
-            if (! $booking || $booking->notified_end || ! $booking->completed_at || ! $booking->user) {
+            if (! $booking || $booking->notified_end || ! $booking->completed_at || ! $booking->user
+                || ! $booking->end_time || $booking->end_time->lt(MailDeliveryWindow::cutoff())) {
                 return;
             }
             $booking->user->notify(new CycleFinishedNotification($event->machine->name));

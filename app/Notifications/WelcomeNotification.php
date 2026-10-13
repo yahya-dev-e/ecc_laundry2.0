@@ -2,6 +2,7 @@
 
 namespace App\Notifications;
 
+use App\Support\MailDeliveryWindow;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueueAfterCommit;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -34,6 +35,11 @@ class WelcomeNotification extends Notification implements ShouldQueueAfterCommit
     public function via(object $notifiable): array
     {
         return ['mail'];
+    }
+
+    public function shouldSend(object $notifiable, string $channel): bool
+    {
+        return $notifiable->created_at && $notifiable->created_at->gte(MailDeliveryWindow::cutoff());
     }
 
     /**

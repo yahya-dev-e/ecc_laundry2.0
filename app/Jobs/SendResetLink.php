@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Models\User;
 use App\Notifications\ResetPasswordNotification;
+use App\Support\MailDeliveryWindow;
 use Illuminate\Contracts\Queue\ShouldBeEncrypted;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -26,7 +27,8 @@ class SendResetLink implements ShouldBeEncrypted, ShouldQueue
 
     public function handle(): void
     {
-        $link = DB::table('password_reset_links')->where('id', $this->linkId)->whereNull('consumed_at')->where('expires_at', '>', now())->first();
+        $link = DB::table('password_reset_links')->where('id', $this->linkId)->whereNull('consumed_at')->where('expires_at', '>', now())
+            ->where('created_at', '>=', MailDeliveryWindow::cutoff())->first();
         if ($link && ($user = User::find($this->userId))) {
             $user->notify(new ResetPasswordNotification($this->token));
         }

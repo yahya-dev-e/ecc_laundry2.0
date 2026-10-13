@@ -76,3 +76,5 @@ ci/audit-fixes.yml.example contains a ready-to-enable workflow for Windows/macOS
 Settings and complaints are not implemented features and are not linked as working pages. Availability polls every 30 seconds; dashboards/calendars offer a refresh notice rather than claiming a clock is real-time data synchronization.
 
 See PRODUCTION-READINESS.md for the 13 October deeper review and remaining server checks. Run php artisan laundry:readiness for a read-only deployment diagnostic; it does not certify external mail delivery or running workers/scheduler. SMTP connection timeout defaults to ten seconds (MAIL_TIMEOUT).
+
+Queued welcome, password-reset and cycle-completion mail is discarded once its underlying event is older than LAUNDRY_MAX_EMAIL_DELAY_MINUTES (default 15). Completion age uses the reservation's scheduled end, including when scheduler completion was delayed. Skipping mail does not cancel a reservation or invalidate an already delivered reset link. Completion recovery only requeues recent alerts. Failed-job history is retained unless explicitly cleared.
