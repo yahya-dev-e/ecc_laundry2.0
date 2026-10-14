@@ -42,6 +42,17 @@ class ReadinessCheck extends Command
                 $check(Schema::hasTable($table), 'Required table: '.$table);
             }
             if (Schema::hasTable('users')) {
+                $role = collect(Schema::getColumns('users'))->firstWhere('name', 'role');
+                $supportsRoles = false;
+                if ($role) {
+                    if ($role['type_name'] === 'enum') {
+                        $supportsRoles = str_contains($role['type'], "'student'") && str_contains($role['type'], "'admin'");
+                    } elseif (in_array($role['type_name'], ['varchar', 'char', 'text'], true)) {
+                        preg_match('/\((\d+)\)/', $role['type'], $length);
+                        $supportsRoles = (int) ($length[1] ?? 255) >= strlen('student');
+                    }
+                }
+                $check($supportsRoles, 'Account role column supports student and admin');
                 foreach (['student_id', 'room_number'] as $name) {
                     $column = collect(Schema::getColumns('users'))->firstWhere('name', $name);
                     $check($column && $column['nullable'], 'Optional profile column accepts NULL: '.$name);

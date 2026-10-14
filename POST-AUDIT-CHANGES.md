@@ -233,6 +233,8 @@ During the live maintenance upgrade, the optional-profile migration found studen
 
 The user subsequently completed the production MySQL migration, passed readiness, switched Apache and reported the public site working. A new user-requested policy drops email delivery older than 15 minutes (LAUNDRY_MAX_EMAIL_DELAY_MINUTES). Guards run when welcome/reset/completion messages execute; cycle age uses scheduled end, and recovery excludes expired alerts. Existing reset links and reservations remain valid. Added stale/recent-mail tests; backend total is now 48 tests / 316 assertions. No schema migration or frontend rebuild is needed for this policy.
 
+14 October: production signup logs identified a users.role schema mismatch (MySQL error 1265 for student). Added a role-column compatibility migration preserving existing roles, plus a readiness check and restrictive-enum signup regression. Signup continues to force student regardless of submitted role. Backend verification reached 49 tests / 324 assertions.
+
 ## Complete tracked-file inventory (updated)
 
 The following appendix is generated from Git against the audit commit. It includes dependency locks, tests and configuration as well as product code. A means added; M means modified. Consult the Git diff for exact line-level changes; the sections above explain their intended effect.
@@ -374,3 +376,5 @@ The following appendix is generated from Git against the audit commit. It includ
 | A | `database/migrations/2026_10_13_000002_preserve_legacy_ledger_links.php` |
 | A | `app/Support/MailDeliveryWindow.php` |
 | A | `tests/Feature/MailDeliveryWindowTest.php` |
+| A | `database/migrations/2026_10_14_000001_allow_application_account_roles.php` |
+| A | `tests/Feature/LegacyRoleMigrationTest.php` |
