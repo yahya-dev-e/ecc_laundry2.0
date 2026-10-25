@@ -24,8 +24,20 @@ class BookingService
      */
     public function createBooking(User $user, Machine $machine, Carbon $startTime, ?int $durationMinutes = null): Reservation
     {
+        return DB::transaction(function () use ($user, $machine, $startTime, $durationMinutes) {
+        $user = User::whereKey($user->id)->lockForUpdate()->firstOrFail();
+        $machine = Machine::whereKey($machine->id)->lockForUpdate()->firstOrFail();
         $duration = $durationMinutes ?? $machine->default_duration_minutes;
         $endTime = (clone $startTime)->addMinutes($duration);
+        if ($duration <= 0 || $startTime->lt(Carbon::now()->subMinutes(15))) {
+            throw new InvalidArgumentException('Créneau horaire invalide ou déjà passé.');
+        }
+        for ($week = $startTime->copy()->startOfWeek(); $week->lt($endTime); $week->addWeek()) {
+            $minutes = $startTime->copy()->max($week)->diffInMinutes($endTime->copy()->min($week->copy()->addWeek()), false);
+            if ($minutes > $user->weeklyRemainingLimit($week) * 60) {
+                throw new InvalidArgumentException('Quota hebdomadaire de réservation dépassé.');
+            }
+        }
 
         if (!$machine->status->isOperable()) {
             throw new InvalidArgumentException("Machine {$machine->name} is currently out of service.");
@@ -36,19 +48,16 @@ class BookingService
         }
 
         $cost = max(1, (int) round($duration / 60));
-        if (!$user->hasCredits($cost)) {
+        if (!$user->hasCredits($cost, $startTime)) {
             $limit = $user->weeklyLimit();
-            $remaining = $user->weeklyRemainingLimit();
+            $remaining = $user->weeklyRemainingLimit($startTime);
             throw new InvalidArgumentException("Crédits insuffisants. Vous avez besoin de {$cost} crédit(s) pour réserver cette machine ({$remaining} crédit(s) restant(s) sur vos {$limit} crédits cette semaine).");
         }
 
-        // Limit booking window to current week (up to Sunday 23:59:59)
+        // Retain the existing grace period for starting the current slot.
         if (!$user->isAdmin()) {
             if ($startTime->lt(Carbon::now()->subMinutes(15))) {
                 throw new InvalidArgumentException("Impossible de réserver un créneau horaire déjà passé.");
-            }
-            if (config('laundry.restrict_to_current_week', true) && $startTime->gt(Carbon::now()->endOfWeek())) {
-                throw new InvalidArgumentException("Les réservations sont limitées à la semaine en cours (jusqu'à dimanche 23h59).");
             }
         }
 
@@ -63,7 +72,7 @@ class BookingService
                 'weekly_session_limit_remaining' => $user->weeklyRemainingLimit(),
             ]);
 
-            $user->deductCredits($cost, "Reservation for machine {$machine->name}", $reservation->id);
+            $user->deductCredits($cost, "Reservation for machine {$machine->name}", $reservation->id, true);
 
             // If reservation starts within 15 minutes, set machine status to RESERVED
             if ($startTime->lessThanOrEqualTo(Carbon::now()->addMinutes(15)) && $machine->isAvailable()) {
@@ -71,6 +80,7 @@ class BookingService
             }
 
             return $reservation;
+        });
         });
     }
 

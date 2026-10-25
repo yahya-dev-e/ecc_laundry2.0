@@ -18,8 +18,8 @@ return [
     'admin_weekly_hours_limit' => (int) env('LAUNDRY_ADMIN_WEEKLY_HOURS_LIMIT', 100),
     'cost_per_hour_slot' => 1,
 
-    // Maximum simultaneous active reservations allowed per student
-    'max_simultaneous_reservations' => 3,
+    // No reservation-count cap; the weekly hours allowance is the limit.
+    'max_simultaneous_reservations' => null,
 
     // Cycle durations (minutes)
     'cycle_durations' => [
@@ -30,9 +30,9 @@ return [
     // How many minutes a user has to start before auto-release
     'grace_period_minutes' => 15,
 
-    // Maximum days in advance a student can book a slot (default: current week limit)
-    'restrict_to_current_week' => (bool) env('LAUNDRY_RESTRICT_CURRENT_WEEK', true),
-    'max_advance_booking_days' => 7,
+    // Reservations may be made for any future week.
+    'restrict_to_current_week' => false,
+    'max_advance_booking_days' => null,
 
     // Operating hours (Full 24h day - no artificial limiters)
     'operating_hours' => [

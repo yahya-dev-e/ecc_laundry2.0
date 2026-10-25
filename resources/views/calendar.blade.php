@@ -266,7 +266,7 @@
                     <!-- Background: 24 hour rows with click-to-book and horizontal divider lines -->
                     @php
                         $endOfWeekDate = \Carbon\Carbon::now()->endOfWeek()->toDateString();
-                        $isReservableDay = ($selectedDate >= $todayDate && $selectedDate <= $endOfWeekDate);
+                        $isReservableDay = ($selectedDate >= $todayDate);
                         $currentHour = (int)\Carbon\Carbon::now()->format('H');
                     @endphp
                     @for ($h = 0; $h < 24; $h++)

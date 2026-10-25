@@ -76,27 +76,23 @@ class BookingController extends Controller
         $machines = Machine::orderBy('name')->get();
 
         $minDate = Carbon::today()->toDateString();
-        $maxDate = config('laundry.restrict_to_current_week', true)
-            ? Carbon::now()->endOfWeek()->toDateString()
-            : Carbon::now()->addDays(config('laundry.max_advance_booking_days', 7))->toDateString();
 
         $initialDate = $minDate;
         if ($request->filled('date')) {
             $candidateDate = $request->query('date');
-            if ($candidateDate >= $minDate && $candidateDate <= $maxDate) {
+            if ($candidateDate >= $minDate) {
                 $initialDate = $candidateDate;
             }
         } elseif ($request->filled('start_time')) {
             try {
                 $candidateDate = Carbon::parse($request->query('start_time'))->toDateString();
-                if ($candidateDate >= $minDate && $candidateDate <= $maxDate) {
+                if ($candidateDate >= $minDate) {
                     $initialDate = $candidateDate;
                 }
             } catch (\Exception $e) {}
         }
 
-        $reservations = Reservation::where('start_time', '>=', Carbon::today()->startOfDay())
-            ->where('start_time', '<=', Carbon::parse($maxDate)->endOfDay())
+        $reservations = Reservation::where('end_time', '>=', Carbon::today()->startOfDay())
             ->get(['machine_id', 'start_time', 'end_time'])
             ->map(function ($r) {
                 return [
@@ -112,7 +108,6 @@ class BookingController extends Controller
             'selectedMachine' => $selectedMachine,
             'reservations' => $reservations,
             'minDate' => $minDate,
-            'maxDate' => $maxDate,
             'initialDate' => $initialDate,
         ]);
     }
@@ -138,13 +133,17 @@ class BookingController extends Controller
 
         $totalSlots = count($startTimes);
         $user = $request->user();
-        if ($user && !$user->hasCredits($totalSlots)) {
-            $remaining = $user->weeklyRemainingLimit();
+        $duration = $validated['duration_minutes'] ?? 60;
+        foreach (collect($startTimes)->groupBy(fn ($time) => $time->copy()->startOfWeek()->toDateString()) as $slots) {
+          if (!$user->hasCredits($slots->count() * max(1, (int) ceil($duration / 60)), $slots->first())) {
+            $remaining = $user->weeklyRemainingLimit($slots->first());
             $limit = $user->weeklyLimit();
             return back()->withInput()->with('error', "Quota hebdomadaire insuffisant : Vous avez sélectionné {$totalSlots} créneau(x) mais il ne vous reste que {$remaining} crédit(s) sur vos {$limit} crédits cette semaine.");
+          }
         }
 
         try {
+            return \Illuminate\Support\Facades\DB::transaction(function () use ($startTimes, $machine, $validated, $request) {
             $createdCount = 0;
             foreach ($startTimes as $startTime) {
                 $this->bookingService->createBooking(
@@ -159,6 +158,7 @@ class BookingController extends Controller
             $slotCountMsg = $createdCount > 1 ? "{$createdCount} créneaux réservés" : "Créneau réservé";
             return redirect()->route('dashboard')
                 ->with('success', "{$slotCountMsg} avec succès pour {$machine->name} !");
+            });
         } catch (InvalidArgumentException $e) {
             return back()->withInput()->with('error', $e->getMessage());
         }

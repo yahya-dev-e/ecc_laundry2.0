@@ -44,6 +44,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/admin/reservation/calendrier', [DashboardController::class, 'calendar']);
 
     // Réservations & Création
+    Route::get('/bookings/quota', function (\Illuminate\Http\Request $request) {
+        $data = $request->validate(['date' => ['required', 'date']]);
+        return response()->json(['remaining_hours' => $request->user()->weeklyRemainingLimit(\Carbon\Carbon::parse($data['date']))]);
+    })->name('bookings.quota');
     Route::get('/bookings/create', [BookingController::class, 'create'])->name('bookings.create');
     Route::get('/reserver', [BookingController::class, 'create']);
     Route::post('/bookings', [BookingController::class, 'store'])->name('bookings.store');

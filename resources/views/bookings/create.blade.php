@@ -116,10 +116,9 @@
                     </label>
                     <input id="bookingDate" type="date" name="date" x-model="selectedDate" @change="onDateChange()" 
                            min="{{ $minDate ?? now()->toDateString() }}" 
-                           max="{{ $maxDate ?? now()->endOfWeek()->toDateString() }}"
                            class="w-full px-3.5 py-2.5 border border-slate-300 rounded text-xs focus:border-[#00897b] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00897b]/30 bg-white">
                     <p class="text-[11px] text-slate-500 mt-1">
-                        Réservations limitées à la semaine en cours (jusqu'au dimanche {{ now()->endOfWeek()->format('d/m') }} à 23h59). Le quota d'heures se réinitialise chaque lundi.
+                        Réservez à la date de votre choix, dans la limite de 8 heures par semaine, du lundi au dimanche.
                     </p>
                 </div>
             </div>
@@ -269,13 +268,13 @@ function bookingApp(initialMachineId) {
         selectedMachineId: initialMachineId,
         selectedDate: '{{ $initialDate ?? now()->toDateString() }}',
         minDate: '{{ $minDate ?? now()->toDateString() }}',
-        maxDate: '{{ $maxDate ?? now()->endOfWeek()->toDateString() }}',
         weeklyLimit: {{ auth()->check() ? auth()->user()->weeklyLimit() : (auth()->check() && auth()->user()->isAdmin() ? 100 : 8) }},
         remainingHours: {{ auth()->check() ? auth()->user()->weeklyRemainingLimit() : 8 }},
         isAdmin: isAdminUser,
         selectedSlots: [],
         allDaySlots: all24Slots,
         init() {
+            this.refreshQuota();
             const urlParams = new URLSearchParams(window.location.search);
             const startTimeParam = urlParams.get('start_time');
             if (startTimeParam) {
@@ -350,13 +349,23 @@ function bookingApp(initialMachineId) {
             this.selectedSlots = [];
         },
         onDateChange() {
-            if (this.selectedDate > this.maxDate) {
-                this.selectedDate = this.maxDate;
-            }
             if (this.selectedDate < this.minDate) {
                 this.selectedDate = this.minDate;
             }
             this.selectedSlots = [];
+            this.refreshQuota();
+        },
+        async refreshQuota() {
+            const date = this.selectedDate;
+            try {
+                const response = await fetch(@json(route('bookings.quota')) + '?date=' + encodeURIComponent(date), {headers: {'Accept': 'application/json'}});
+                if (response.ok) {
+                    const quota = await response.json();
+                    if (date === this.selectedDate) this.remainingHours = quota.remaining_hours;
+                }
+            } catch (error) {
+                console.error('Unable to refresh weekly quota', error);
+            }
         }
     };
 }

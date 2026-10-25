@@ -100,17 +100,19 @@ class User extends Authenticatable
         return $this->isAdmin() ? (int) config('laundry.admin_weekly_hours_limit', 100) : (int) config('laundry.weekly_hours_limit', 8);
     }
 
-    public function weeklyRemainingLimit(): int
+    public function weeklyRemainingLimit(?\Carbon\Carbon $date = null): int
     {
-        $startOfWeek = \Carbon\Carbon::now()->startOfWeek();
-        $endOfWeek = \Carbon\Carbon::now()->endOfWeek();
+        $startOfWeek = ($date ?? \Carbon\Carbon::now())->copy()->startOfWeek();
+        $endOfWeek = $startOfWeek->copy()->addWeek();
 
-        $usedCount = $this->reservations()
-            ->where('start_time', '>=', $startOfWeek)
-            ->where('start_time', '<=', $endOfWeek)
-            ->count();
+        $usedMinutes = $this->reservations()
+            ->where('start_time', '<', $endOfWeek)
+            ->where('end_time', '>', $startOfWeek)
+            ->get(['start_time', 'end_time'])
+            ->sum(fn (Reservation $r) => $r->start_time->copy()->max($startOfWeek)
+                ->diffInMinutes($r->end_time->copy()->min($endOfWeek), false));
 
-        return max(0, $this->weeklyLimit() - $usedCount);
+        return max(0, $this->weeklyLimit() - (int) ceil($usedMinutes / 60));
     }
 
     public function transactions(): HasMany
@@ -123,14 +125,14 @@ class User extends Authenticatable
         return $this->weeklyRemainingLimit();
     }
 
-    public function hasCredits(int $amount): bool
+    public function hasCredits(int $amount, ?\Carbon\Carbon $date = null): bool
     {
-        return $this->weeklyRemainingLimit() >= $amount;
+        return $this->weeklyRemainingLimit($date) >= $amount;
     }
 
-    public function deductCredits(int $amount, string $description, ?int $bookingId = null): ?Transaction
+    public function deductCredits(int $amount, string $description, ?int $bookingId = null, bool $quotaValidated = false): ?Transaction
     {
-        if (!$this->hasCredits($amount)) {
+        if (!$quotaValidated && !$this->hasCredits($amount)) {
             throw new \InvalidArgumentException('Crédits insuffisants.');
         }
 
