@@ -2,7 +2,7 @@
 @section('content')
 <div class="max-w-3xl mx-auto space-y-5" x-data="bookingForm({{ $selectedMachine?->id ?? $machines->first()?->id ?? 'null' }}, @js($initialDate))" @pageshow.window="submitting = false; if ($event.persisted) loadSlots()">
     <h1 class="text-xl font-bold">Réserver une machine</h1>
-    <p class="text-sm text-slate-600">Horaires du campus : {{ config('app.timezone') }}. Réservation jusqu’au {{ \Carbon\Carbon::parse($maxDate)->format('d/m/Y') }} inclus.</p>
+    <p class="text-sm text-slate-600">Horaires du campus : {{ config('app.timezone') }}. Choisissez librement vos dates et créneaux dans la limite de votre quota hebdomadaire.</p>
     @if($machines->isEmpty())
         <p role="status" class="p-4 bg-white rounded-lg">Aucune machine n’est disponible dans le catalogue.</p>
     @else
@@ -16,12 +16,12 @@
             </select>
         </div>
         <div><label for="bookingDate" class="block font-semibold text-sm mb-1">Date</label>
-            <input id="bookingDate" type="date" name="date" x-model="selectedDate" @change="selectedTimes = []; loadSlots()" value="{{ $initialDate }}" min="{{ $minDate }}" max="{{ $maxDate }}" class="w-full border border-slate-300 rounded-lg px-3 py-2.5" required>
+            <input id="bookingDate" type="date" name="date" x-model="selectedDate" @change="selectedTimes = []; loadSlots()" value="{{ $initialDate }}" min="{{ $minDate }}" class="w-full border border-slate-300 rounded-lg px-3 py-2.5" required>
         </div>
         <noscript>
             <p>Choisissez l’heure de début. Chaque réservation dure une heure.</p>
             <label for="manual-time">Date et heure de début</label>
-            <input id="manual-time" type="datetime-local" name="start_time" min="{{ now()->format('Y-m-d\TH:i') }}" max="{{ $maxDate }}T23:00" required>
+            <input id="manual-time" type="datetime-local" name="start_time" min="{{ now()->format('Y-m-d\TH:i') }}" required>
             <button class="btn-primary" type="submit">Réserver ce créneau</button>
         </noscript>
         <div x-cloak>
@@ -40,8 +40,8 @@
             </div>
             <p x-show="!loading && !error && !slots.length" class="p-4 rounded-lg bg-slate-50">Aucun créneau disponible pour cette machine et cette date.</p>
             <template x-for="time in selectedTimes" :key="time"><input type="hidden" name="start_times[]" :value="time"></template>
-            <p class="mt-4 text-sm" aria-live="polite"><span x-text="selectedTimes.length"></span>h choisies · <span x-text="remainingMinutes / 60"></span>h disponibles · <span x-text="maxNewBookings"></span> réservation(s) active(s) encore autorisée(s).</p>
-            <p x-show="overQuota" role="alert" class="text-rose-700 text-sm mt-2">La sélection dépasse votre quota ou la limite de réservations actives.</p>
+            <p class="mt-4 text-sm" aria-live="polite"><span x-text="selectedTimes.length"></span>h choisies · <span x-text="remainingMinutes / 60"></span>h disponibles pour la semaine sélectionnée.</p>
+            <p x-show="overQuota" role="alert" class="text-rose-700 text-sm mt-2">La sélection dépasse votre quota hebdomadaire.</p>
             <div class="flex flex-wrap gap-3 pt-5 mt-5 border-t">
                 <button type="submit" :disabled="!selectedTimes.length || overQuota || submitting || loading || !!error" class="btn-primary">Confirmer la réservation</button>
                 <a href="{{ route('calendrier') }}" class="px-4 py-2 underline">Annuler</a>

@@ -271,8 +271,7 @@
                     
                     <!-- Background: 24 hour rows with click-to-book and horizontal divider lines -->
                     @php
-                        $lastBookingDate = \App\Services\BookingWindow::lastDate();
-                        $isReservableDay = ($selectedDate >= $todayDate && $selectedDate <= $lastBookingDate);
+                        $isReservableDay = ($selectedDate >= $todayDate);
                         $currentHour = (int)\Carbon\Carbon::now()->format('H');
                     @endphp
                     @for ($h = 0; $h < 24; $h++)

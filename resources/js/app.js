@@ -4,9 +4,9 @@ import focus from '@alpinejs/focus';
 Alpine.plugin(focus);
 
 Alpine.data('bookingForm', (machineId, selectedDate) => ({
-    machineId, selectedDate, slots: [], selectedTimes: [], remainingMinutes: 0, maxNewBookings: 0,
+    machineId, selectedDate, slots: [], selectedTimes: [], remainingMinutes: 0,
     loading: false, submitting: false, error: '', message: '', timer: null, requestId: 0,
-    get overQuota() { return this.selectedTimes.length * 60 > this.remainingMinutes || this.selectedTimes.length > this.maxNewBookings; },
+    get overQuota() { return this.selectedTimes.length * 60 > this.remainingMinutes; },
     init() {
         this.loadSlots();
         this.timer = setInterval(() => { if (!document.hidden && !this.submitting) this.loadSlots(); }, 30000);
@@ -27,7 +27,7 @@ Alpine.data('bookingForm', (machineId, selectedDate) => ({
             this.slots = data.slots.filter(s => s.is_available);
             const previousCount = this.selectedTimes.length;
             this.selectedTimes = this.selectedTimes.filter(t => this.slots.some(s => s.datetime === t));
-            this.remainingMinutes = data.remaining_minutes; this.maxNewBookings = data.max_new_bookings;
+            this.remainingMinutes = data.remaining_minutes;
             this.message = previousCount !== this.selectedTimes.length ? 'Un créneau choisi n’est plus disponible. Vérifiez votre sélection.' : this.slots.length + ' créneaux disponibles';
         } catch (e) { if (id === this.requestId) { this.error = e.message; this.slots = []; } }
         finally { if (id === this.requestId) this.loading = false; }

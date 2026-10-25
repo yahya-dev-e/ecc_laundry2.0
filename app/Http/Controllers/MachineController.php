@@ -27,7 +27,6 @@ class MachineController extends Controller
         return response()->json(['machine_id' => $machine->id, 'name' => $machine->name,
             'date' => $data['date'] ?? now()->toDateString(), 'timezone' => config('app.timezone'),
             'remaining_minutes' => $request->user()->weeklyRemainingMinutes(Carbon::parse($data['date'] ?? now()->toDateString())),
-            'max_new_bookings' => max(0, config('laundry.max_simultaneous_reservations', 3) - $request->user()->reservations()->activeOrUpcoming()->count()),
             'slots' => $this->scheduler->getAvailableSlots($machine, Carbon::parse($data['date'] ?? now()->toDateString()))])->header('Cache-Control', 'no-store');
     }
 

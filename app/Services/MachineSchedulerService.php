@@ -18,7 +18,6 @@ class MachineSchedulerService
     public function getAvailableSlots(Machine $machine, Carbon $date): array
     {
         $date = $date->copy()->setTimezone(config('app.timezone'))->startOfDay();
-        $max = BookingWindow::end();
         $reservations = Reservation::occupying()->where('machine_id', $machine->id)
             ->where('start_time', '<', $date->copy()->addDay())->where('end_time', '>', $date)->get(['start_time', 'end_time']);
         $slots = [];
@@ -26,7 +25,7 @@ class MachineSchedulerService
             $start = $date->copy()->addHours($hour);
             $end = $start->copy()->addHour();
             $past = $start->lt(now());
-            $free = $machine->status->isOperable() && ! $past && $end->lte($max)
+            $free = $machine->status->isOperable() && ! $past
                 && ! $reservations->contains(fn ($r) => $r->start_time->lt($end) && $r->end_time->gt($start));
             $slots[] = ['start_time' => $start->format('H:i'), 'end_time' => $hour === 23 ? '24:00' : $end->format('H:i'),
                 'datetime' => $start->toIso8601String(), 'is_available' => $free, 'is_past' => $past];

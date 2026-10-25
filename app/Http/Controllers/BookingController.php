@@ -6,7 +6,6 @@ use App\Http\Requests\StoreBookingRequest;
 use App\Models\Machine;
 use App\Models\Reservation;
 use App\Services\BookingService;
-use App\Services\BookingWindow;
 use App\Services\MachineSchedulerService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -24,18 +23,17 @@ class BookingController extends Controller
         $machines = Machine::orderBy('name')->get();
         $selectedMachine = $machines->firstWhere('id', (int) $request->query('machine_id'));
         $minDate = now()->toDateString();
-        $maxDate = BookingWindow::lastDate();
         $initialDate = $minDate;
         try {
             $candidate = Carbon::parse($request->query('date', $request->query('start_time', $minDate)))->toDateString();
-            if ($candidate >= $minDate && $candidate <= $maxDate) {
+            if ($candidate >= $minDate) {
                 $initialDate = $candidate;
             }
         } catch (\Throwable) {
         }
         $reservations = []; // Availability is read from the authoritative slots endpoint.
 
-        return view('bookings.create', compact('machines', 'selectedMachine', 'minDate', 'maxDate', 'initialDate', 'reservations'));
+        return view('bookings.create', compact('machines', 'selectedMachine', 'minDate', 'initialDate', 'reservations'));
     }
 
     public function store(StoreBookingRequest $request)

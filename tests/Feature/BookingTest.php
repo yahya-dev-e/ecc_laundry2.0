@@ -71,7 +71,7 @@ class BookingTest extends TestCase
         $this->post('/bookings', ['machine_id' => $machine->id, 'start_time' => now()->setTime(23, 0)->toIso8601String()])
             ->assertSessionHasNoErrors()->assertSessionHas('success');
         $this->post('/bookings', ['machine_id' => $machine->id, 'start_time' => now()->addDay()->startOfDay()->toIso8601String()])
-            ->assertSessionHasErrors('start_time');
+            ->assertSessionHasNoErrors()->assertSessionHas('success');
     }
 
     public function test_rolling_window_on_sunday_includes_next_sunday_and_its_last_slot(): void
@@ -79,7 +79,7 @@ class BookingTest extends TestCase
         $this->travelTo(Carbon::parse('2026-10-11 10:15', 'Africa/Casablanca'));
         $user = User::factory()->create();
         $machine = Machine::factory()->create();
-        $this->actingAs($user)->get('/bookings/create')->assertViewHas('maxDate', '2026-10-18');
+        $this->actingAs($user)->get('/bookings/create')->assertOk()->assertDontSee('max="2026-10-18"', false);
         $slots = $this->getJson('/machines/'.$machine->id.'/slots?date=2026-10-18')->assertOk()->json('slots');
         $this->assertTrue(collect($slots)->firstWhere('start_time', '23:00')['is_available']);
         foreach (['2026-10-12T12:00:00+01:00', '2026-10-18T23:00:00+01:00'] as $start) {
@@ -87,15 +87,31 @@ class BookingTest extends TestCase
                 ->assertSessionHasNoErrors()->assertSessionHas('success');
         }
         $this->post('/bookings', ['machine_id' => $machine->id, 'start_time' => '2026-10-19T00:00:00+01:00'])
-            ->assertSessionHasErrors('start_time');
+            ->assertSessionHasNoErrors()->assertSessionHas('success');
         $outside = $this->getJson('/machines/'.$machine->id.'/slots?date=2026-10-19')->json('slots');
-        $this->assertFalse(collect($outside)->contains('is_available', true));
-        try {
-            app(BookingService::class)->createBooking($user, $machine, Carbon::parse('2026-10-18 23:30'), 60);
-            $this->fail('Reservation crossing the window end accepted');
-        } catch (\InvalidArgumentException) {
-            $this->assertDatabaseCount('reservations', 2);
-        }
+        $this->assertTrue(collect($outside)->contains('is_available', true));
+    }
+
+    public function test_all_eight_hours_can_be_booked_on_one_day_and_future_weeks_have_separate_quota(): void
+    {
+        config(['laundry.max_simultaneous_reservations' => 3, 'laundry.max_advance_booking_days' => 1]);
+        $user = User::factory()->create();
+        $machine = Machine::factory()->create();
+        $times = collect(range(1, 8))->map(fn ($hour) => now()->addHours($hour)->toIso8601String())->all();
+        $this->actingAs($user)->post('/bookings', ['machine_id' => $machine->id, 'start_times' => $times])
+            ->assertSessionHasNoErrors()->assertSessionHas('success');
+        $this->assertSame(0, $user->weeklyRemainingMinutes());
+        $this->assertSame(8, $user->reservations()->count());
+        $this->post('/bookings', ['machine_id' => $machine->id, 'start_time' => now()->addHours(9)->toIso8601String()])
+            ->assertSessionHas('error');
+        $future = now()->addMonths(3)->startOfDay()->addHours(10);
+        $this->getJson('/machines/'.$machine->id.'/slots?date='.$future->toDateString())
+            ->assertOk()->assertJsonPath('remaining_minutes', 480);
+        $this->get('/bookings/create?date='.$future->toDateString())->assertViewHas('initialDate', $future->toDateString());
+        $this->post('/bookings', ['machine_id' => $machine->id, 'start_time' => $future->toIso8601String()])
+            ->assertSessionHasNoErrors()->assertSessionHas('success');
+        $this->assertSame(420, $user->weeklyRemainingMinutes($future));
+        $this->assertSame(9, $user->reservations()->count());
     }
 
     public function test_real_pages_render_for_student_and_admin(): void

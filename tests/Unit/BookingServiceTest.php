@@ -44,27 +44,23 @@ class BookingServiceTest extends TestCase
         }
     }
 
-    public function test_batch_respects_active_limit_and_whole_transaction_rolls_back_on_ledger_failure(): void
+    public function test_batch_allows_more_than_three_and_rolls_back_on_ledger_failure(): void
     {
         $user = User::factory()->create();
         $machine = Machine::factory()->create();
-        try {
-            $this->service()->createBookings($user, $machine, [now()->addHour(), now()->addHours(2), now()->addHours(3), now()->addHours(4)]);
-            $this->fail('Active limit exceeded');
-        } catch (\InvalidArgumentException) {
-            $this->assertDatabaseCount('reservations', 0);
-        }
+        $this->service()->createBookings($user, $machine, [now()->addHour(), now()->addHours(2), now()->addHours(3), now()->addHours(4)]);
+        $this->assertDatabaseCount('reservations', 4);
         Transaction::creating(fn () => throw new \RuntimeException('Ledger unavailable'));
         try {
-            $this->service()->createBookings($user, $machine, [now()->addHour(), now()->addHours(2)]);
+            $this->service()->createBookings($user, $machine, [now()->addHours(5), now()->addHours(6)]);
             $this->fail('Ledger failure swallowed');
         } catch (\RuntimeException $e) {
             $this->assertSame('Ledger unavailable', $e->getMessage());
         } finally {
             Transaction::flushEventListeners();
         }
-        $this->assertDatabaseCount('reservations', 0);
-        $this->assertDatabaseCount('transactions', 0);
+        $this->assertDatabaseCount('reservations', 4);
+        $this->assertDatabaseCount('transactions', 4);
     }
 
     public function test_cannot_start_early_or_during_maintenance(): void

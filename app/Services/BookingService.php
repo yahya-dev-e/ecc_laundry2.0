@@ -38,12 +38,11 @@ class BookingService
             }
             $times = array_map(fn ($t) => Carbon::parse($t)->setTimezone(config('app.timezone')), $starts);
             usort($times, fn ($a, $b) => $a->getTimestamp() <=> $b->getTimestamp());
-            $max = BookingWindow::end();
             $previousEnd = null;
             foreach ($times as $start) {
                 $end = $start->copy()->addMinutes($duration);
-                if ($start->lt(now()) || $end->gt($max)) {
-                    throw new InvalidArgumentException('Ce créneau est passé ou hors de la période de réservation.');
+                if ($start->lt(now())) {
+                    throw new InvalidArgumentException('Ce créneau est déjà passé.');
                 }
                 if (($previousEnd && $start->lt($previousEnd)) || ! $this->scheduler->isMachineAvailableForSlot($machine, $start, $end)) {
                     throw new InvalidArgumentException('Un créneau sélectionné est déjà réservé.');
@@ -54,10 +53,6 @@ class BookingService
                 if ($user->weeklyRemainingMinutes(Carbon::parse($week)) < $weekTimes->count() * $duration) {
                     throw new InvalidArgumentException('Quota hebdomadaire insuffisant.');
                 }
-            }
-            $activeCount = $user->reservations()->activeOrUpcoming()->count();
-            if ($activeCount + count($times) > config('laundry.max_simultaneous_reservations', 3)) {
-                throw new InvalidArgumentException('Vous avez atteint le nombre maximal de réservations actives.');
             }
             $bookings = [];
             foreach ($times as $start) {
