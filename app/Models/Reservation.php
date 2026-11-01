@@ -65,14 +65,14 @@ class Reservation extends Model
         if ($this->released_at) {
             return 'no_show';
         }
-        if ($this->completed_at) {
+        if ($this->completed_at || ($this->end_time && $this->end_time->isPast())) {
             return 'completed';
         }
         if ($this->started_at) {
             return 'in_progress';
         }
 
-        return $this->end_time?->isPast() ? 'no_show' : 'upcoming';
+        return 'upcoming';
     }
 
     public function isInProgress(): bool
@@ -95,7 +95,6 @@ class Reservation extends Model
         return ! $this->started_at && ! $this->cancelled_at && ! $this->released_at && ! $this->completed_at
             && $this->start_time && $this->end_time
             && now()->gte($this->start_time)
-            && now()->lt($this->start_time->copy()->addMinutes(config('laundry.grace_period_minutes', 15)))
             && $this->end_time->isFuture();
     }
 

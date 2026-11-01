@@ -14,8 +14,8 @@ Artisan::command('inspire', function () {
 // Check for machine cycles that have reached zero seconds remaining
 Schedule::job(new CheckActiveCycles)->everyMinute()->withoutOverlapping();
 
-// Release bookings where user has not showed up within grace period
-Schedule::job(new AutoReleaseExpiredBookings)->everyMinute()->withoutOverlapping();
+// Release bookings where user has not showed up within grace period (disabled per campus policy)
+// Schedule::job(new AutoReleaseExpiredBookings)->everyMinute()->withoutOverlapping();
 
 Schedule::call(fn () => DB::table('password_reset_links')->where('expires_at', '<', now()->subDay())->delete())
     ->daily()->name('prune-reset-links')->withoutOverlapping();

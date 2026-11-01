@@ -106,9 +106,8 @@ class ReadinessTest extends TestCase
         $service = app(BookingService::class);
         $booking = $service->createBooking($user, Machine::factory()->create(), now()->addHour());
         $this->travelTo($booking->start_time->copy()->addMinutes(15));
-        $this->assertFalse($booking->canBeStarted());
-        $this->assertSame(1, $service->releaseExpiredBookings());
-        $this->assertSame(480, $user->weeklyRemainingMinutes());
+        $this->assertTrue($booking->canBeStarted());
+        $this->assertSame(0, $service->releaseExpiredBookings());
     }
 
     public function test_completion_notification_recovery_ignores_legacy_and_already_notified_rows(): void

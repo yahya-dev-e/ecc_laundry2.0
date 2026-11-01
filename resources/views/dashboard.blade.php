@@ -4,7 +4,7 @@
     <section class="bg-[#00796b] rounded-xl p-5 sm:p-7 text-white">
         <h1 class="text-2xl font-bold">Bonjour, {{ auth()->user()->name }} !</h1>
         <p class="mt-2">{{ auth()->user()->weeklyRemainingLimit() }}h disponibles sur {{ auth()->user()->weeklyLimit() }}h cette semaine.</p>
-        <p class="text-sm mt-2">Le quota se renouvelle le lundi. Les annulations et absences libèrent les heures réservées. Les cycles terminés restent comptabilisés.</p>
+        <p class="text-sm mt-2">Le quota se renouvelle le lundi. Les annulations libèrent les heures réservées. Les créneaux réservés restent comptabilisés.</p>
         <div class="flex flex-wrap gap-3 mt-5"><a href="{{ route('bookings.create') }}" class="rounded-lg px-4 py-2.5 bg-white text-[#00695c] font-semibold">Réserver une machine</a>
         <a href="{{ route('calendrier') }}" class="rounded-lg px-4 py-2.5 border border-white font-semibold">Voir le calendrier</a></div>
     </section>

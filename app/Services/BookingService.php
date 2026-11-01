@@ -147,33 +147,7 @@ class BookingService
 
     public function releaseExpiredBookings(): int
     {
-        $ids = Reservation::occupying()->whereNull('started_at')->whereNull('completed_at')
-            ->where('start_time', '<=', now()->subMinutes(config('laundry.grace_period_minutes', 15)))->pluck('id');
-        $released = 0;
-        foreach ($ids as $id) {
-            $released += DB::transaction(function () use ($id) {
-                $snapshot = Reservation::find($id);
-                if (! $snapshot) {
-                    return 0;
-                }
-                User::whereKey($snapshot->user_id)->lockForUpdate()->firstOrFail();
-                $machine = Machine::whereKey($snapshot->machine_id)->lockForUpdate()->firstOrFail();
-                $booking = Reservation::whereKey($id)->lockForUpdate()->firstOrFail();
-                if ($booking->started_at || $booking->cancelled_at || $booking->released_at || $booking->completed_at) {
-                    return 0;
-                }
-                $booking->update(['released_at' => now(), 'cancellation_reason' => 'Absence après le délai de présence']);
-                Transaction::create(['user_id' => $booking->user_id, 'booking_id' => $booking->id,
-                    'amount' => $booking->quota_minutes, 'type' => 'refund', 'event_key' => 'refund:'.$booking->id,
-                    'description' => 'Libération pour absence (minutes)']);
-                if (! $machine->active_reservation_id && $machine->isReserved()) {
-                    $machine->update(['status' => MachineStatus::AVAILABLE]);
-                }
-
-                return 1;
-            }, 5);
-        }
-
-        return $released;
+        // No-show auto-release is disabled per school policy; reservations remain held for students
+        return 0;
     }
 }

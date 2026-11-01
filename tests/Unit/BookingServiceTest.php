@@ -112,11 +112,11 @@ class BookingServiceTest extends TestCase
         $machine = Machine::factory()->create();
         $booking = $this->service()->createBooking($user, $machine, now()->addHour());
         $this->travelTo(now()->addHours(3));
-        $this->assertSame(1, $this->service()->releaseExpiredBookings());
         $this->assertSame(0, $this->service()->releaseExpiredBookings());
-        $this->assertNotNull($booking->fresh()->released_at);
-        $this->assertSame(480, $user->weeklyRemainingMinutes());
-        $this->assertSame(1, DB::table('transactions')->where('type', 'refund')->count());
+        $this->assertNull($booking->fresh()->released_at);
+        $this->assertSame('completed', $booking->fresh()->status);
+        $this->assertSame(420, $user->weeklyRemainingMinutes());
+        $this->assertSame(0, DB::table('transactions')->where('type', 'refund')->count());
     }
 
     public function test_rolling_window_checks_the_target_weeks_quota(): void
