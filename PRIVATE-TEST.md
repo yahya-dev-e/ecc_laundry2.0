@@ -91,10 +91,18 @@ Open **https://laundry.fecc.ma:8443** from school Wi-Fi/LAN. If school DNS resol
 
 ## 4. Test-only background processes and verification
 
-Create separate Windows scheduled tasks running in `C:\laragon\private\laundry-test`, using the full path to Laragon's PHP executable:
+Install the supervised worker using [the Windows queue runbook](scripts/windows/README.md).
+Pass `-AppPath C:\laragon\private\laundry-test` to installation and management commands
+for this guide's checkout; the scripts default to the separately requested
+`C:\laragon\private\laundry-release` path. Install with `-EnvironmentKind PrivateTest
+-ExpectedDatabase ecc_laundry_private_test`. The task validates the effective
+database/cache/queue targets and private-test mode before launching PHP.
+It relaunches the worker after both clean `queue:restart` exits and crashes.
+Stop/drain before updates, and run the documented restart command after a
+successful update; Laragon Restart All does not invoke it.
 
-- Worker at startup, restart on failure: `php artisan queue:work --sleep=3 --tries=3 --timeout=90`.
-- Scheduler every minute: `php artisan schedule:run`.
+The scheduler remains a separate task every minute: `php artisan schedule:run`.
+These scripts do not install or change that scheduler task.
 
 Use the private checkout as each task's working directory. Never point these tasks at production. MAIL_MAILER=log records test emails locally; it does **not** deliver email. Outbound SMTP testing is a separate step requiring credentials and recipient controls.
 

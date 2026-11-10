@@ -53,6 +53,8 @@ For production, configure APP_ENV=production, APP_DEBUG=false, a canonical HTTPS
 
 Run queue workers under a supervisor, restart them when deploying code, monitor failed_jobs, retry failures after resolving the cause, and run the scheduler continuously. Queued email retries three times. SMTP acceptance and database commits cannot provide exactly-once external delivery after an ambiguous transport failure.
 
+For Windows Server / Laragon, see [queue task installation, graceful deployment restart, status and stop commands](scripts/windows/README.md). The worker task is independent of HTTP requests and Laragon's Restart All button. Keep private-test and production databases and workers isolated.
+
 ## Verification
 
     composer audit --locked
