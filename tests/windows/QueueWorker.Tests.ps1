@@ -1,4 +1,4 @@
-#Requires -Version 5.1
+#Requires -Version 4.0
 [CmdletBinding()]
 param([Parameter(Mandatory)][string]$PhpPath)
 
@@ -38,8 +38,9 @@ try {
     foreach ($file in (Get-ChildItem -LiteralPath (Join-Path $repo 'scripts\windows') -Filter '*.ps1')) {
         $tokens = $null
         $errors = $null
-        [void][Management.Automation.Language.Parser]::ParseFile($file.FullName, [ref]$tokens, [ref]$errors)
+        $ast = [Management.Automation.Language.Parser]::ParseFile($file.FullName, [ref]$tokens, [ref]$errors)
         Assert-Test ($errors.Count -eq 0) "PowerShell parser: $($file.Name)"
+        Assert-Test ($ast.ScriptRequirements.RequiredPSVersion -eq [version]'4.0') "PowerShell 4.0 minimum: $($file.Name)"
     }
     foreach ($file in (Get-ChildItem -LiteralPath (Join-Path $repo 'scripts\windows') -Filter '*.php')) {
         & $PhpPath -n -l $file.FullName

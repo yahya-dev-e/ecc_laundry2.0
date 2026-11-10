@@ -1,4 +1,5 @@
-# Windows PowerShell 5.1. Dot-sourced by the task and operator commands.
+#Requires -Version 4.0
+# Windows PowerShell 4.0+. Dot-sourced by the task and operator commands.
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 

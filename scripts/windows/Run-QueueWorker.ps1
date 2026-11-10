@@ -1,4 +1,4 @@
-#Requires -Version 5.1
+#Requires -Version 4.0
 [CmdletBinding()]
 param([string]$AppPath = 'C:\laragon\private\laundry-release')
 

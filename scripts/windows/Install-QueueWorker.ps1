@@ -1,4 +1,4 @@
-#Requires -Version 5.1
+#Requires -Version 4.0
 #Requires -RunAsAdministrator
 [CmdletBinding()]
 param(
@@ -43,7 +43,7 @@ try {
         ExpectedDatabaseHost = $ExpectedDatabaseHost
         TaskUser = $Credential.UserName
     }
-    # PHP JSON does not accept PowerShell 5.1's UTF-8 BOM.
+    # PHP JSON does not accept Windows PowerShell's UTF-8 BOM (including 4.0).
     [IO.File]::WriteAllText($temporary, ($config | ConvertTo-Json), (New-Object Text.UTF8Encoding($false)))
     $probeConfig = [pscustomobject]$config
     [void](Invoke-QueuePhp $paths $probeConfig @((Join-Path $PSScriptRoot 'check-queue-environment.php'), $temporary))

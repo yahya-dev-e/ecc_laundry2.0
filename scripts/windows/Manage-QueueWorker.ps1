@@ -1,4 +1,4 @@
-#Requires -Version 5.1
+#Requires -Version 4.0
 #Requires -RunAsAdministrator
 [CmdletBinding()]
 param(

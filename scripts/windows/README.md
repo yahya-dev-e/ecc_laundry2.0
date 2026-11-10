@@ -7,7 +7,11 @@ Nothing is added to Laravel providers, HTTP requests, or application startup.
 
 ## Server prerequisites
 
-- Windows Server 2012 or newer, Windows PowerShell 5.1 and Task Scheduler.
+- Windows Server 2012 or newer, Windows PowerShell **4.0 or newer** (with its
+  .NET Framework 4.5 prerequisite), the built-in `ScheduledTasks` module and
+  Task Scheduler. PowerShell 5.1 is not required. Confirm the shell version with
+  `$PSVersionTable.PSVersion` and module availability with
+  `Get-Module -ListAvailable ScheduledTasks`.
 - Default checkout: `C:\laragon\private\laundry-release`.
 - Default PHP: `C:\laragon\bin\php\php-8.3.36\php.exe`. Confirm the file exists
   and its CLI `php.ini` loads PDO MySQL, OpenSSL and the application's extensions.
@@ -241,7 +245,7 @@ References: [Laravel queue deployment/restarts and timeout requirements](https:/
 
 ## Local verification
 
-Run the isolated tests from the repository root in Windows PowerShell 5.1:
+Run the isolated tests from the repository root in Windows PowerShell 4.0 or newer:
 
 ```powershell
 .\tests\windows\QueueWorker.Tests.ps1 -PhpPath 'C:\path\to\php.exe'
@@ -254,6 +258,28 @@ SMTP connection is made. This does not certify Windows Server/Laragon startup,
 actual account permissions, Task Scheduler registration, real Laravel job
 execution or external delivery; those require an isolated server rehearsal.
 
-Local result on 10 November 2026: all 27 isolated checks passed using Windows
-PowerShell 5.1 and portable PHP 8.4.27. The target PHP 8.3.36 / Windows Server /
-Laragon deployment was not runtime-tested.
+For development, the optional PSScriptAnalyzer compatibility settings target
+PowerShell 4.0 syntax and the Windows Server 2012 R2 / PowerShell 4.0 command
+and .NET type profile. Run from a development machine with PSScriptAnalyzer
+installed; no analyzer dependency is needed on the server:
+
+```powershell
+$issues = @(Invoke-ScriptAnalyzer -Path scripts/windows -Recurse -Settings tests/windows/PowerShell4.Settings.psd1)
+$issues
+if ($issues.Count -gt 0) { throw 'PowerShell 4.0 compatibility check failed.' }
+```
+
+The scripts use .NET Framework 4.5 async stream reads so stdout/stderr cannot
+deadlock a PHP control command. Those APIs are available with PowerShell 4.0;
+the task uses the existing `powershell.exe`, without installing another shell.
+After pulling this compatibility fix, rerun the same installation command if
+the previous install stopped at the version requirement. Existing task names,
+configuration and management commands are unchanged.
+
+Local result on 10 November 2026: all 31 isolated checks passed using Windows
+PowerShell 5.1 and portable PHP 8.4.27, including assertions that every worker
+script declares PowerShell 4.0 as its minimum. PSScriptAnalyzer 1.24.0 reported
+zero findings for the PowerShell 4.0 syntax, command/parameter and .NET type
+compatibility rules above. An actual PowerShell 4.0 runtime
+and the target PHP 8.3.36 / Windows Server / Laragon deployment were not
+runtime-tested.
