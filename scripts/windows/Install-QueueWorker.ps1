@@ -5,7 +5,7 @@ param(
     [string]$AppPath = 'C:\laragon\private\laundry-release',
     [string]$PhpPath = 'C:\laragon\bin\php\php-8.3.36\php.exe',
     [Parameter(Mandatory)][ValidateSet('PrivateTest', 'Production')][string]$EnvironmentKind,
-    [Parameter(Mandatory)][ValidatePattern('^[A-Za-z0-9_]+$')][string]$ExpectedDatabase,
+    [Parameter(Mandatory)][ValidatePattern('\A[A-Za-z0-9_-]+\z')][string]$ExpectedDatabase,
     [string]$ExpectedDatabaseHost = '127.0.0.1',
     [Parameter(Mandatory)][PSCredential]$Credential
 )

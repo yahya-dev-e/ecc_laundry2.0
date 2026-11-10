@@ -68,6 +68,9 @@ Production -ExpectedDatabase YOUR_APPROVED_DATABASE` instead. This requires
 private-test mode to be disabled. Supply `-ExpectedDatabaseHost` if the host is
 not `127.0.0.1`. No configuration is automatically corrected to pass these
 checks. Confirm the database name/host privately before installing.
+`ExpectedDatabase` accepts only ASCII letters, digits, underscores and hyphens
+(for example, `ecc-laundry-v1`); empty names, whitespace and other punctuation
+are rejected. Private-test names must still end in `_test`.
 
 There is exactly one root-level task, **LaundryQueueWorker**. It will not be
 replaced if its action belongs to another checkout. To run production and
@@ -276,7 +279,7 @@ After pulling this compatibility fix, rerun the same installation command if
 the previous install stopped at the version requirement. Existing task names,
 configuration and management commands are unchanged.
 
-Local result on 10 November 2026: all 31 isolated checks passed using Windows
+Local result on 10 November 2026: all 53 isolated checks passed using Windows
 PowerShell 5.1 and portable PHP 8.4.27, including assertions that every worker
 script declares PowerShell 4.0 as its minimum. PSScriptAnalyzer 1.24.0 reported
 zero findings for the PowerShell 4.0 syntax, command/parameter and .NET type

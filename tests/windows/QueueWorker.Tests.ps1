@@ -35,12 +35,31 @@ function Start-TestSupervisor {
 function Get-TestWorker { Get-Content -LiteralPath $paths.WorkerState -Raw | ConvertFrom-Json }
 
 try {
+    $installerAst = $null
     foreach ($file in (Get-ChildItem -LiteralPath (Join-Path $repo 'scripts\windows') -Filter '*.ps1')) {
         $tokens = $null
         $errors = $null
         $ast = [Management.Automation.Language.Parser]::ParseFile($file.FullName, [ref]$tokens, [ref]$errors)
         Assert-Test ($errors.Count -eq 0) "PowerShell parser: $($file.Name)"
         Assert-Test ($ast.ScriptRequirements.RequiredPSVersion -eq [version]'4.0') "PowerShell 4.0 minimum: $($file.Name)"
+        if ($file.Name -eq 'Install-QueueWorker.ps1') { $installerAst = $ast }
+    }
+    # Exercise the installer's actual parameter binding without executing its body,
+    # requesting elevation, registering a task, or reading a real environment.
+    $databaseParameter = @($installerAst.ParamBlock.Parameters | Where-Object { $_.Name.VariablePath.UserPath -eq 'ExpectedDatabase' })[0]
+    $validateDatabase = [scriptblock]::Create('param(' + $databaseParameter.Extent.Text + ') $ExpectedDatabase')
+    foreach ($name in @('ecc-laundry-v1', 'ecc_laundry_private_test', 'ecc-laundry-v1_test', 'ECC123')) {
+        Assert-Test ((& $validateDatabase -ExpectedDatabase $name) -eq $name) "ExpectedDatabase accepts $name"
+    }
+    $invalidNames = @('', 'ecc laundry', ' ecc-laundry-v1', 'ecc-laundry-v1 ',
+        'ecc.laundry', '../ecc-laundry-v1', 'ecc\laundry', 'ecc/laundry',
+        'ecc;drop', "ecc'laundry", 'ecc"laundry', 'ecc`laundry',
+        "ecc`tlaundry", "ecc`rlaundry", "ecc`nlaundry", "ecc-laundry-v1`n", ('ecc_laundr' + [char]0x00e9))
+    for ($index = 0; $index -lt $invalidNames.Count; $index++) {
+        $rejected = $false
+        try { [void](& $validateDatabase -ExpectedDatabase $invalidNames[$index]) }
+        catch [Management.Automation.ParameterBindingException] { $rejected = $true }
+        Assert-Test $rejected "ExpectedDatabase rejects invalid name case $index"
     }
     foreach ($file in (Get-ChildItem -LiteralPath (Join-Path $repo 'scripts\windows') -Filter '*.php')) {
         & $PhpPath -n -l $file.FullName
@@ -116,6 +135,19 @@ while (true) {
     Write-TestFile (Join-Path $fixture 'fixture.json') ($effective | ConvertTo-Json)
     Assert-QueueEnvironment $paths $config
     Assert-Test $true 'Preflight accepts approved isolated target without SQL'
+    $config.EnvironmentKind = 'Production'
+    $config.ExpectedDatabase = 'ecc-laundry-v1'
+    $effective['database.database'] = 'ecc-laundry-v1'
+    $effective['private_test.enabled'] = $false
+    Write-TestFile $paths.Config ($config | ConvertTo-Json)
+    Write-TestFile (Join-Path $fixture 'fixture.json') ($effective | ConvertTo-Json)
+    Assert-QueueEnvironment $paths $config
+    Assert-Test $true 'Preflight accepts an approved hyphenated production database without SQL'
+    $config.EnvironmentKind = 'PrivateTest'
+    $config.ExpectedDatabase = 'fixture_test'
+    $effective['database.database'] = 'fixture_test'
+    $effective['private_test.enabled'] = $true
+    Write-TestFile $paths.Config ($config | ConvertTo-Json)
     foreach ($change in @(
         @('database.database', 'production'), @('database.host', 'unexpected-host'),
         @('private_test.enabled', $false), @('queue.default', 'sync'),
