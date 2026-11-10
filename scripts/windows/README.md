@@ -13,7 +13,7 @@ Nothing is added to Laravel providers, HTTP requests, or application startup.
   `$PSVersionTable.PSVersion` and module availability with
   `Get-Module -ListAvailable ScheduledTasks`.
 - Default checkout: `C:\laragon\private\laundry-release`.
-- Default PHP: `C:\laragon\bin\php\php-8.3.36\php.exe`. Confirm the file exists
+- Default PHP: `C:\laragon\bin\php\php-8.3.36-Win32-vs16-x64\php.exe`. Confirm the file exists
   and its CLI `php.ini` loads PDO MySQL, OpenSSL and the application's extensions.
 - Installed Composer dependencies and an existing `.env` / `APP_KEY`.
 - MySQL must itself start at boot (for example, as a Windows service). A task
@@ -35,20 +35,31 @@ including `config:cache` and database URLs. It accepts MySQL, the `database`
 queue connection with queue `default`, and `retry_after > 60`. The application,
 queue, and database cache must use the explicitly approved database/host.
 File cache is accepted only inside this checkout's storage directory. Array,
-null and external/shared Redis caches are refused. Database cache requires a
-nonempty prefix; keep that prefix distinct between deployments. Ensure the
+null and external/shared Redis caches are refused. An empty or absent database
+cache prefix is accepted: the exact approved database/host is the isolation
+boundary. No `config/cache.php`, `CACHE_PREFIX`, or configuration rebuild is
+needed. Laravel `queue:restart` reaches other workers sharing that database,
+cache table and prefix, so keep production and private-test databases separate. Ensure the
 existing queue/cache/failed-job tables exist through your separately reviewed
 deployment procedure. Installation does not create them or query their contents.
 
 ## One-time installation
 
-Use **PowerShell as Administrator on the server**. Example for the isolated
-private test (replace the Windows account name):
+Use **PowerShell as Administrator on the server**. For this production server,
+copy this single installation command (it works from any current directory):
 
 ```powershell
-cd C:\laragon\private\laundry-release
-.\scripts\windows\Install-QueueWorker.ps1 -EnvironmentKind PrivateTest -ExpectedDatabase ecc_laundry_private_test -Credential (Get-Credential 'SERVER\LaundryWorker')
-.\scripts\windows\Manage-QueueWorker.ps1 -Action Status
+& 'C:\laragon\private\laundry-release\scripts\windows\Install-QueueWorker.ps1' -EnvironmentKind Production -ExpectedDatabase 'ecc-laundry-v1' -Credential (Get-Credential 'washmachineplan\srvset')
+```
+
+The default PHP path matches this server's Laragon installation. Override
+`-PhpPath` only for a different installation. No production `.env`, database
+schema, cache prefix, or Windows version changes are required.
+
+After a successful deployment, the single restart command is:
+
+```powershell
+& 'C:\laragon\private\laundry-release\scripts\windows\Manage-QueueWorker.ps1' -Action Restart
 ```
 
 Enter the Windows account's password in the credential prompt; it is passed to
@@ -114,9 +125,9 @@ worker. Do not overwrite `.env` or regenerate `APP_KEY`. Then refresh only the
 application's compiled files using the explicit PHP binary:
 
 ```bat
-"C:\laragon\bin\php\php-8.3.36\php.exe" artisan config:cache
-"C:\laragon\bin\php\php-8.3.36\php.exe" artisan route:cache
-"C:\laragon\bin\php\php-8.3.36\php.exe" artisan view:cache
+"C:\laragon\bin\php\php-8.3.36-Win32-vs16-x64\php.exe" artisan config:cache
+"C:\laragon\bin\php\php-8.3.36-Win32-vs16-x64\php.exe" artisan route:cache
+"C:\laragon\bin\php\php-8.3.36-Win32-vs16-x64\php.exe" artisan view:cache
 ```
 
 After the website update succeeds, this is the **relaunch command**:
@@ -179,7 +190,7 @@ Get-ChildItem C:\laragon\private\laundry-release\storage\logs\queue-worker-*.log
 Get-CimInstance Win32_Process -Filter "Name = 'php.exe'" | Select-Object ProcessId,ParentProcessId,ExecutablePath,CommandLine
 Get-Acl C:\laragon\private\laundry-release\storage | Format-List
 Get-WinEvent -LogName Microsoft-Windows-TaskScheduler/Operational -MaxEvents 20
-& 'C:\laragon\bin\php\php-8.3.36\php.exe' artisan queue:failed
+& 'C:\laragon\bin\php\php-8.3.36-Win32-vs16-x64\php.exe' artisan queue:failed
 ```
 
 Enable Task Scheduler history if its Operational log is disabled. The running
@@ -279,10 +290,14 @@ After pulling this compatibility fix, rerun the same installation command if
 the previous install stopped at the version requirement. Existing task names,
 configuration and management commands are unchanged.
 
-Local result on 10 November 2026: all 53 isolated checks passed using Windows
+Before the empty-prefix change, on 10 November 2026 all 53 isolated checks passed using Windows
 PowerShell 5.1 and portable PHP 8.4.27, including assertions that every worker
 script declares PowerShell 4.0 as its minimum. PSScriptAnalyzer 1.24.0 reported
 zero findings for the PowerShell 4.0 syntax, command/parameter and .NET type
 compatibility rules above. An actual PowerShell 4.0 runtime
 and the target PHP 8.3.36 / Windows Server / Laragon deployment were not
 runtime-tested.
+
+For this application of the empty-prefix patch, tests and PowerShell
+compatibility checks were not run, as requested. The production server was
+not accessed.

@@ -83,8 +83,11 @@ return new class implements ArrayAccess {
     public function offsetGet($key): mixed {
         return new class {
             public function connection($name) {
-                return new class {
-                    public function getConfig($key) { return config('database.'.$key); }
+                return new class($name) {
+                    public function __construct(private ?string $name) {}
+                    public function getConfig($key) {
+                        return config('connections.'.$this->name.'.'.$key) ?? config('database.'.$key);
+                    }
                 };
             }
         };
@@ -139,10 +142,15 @@ while (true) {
     $config.ExpectedDatabase = 'ecc-laundry-v1'
     $effective['database.database'] = 'ecc-laundry-v1'
     $effective['private_test.enabled'] = $false
+    $effective.Remove('cache.prefix') # Production has neither cache.php nor CACHE_PREFIX.
     Write-TestFile $paths.Config ($config | ConvertTo-Json)
     Write-TestFile (Join-Path $fixture 'fixture.json') ($effective | ConvertTo-Json)
     Assert-QueueEnvironment $paths $config
     Assert-Test $true 'Preflight accepts an approved hyphenated production database without SQL'
+    $effective['cache.prefix'] = ''
+    Write-TestFile (Join-Path $fixture 'fixture.json') ($effective | ConvertTo-Json)
+    Assert-QueueEnvironment $paths $config
+    Assert-Test $true 'Preflight accepts empty cache prefix without changing configuration'
     $config.EnvironmentKind = 'PrivateTest'
     $config.ExpectedDatabase = 'fixture_test'
     $effective['database.database'] = 'fixture_test'
@@ -151,7 +159,7 @@ while (true) {
     foreach ($change in @(
         @('database.database', 'production'), @('database.host', 'unexpected-host'),
         @('private_test.enabled', $false), @('queue.default', 'sync'),
-        @('queue.connections.database.retry_after', 60), @('cache.prefix', '')
+        @('queue.connections.database.retry_after', 60)
     )) {
         $previous = $effective[$change[0]]
         $effective[$change[0]] = $change[1]
@@ -160,6 +168,23 @@ while (true) {
         try { Assert-QueueEnvironment $paths $config } catch { $rejected = $true }
         Assert-Test $rejected "Preflight rejects mismatch: $($change[0])"
         $effective[$change[0]] = $previous
+    }
+    foreach ($connectionKey in @('queue.connections.database.connection', 'connection', 'lock_connection')) {
+        $effective['connections.unapproved.database'] = 'other_database'
+        if ($connectionKey -eq 'queue.connections.database.connection') {
+            $effective[$connectionKey] = 'unapproved'
+        } else {
+            $effective['cache.stores.database'][$connectionKey] = 'unapproved'
+        }
+        Write-TestFile (Join-Path $fixture 'fixture.json') ($effective | ConvertTo-Json)
+        $rejected = $false
+        try { Assert-QueueEnvironment $paths $config } catch { $rejected = $true }
+        Assert-Test $rejected "Preflight rejects unapproved database via $connectionKey with empty prefix"
+        if ($connectionKey -eq 'queue.connections.database.connection') {
+            $effective.Remove($connectionKey)
+        } else {
+            $effective['cache.stores.database'].Remove($connectionKey)
+        }
     }
     Write-TestFile (Join-Path $fixture 'fixture.json') ($effective | ConvertTo-Json)
     $first = Start-TestSupervisor

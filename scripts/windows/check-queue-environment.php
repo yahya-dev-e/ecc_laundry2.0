@@ -46,9 +46,9 @@ try {
         $stage = 'cache-database';
         $checkDatabase($cache['connection'] ?? null);
         $checkDatabase($cache['lock_connection'] ?? $cache['connection'] ?? null);
-        if (!is_string(config('cache.prefix')) || config('cache.prefix') === '') {
-            throw new RuntimeException('A nonempty isolated cache prefix is required.');
-        }
+        // The exact approved database/host above is the isolation boundary.
+        // An empty prefix is valid in a dedicated database; do not change the
+        // application's cache namespace just to install its queue worker.
     } elseif (($cache['driver'] ?? null) === 'file') {
         $stage = 'file-cache';
         $storage = realpath($root.'/storage').DIRECTORY_SEPARATOR;
